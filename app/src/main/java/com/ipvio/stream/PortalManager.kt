@@ -209,6 +209,14 @@ object PortalManager {
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("exp_date", expDateStr).apply()
         }
 
+        // Metadados globais (TMDB / OMDb sincronizados do portal)
+        val metaObj = json.optJSONObject("meta")
+        if (metaObj != null) {
+            val tKey = metaObj.optString("tmdbKey", "").trim().ifBlank { null }
+            val oKey = metaObj.optString("omdbKey", "").trim().ifBlank { null }
+            Config.applyRemote(tKey, oKey)
+        }
+
         // 1. Mensagem na tela (Push)
         val msgObj = json.optJSONObject("message")
         if (msgObj != null) {

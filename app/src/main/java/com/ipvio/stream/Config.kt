@@ -55,6 +55,16 @@ object Config {
         inited = true
     }
 
+    /** Applies remote TMDB and OMDB keys configured globally in the portal when the user has none entered locally. */
+    fun applyRemote(tmdb: String?, omdb: String?) {
+        if (!tmdbOwn && !tmdb.isNullOrBlank()) {
+            TMDB_KEY = clean(tmdb)
+        }
+        if (!omdbOwn && !omdb.isNullOrBlank()) {
+            OMDB_KEY = clean(omdb)
+        }
+    }
+
     /** Keys for the online subtitle search (see [SubSearch]); empty = that service is not asked. */
     @Volatile var OS_KEY: String = ""
         private set

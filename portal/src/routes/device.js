@@ -72,6 +72,10 @@ async function buildDeviceResponse(device, currentCode = 0, req = null) {
       text: device.message,
       type: device.message_type || 'info'
     } : null,
+    meta: {
+      tmdbKey: settings.tmdb_api_key || null,
+      omdbKey: settings.omdb_api_key || null
+    },
     ota
   };
 }
@@ -356,6 +360,30 @@ router.get('/ota/check', async (req, res) => {
     res.json({ success: true, ota });
   } catch (err) {
     console.error('[OTA Check Error]', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+const metadataService = require('../services/metadataService');
+
+// 5. Proxy com Cache Global de Metadados (TMDB)
+router.get('/meta/tmdb', async (req, res) => {
+  try {
+    const { path: subpath, ...params } = req.query;
+    if (!subpath) return res.status(400).json({ success: false, error: 'Parâmetro path obrigatório' });
+    const result = await metadataService.fetchTmdb(subpath, params);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 6. Proxy com Cache Global de Metadados (OMDB)
+router.get('/meta/omdb', async (req, res) => {
+  try {
+    const result = await metadataService.fetchOmdb(req.query);
+    res.json({ success: true, ...result });
+  } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });

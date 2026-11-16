@@ -11,6 +11,7 @@ const config = require('../config');
 const { checkPlaylistValidity } = require('../services/playlistChecker');
 const { getSettings, saveSettings, migrateAllClientsUrl, runExpiryAutomations } = require('../services/automationService');
 const { sendWhatsAppMessage } = require('../services/whatsappService');
+const metadataService = require('../services/metadataService');
 
 // Rate limiter contra ataques de força bruta no login (máx 5 tentativas por IP a cada 15 min)
 const loginLimiter = rateLimit({
@@ -276,6 +277,36 @@ router.post('/automations/run-expiry', async (req, res) => {
   try {
     const result = await runExpiryAutomations();
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4.5 Metadados (TMDB / OMDB): estatísticas de cache, teste de chaves e limpeza
+router.get('/meta/stats', async (req, res) => {
+  try {
+    const stats = await metadataService.getStats();
+    res.json({ success: true, stats });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/meta/test', async (req, res) => {
+  try {
+    const { tmdbKey, omdbKey } = req.body;
+    const results = await metadataService.testKeys({ tmdbKey, omdbKey });
+    res.json({ success: true, results });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/meta/clear-cache', async (req, res) => {
+  try {
+    const { provider } = req.body;
+    const stats = await metadataService.clearCache(provider);
+    res.json({ success: true, message: 'Cache de metadados limpo com sucesso.', stats });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

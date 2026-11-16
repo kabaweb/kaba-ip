@@ -360,6 +360,62 @@
             </div>
           </div>
 
+          <!-- CARD 4: CHAVES DE METADADOS & CACHE GLOBAL (TMDB / OMDB) -->
+          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
+            <div class="flex items-center gap-2 text-white">
+              <div class="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center font-bold">🎬</div>
+              <div>
+                <h2 class="text-base font-bold">Metadados & Cache Global</h2>
+                <p class="text-xs text-gray-400">TMDB & OMDb (Economia de Cotas)</p>
+              </div>
+            </div>
+
+            <p class="text-xs text-gray-400 leading-relaxed">
+              Armazene as chaves globais. Elas são sincronizadas com os aparelhos conectados e as consultas ficam salvas no banco de dados para não estourar o limite diário das APIs.
+            </p>
+
+            <div class="space-y-3 text-xs">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-semibold text-gray-300">Chave API TMDB</label>
+                  <span id="tmdb-test-status" class="text-[11px] text-gray-400">Não testada</span>
+                </div>
+                <input type="password" id="tmdb-api-key" placeholder="ex: 32 caracteres hexadecimais (themoviedb.org)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500 text-[11px]">
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="font-semibold text-gray-300">Chave API OMDb (IMDb / Rotten)</label>
+                  <span id="omdb-test-status" class="text-[11px] text-gray-400">Não testada</span>
+                </div>
+                <input type="password" id="omdb-api-key" placeholder="ex: chave de 8 caracteres (omdbapi.com)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500 text-[11px]">
+              </div>
+
+              <div class="p-3 bg-surface-800 rounded-xl border border-gray-800 space-y-1 text-[11px]">
+                <div class="flex justify-between items-center text-gray-300">
+                  <span>Itens em Cache no Banco:</span>
+                  <span id="meta-cache-count" class="font-bold text-white">0</span>
+                </div>
+                <div class="flex justify-between items-center text-gray-400 text-[10px]">
+                  <span>TMDB: <strong id="meta-cache-tmdb" class="text-cyan-400">0</strong></span>
+                  <span>OMDb: <strong id="meta-cache-omdb" class="text-amber-400">0</strong></span>
+                </div>
+              </div>
+
+              <div class="flex gap-2 pt-1">
+                <button onclick="saveMetadataSettings()" class="flex-1 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition text-xs shadow-md">
+                  Salvar Chaves
+                </button>
+                <button onclick="testMetadataKeys()" id="btn-test-meta" class="py-2 px-3 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold transition text-xs shadow-md" title="Testa a validade das chaves na API oficial">
+                  Testar
+                </button>
+                <button onclick="clearMetadataCache()" class="py-2 px-2.5 rounded-xl bg-surface-700 hover:bg-rose-900/40 text-gray-300 hover:text-rose-300 border border-gray-700 text-xs transition" title="Limpar cache do banco de dados">
+                  Limpar
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- CARD 4: GERADOR DE TESTES AUTOMÁTICOS (PAINEL SLIM) -->
           <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4 lg:col-span-3">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-800 pb-3">

@@ -172,12 +172,22 @@ async function createTables() {
     );
   `;
 
+  const createMetadataCacheTable = `
+    CREATE TABLE IF NOT EXISTS metadata_cache (
+      cache_key VARCHAR(255) PRIMARY KEY,
+      provider VARCHAR(20) NOT NULL,
+      data_json TEXT NOT NULL,
+      updated_at BIGINT NOT NULL
+    );
+  `;
+
   await dbDriver.exec(createDevicesTable);
   await dbDriver.exec(createOtaTable);
   await dbDriver.exec(createSettingsTable);
   await dbDriver.exec(createBackupsTable);
   await dbDriver.exec(createAccountSyncTable);
   await dbDriver.exec(createTestRequestsTable);
+  await dbDriver.exec(createMetadataCacheTable);
 
   // Migrações suaves para colunas adicionais
   const alterColumns = [

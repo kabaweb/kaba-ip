@@ -838,6 +838,13 @@ async function loadSettings() {
     if (document.getElementById('test-whatsapp-message')) {
       document.getElementById('test-whatsapp-message').value = s.test_whatsapp_message || '';
     }
+    if (document.getElementById('tmdb-api-key')) {
+      document.getElementById('tmdb-api-key').value = s.tmdb_api_key || '';
+    }
+    if (document.getElementById('omdb-api-key')) {
+      document.getElementById('omdb-api-key').value = s.omdb_api_key || '';
+    }
+    loadMetadataStats();
     const publicLink = document.getElementById('link-public-teste');
     if (publicLink) {
       publicLink.href = `${getPublicBaseUrl()}/teste`;
@@ -1227,6 +1234,122 @@ function downloadQrCodeImage() {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+// -------------------------------------------------------------
+// METADADOS & CACHE (TMDB / OMDB)
+// -------------------------------------------------------------
+async function loadMetadataStats() {
+  try {
+    const res = await fetch('/api/admin/meta/stats', { headers: authHeaders() });
+    if (!res.ok) return;
+    const data = await res.json();
+    const stats = data.stats || {};
+    if (document.getElementById('meta-cache-count')) {
+      document.getElementById('meta-cache-count').innerText = stats.total || 0;
+    }
+    if (document.getElementById('meta-cache-tmdb')) {
+      document.getElementById('meta-cache-tmdb').innerText = stats.tmdb || 0;
+    }
+    if (document.getElementById('meta-cache-omdb')) {
+      document.getElementById('meta-cache-omdb').innerText = stats.omdb || 0;
+    }
+  } catch (_) {}
+}
+
+async function saveMetadataSettings() {
+  const tmdbKey = document.getElementById('tmdb-api-key').value.trim();
+  const omdbKey = document.getElementById('omdb-api-key').value.trim();
+  try {
+    const res = await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ tmdb_api_key: tmdbKey, omdb_api_key: omdbKey })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      alert('Chaves de Metadados (TMDB e OMDb) salvas com sucesso!');
+      loadMetadataStats();
+    } else {
+      alert('Erro ao salvar chaves: ' + (data.error || `HTTP ${res.status}`));
+    }
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+async function testMetadataKeys() {
+  const btn = document.getElementById('btn-test-meta');
+  const tmdbStatus = document.getElementById('tmdb-test-status');
+  const omdbStatus = document.getElementById('omdb-test-status');
+
+  const tmdbKey = document.getElementById('tmdb-api-key').value.trim();
+  const omdbKey = document.getElementById('omdb-api-key').value.trim();
+
+  if (!tmdbKey && !omdbKey) {
+    return alert('Preencha ao menos uma das chaves (TMDB ou OMDb) para testar.');
+  }
+
+  btn.disabled = true;
+  btn.innerText = 'Testando...';
+  if (tmdbStatus) tmdbStatus.innerText = 'Verificando...';
+  if (omdbStatus) omdbStatus.innerText = 'Verificando...';
+
+  try {
+    const res = await fetch('/api/admin/meta/test', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ tmdbKey, omdbKey })
+    });
+    const data = await res.json();
+    const r = data.results || {};
+
+    if (tmdbStatus) {
+      if (r.tmdb.configured) {
+        tmdbStatus.innerHTML = r.tmdb.ok
+          ? '<span class="text-emerald-400 font-bold">🟢 Válida</span>'
+          : `<span class="text-rose-400 font-bold" title="${r.tmdb.message}">🔴 Falhou</span>`;
+      } else {
+        tmdbStatus.innerText = 'Não configurada';
+      }
+    }
+
+    if (omdbStatus) {
+      if (r.omdb.configured) {
+        omdbStatus.innerHTML = r.omdb.ok
+          ? '<span class="text-emerald-400 font-bold">🟢 Válida</span>'
+          : `<span class="text-rose-400 font-bold" title="${r.omdb.message}">🔴 Falhou</span>`;
+      } else {
+        omdbStatus.innerText = 'Não configurada';
+      }
+    }
+
+    const messages = [];
+    if (r.tmdb.configured) messages.push(`TMDB: ${r.tmdb.message}`);
+    if (r.omdb.configured) messages.push(`OMDb: ${r.omdb.message}`);
+    alert(messages.join('\n'));
+  } catch (err) {
+    alert('Erro ao testar chaves: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Testar';
+  }
+}
+
+async function clearMetadataCache() {
+  if (!confirm('Deseja realmente limpar o cache de metadados do banco de dados?')) return;
+  try {
+    const res = await fetch('/api/admin/meta/clear-cache', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    alert('Cache de metadados limpo com sucesso!');
+    loadMetadataStats();
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
 }
 
 // Inicialização

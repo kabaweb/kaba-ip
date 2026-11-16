@@ -10,6 +10,8 @@ async function getSettings() {
   }
   return {
     default_iptv_url: map.default_iptv_url || '',
+    tmdb_api_key: map.tmdb_api_key || '',
+    omdb_api_key: map.omdb_api_key || '',
     whatsapp_api_url: map.whatsapp_api_url || '',
     whatsapp_api_token: map.whatsapp_api_token || '',
     auto_expiry_enabled: map.auto_expiry_enabled === '1',
