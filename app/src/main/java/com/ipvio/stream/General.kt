@@ -278,18 +278,52 @@ class BootReceiver : BroadcastReceiver() {
         val pending = goAsync()
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             try {
-                val intent = Intent(c, MainActivity::class.java).apply {
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-                    )
-                }
-                c.startActivity(intent)
+                launchApp(c)
             } catch (_: Exception) {
             } finally {
                 pending.finish()
             }
-        }, 3500)
+        }, 3000)
+    }
+
+    private fun launchApp(c: Context) {
+        val intent = Intent(c, MainActivity::class.java).apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+            )
+        }
+        val directOk = runCatching { c.startActivity(intent) }.isSuccess
+
+        // No Android 10+ (tablets/smartphones como BMAX), se o início direto em background for contido pelo sistema,
+        // aciona uma notificação com fullScreenIntent que sobe a Activity em tela cheia na hora
+        if (!directOk || android.os.Build.VERSION.SDK_INT >= 29) {
+            runCatching {
+                val nm = c.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+                val channelId = "autostart_boot"
+                if (android.os.Build.VERSION.SDK_INT >= 26) {
+                    val ch = android.app.NotificationChannel(channelId, "Inicialização", android.app.NotificationManager.IMPORTANCE_HIGH).apply {
+                        setSound(null, null)
+                        enableVibration(false)
+                    }
+                    nm.createNotificationChannel(ch)
+                }
+                val piFlags = if (android.os.Build.VERSION.SDK_INT >= 23) android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE else android.app.PendingIntent.FLAG_UPDATE_CURRENT
+                val pi = android.app.PendingIntent.getActivity(c, 2026, intent, piFlags)
+                val notif = androidx.core.app.NotificationCompat.Builder(c, channelId)
+                    .setSmallIcon(android.R.drawable.ic_dialog_info)
+                    .setContentTitle("Iniciando Korp TV...")
+                    .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                    .setCategory(androidx.core.app.NotificationCompat.CATEGORY_ALARM)
+                    .setFullScreenIntent(pi, true)
+                    .setAutoCancel(true)
+                    .build()
+                nm.notify(2026, notif)
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    runCatching { nm.cancel(2026) }
+                }, 4000)
+            }
+        }
     }
 }

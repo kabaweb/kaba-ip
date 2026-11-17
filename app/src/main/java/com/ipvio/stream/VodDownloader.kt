@@ -69,9 +69,15 @@ object VodDownloader {
     @Volatile private var appCtx: Context? = null
     fun attach(c: Context) { appCtx = c.applicationContext }
 
+    @Volatile private var cachedDirs: List<File>? = null
+    @Volatile private var cachedList: List<DownloadedItem>? = null
+
     fun dirs(c: Context): List<File> {
+        cachedDirs?.let { return it }
         val ext = runCatching { c.getExternalFilesDirs("vod_downloads").filterNotNull() }.getOrDefault(emptyList())
-        return ext.ifEmpty { listOf(File(c.filesDir, "vod_downloads")) }
+        val res = ext.ifEmpty { listOf(File(c.filesDir, "vod_downloads")) }
+        cachedDirs = res
+        return res
     }
 
     fun dir(c: Context): File {
@@ -183,6 +189,7 @@ object VodDownloader {
     }
 
     private fun done(c: Context, task: Task) {
+        cachedList = null
         android.os.Handler(android.os.Looper.getMainLooper()).post {
             active.remove(task)
             VodDownloadService.update(c)
@@ -205,6 +212,7 @@ object VodDownloader {
     }
 
     fun list(c: Context): List<DownloadedItem> {
+        cachedList?.let { return it }
         val out = ArrayList<DownloadedItem>()
         for (d in dirs(c)) {
             val files = d.listFiles { f -> f.isFile && !f.name.endsWith(".json") && !f.name.endsWith(".part") } ?: continue
@@ -221,10 +229,13 @@ object VodDownloader {
                 out.add(DownloadedItem(f, id, k, title, sub, logo, f.length(), time))
             }
         }
-        return out.sortedByDescending { it.downloadedAt }
+        val sorted = out.sortedByDescending { it.downloadedAt }
+        cachedList = sorted
+        return sorted
     }
 
     fun delete(c: Context, item: DownloadedItem) {
+        cachedList = null
         runCatching { item.file.delete() }
         runCatching { metaFile(item.file).delete() }
     }

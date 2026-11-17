@@ -45,15 +45,16 @@ fun rememberMetaState(item: Item): MetaState {
     LaunchedEffect(item.id) {
         if (m == null && !done) {
             // Short pause: cards that only fly past while scrolling start no TMDB search (the effect is cancelled)
-            kotlinx.coroutines.delay(250)
-            m = MetaRepo.basic(ctx, item); done = true
+            kotlinx.coroutines.delay(600)
+            m = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MetaRepo.basic(ctx, item) }
+            done = true
         }
         // The slim cache lacks the description: reload the full entry from the device, but only for cards that stay
         // on screen. Before, every card read its file and recomposed while a grid was scrolled.
         else m?.let { cur ->
             if (cur.overview == null && cur.tmdbId > 0) {
-                kotlinx.coroutines.delay(700)
-                MetaRepo.basic(ctx, item)?.let { m = it }
+                kotlinx.coroutines.delay(1000)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MetaRepo.basic(ctx, item) }?.let { m = it }
             }
         }
     }

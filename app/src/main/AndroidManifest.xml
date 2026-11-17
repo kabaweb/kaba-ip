@@ -5,6 +5,7 @@
     <!-- Detects when the network is back after a drop, so the stream reconnects immediately -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- Keeps CPU and Wi-Fi awake during playback -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Needed so the app may open in the foreground after the device starts, on Android 10 and later -->
