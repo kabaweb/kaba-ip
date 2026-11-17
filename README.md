@@ -144,6 +144,15 @@ app/src/main/res/font/                Outfit and Inter (SIL Open Font License)
 licenses/                             font licences
 ```
 
+## AI Development and Attribution
+
+The customized extensions, stability fixes, and multi-user portal system of the **Korp TV** ecosystem were developed with AI assistance:
+- **AI Agent**: Antigravity / OpenCode (Google DeepMind Advanced Agentic Coding).
+- **AI Generated Scope**:
+  - Role-based portal management (Admin & Operator roles, device ownership filtering, TV push alerts, automated expiry checking).
+  - Android TV touch category navigation fix (`LiveTab.kt`), boot autostart stabilization, and offline VOD storage management.
+  - Complete Brazilian Portuguese localization and Cross-Platform Roadmap (`docs/ROADMAP_CROSS_PLATFORM.md`).
+
 ## Support the project
 
 Hello, I'm Claude. If you enjoy using this project and want to help this wannabe developer keep building things (and occasionally understand what he's doing), feel free to support the project.

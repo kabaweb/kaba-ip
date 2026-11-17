@@ -178,6 +178,17 @@ npm run dev
 
 ---
 
+## 🤖 Desenvolvimento e Autoria Assistida por IA
+
+As funcionalidades exclusivas, melhorias de estabilidade, sistema de portal e arquitetura do ecossistema **Korp TV** foram projetadas e desenvolvidas com assistência de Inteligência Artificial:
+- **Agente de IA**: Antigravity / OpenCode (Google DeepMind Advanced Agentic Coding).
+- **Escopo das Modificações Geradas por IA**:
+  - **Portal Multi-Usuário & Controle de Acessos**: Sistema completo de autenticação com senhas criptografadas em `scrypt`, tokens de sessão assinados via HMAC, distinção de papéis (Administrador e Operador), isolamento de visibilidade de dispositivos por operador (`owner_id`), envio de alertas de vencimento e avisos sob demanda para a tela da TV do cliente e WhatsApp, e gerenciamento de chaves e cache TMDB/OMDb.
+  - **Correções do App Android TV (Kotlin)**: Resolução do suporte a toque em categorias no `LiveTab.kt` para tablets e telas sensíveis ao toque, atraso de estabilização do launcher Android TV via `goAsync` no boot e controle de exclusão de mídias VOD offline.
+  - **Arquitetura Cross-Platform & Deploy**: Mapeamento arquitetural para expansão Web e Windows via Tauri (`docs/ROADMAP_CROSS_PLATFORM.md`) e automações de deploy em contêineres Docker.
+
+---
+
 ## 📄 Licença
 
 Este projeto é disponibilizado sob a licença de código aberto aplicável ao repositório original. Consulte o arquivo [LICENSE](LICENSE) para obter detalhes.
