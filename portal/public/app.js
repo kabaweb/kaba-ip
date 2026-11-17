@@ -1239,6 +1239,12 @@ function downloadQrCodeImage() {
 // -------------------------------------------------------------
 // METADADOS & CACHE (TMDB / OMDB)
 // -------------------------------------------------------------
+function togglePasswordVisibility(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
 async function loadMetadataStats() {
   try {
     const res = await fetch('/api/admin/meta/stats', { headers: authHeaders() });
@@ -1246,7 +1252,7 @@ async function loadMetadataStats() {
     const data = await res.json();
     const stats = data.stats || {};
     if (document.getElementById('meta-cache-count')) {
-      document.getElementById('meta-cache-count').innerText = stats.total || 0;
+      document.getElementById('meta-cache-count').innerText = `${stats.total || 0} itens`;
     }
     if (document.getElementById('meta-cache-tmdb')) {
       document.getElementById('meta-cache-tmdb').innerText = stats.tmdb || 0;
@@ -1257,95 +1263,138 @@ async function loadMetadataStats() {
   } catch (_) {}
 }
 
-async function saveMetadataSettings() {
-  const tmdbKey = document.getElementById('tmdb-api-key').value.trim();
-  const omdbKey = document.getElementById('omdb-api-key').value.trim();
+async function saveTmdbOnly() {
+  const key = document.getElementById('tmdb-api-key').value.trim();
   try {
     const res = await fetch('/api/admin/settings', {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ tmdb_api_key: tmdbKey, omdb_api_key: omdbKey })
+      body: JSON.stringify({ tmdb_api_key: key })
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.success) {
-      alert('Chaves de Metadados (TMDB e OMDb) salvas com sucesso!');
+      alert('Chave API do TMDB salva com sucesso no banco de dados!');
       loadMetadataStats();
     } else {
-      alert('Erro ao salvar chaves: ' + (data.error || `HTTP ${res.status}`));
+      alert('Erro ao salvar TMDB: ' + (data.error || `HTTP ${res.status}`));
     }
   } catch (err) {
     alert('Erro: ' + err.message);
   }
 }
 
-async function testMetadataKeys() {
-  const btn = document.getElementById('btn-test-meta');
-  const tmdbStatus = document.getElementById('tmdb-test-status');
-  const omdbStatus = document.getElementById('omdb-test-status');
-
-  const tmdbKey = document.getElementById('tmdb-api-key').value.trim();
-  const omdbKey = document.getElementById('omdb-api-key').value.trim();
-
-  if (!tmdbKey && !omdbKey) {
-    return alert('Preencha ao menos uma das chaves (TMDB ou OMDb) para testar.');
-  }
+async function testTmdbOnly() {
+  const btn = document.getElementById('btn-test-tmdb');
+  const statusEl = document.getElementById('tmdb-test-status');
+  const key = document.getElementById('tmdb-api-key').value.trim();
+  if (!key) return alert('Por favor, informe a chave da API do TMDB para testar.');
 
   btn.disabled = true;
   btn.innerText = 'Testando...';
-  if (tmdbStatus) tmdbStatus.innerText = 'Verificando...';
-  if (omdbStatus) omdbStatus.innerText = 'Verificando...';
+  if (statusEl) statusEl.innerText = 'Verificando...';
 
   try {
     const res = await fetch('/api/admin/meta/test', {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ tmdbKey, omdbKey })
+      body: JSON.stringify({ tmdbKey: key })
     });
     const data = await res.json();
-    const r = data.results || {};
-
-    if (tmdbStatus) {
-      if (r.tmdb.configured) {
-        tmdbStatus.innerHTML = r.tmdb.ok
+    const r = data.results?.tmdb;
+    if (r) {
+      if (statusEl) {
+        statusEl.innerHTML = r.ok
           ? '<span class="text-emerald-400 font-bold">🟢 Válida</span>'
-          : `<span class="text-rose-400 font-bold" title="${r.tmdb.message}">🔴 Falhou</span>`;
-      } else {
-        tmdbStatus.innerText = 'Não configurada';
+          : `<span class="text-rose-400 font-bold" title="${r.message}">🔴 Falhou</span>`;
       }
+      alert('TMDB: ' + r.message);
     }
-
-    if (omdbStatus) {
-      if (r.omdb.configured) {
-        omdbStatus.innerHTML = r.omdb.ok
-          ? '<span class="text-emerald-400 font-bold">🟢 Válida</span>'
-          : `<span class="text-rose-400 font-bold" title="${r.omdb.message}">🔴 Falhou</span>`;
-      } else {
-        omdbStatus.innerText = 'Não configurada';
-      }
-    }
-
-    const messages = [];
-    if (r.tmdb.configured) messages.push(`TMDB: ${r.tmdb.message}`);
-    if (r.omdb.configured) messages.push(`OMDb: ${r.omdb.message}`);
-    alert(messages.join('\n'));
   } catch (err) {
-    alert('Erro ao testar chaves: ' + err.message);
+    alert('Erro ao testar TMDB: ' + err.message);
   } finally {
     btn.disabled = false;
     btn.innerText = 'Testar';
   }
 }
 
-async function clearMetadataCache() {
-  if (!confirm('Deseja realmente limpar o cache de metadados do banco de dados?')) return;
+async function clearTmdbCache() {
+  if (!confirm('Deseja limpar todos os metadados do TMDB salvos em cache no banco de dados?')) return;
   try {
     const res = await fetch('/api/admin/meta/clear-cache', {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({})
+      body: JSON.stringify({ provider: 'tmdb' })
+    });
+    alert('Cache do TMDB limpo com sucesso!');
+    loadMetadataStats();
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+async function saveOmdbOnly() {
+  const key = document.getElementById('omdb-api-key').value.trim();
+  try {
+    const res = await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ omdb_api_key: key })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      alert('Chave API do OMDb salva com sucesso no banco de dados!');
+      loadMetadataStats();
+    } else {
+      alert('Erro ao salvar OMDb: ' + (data.error || `HTTP ${res.status}`));
+    }
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+async function testOmdbOnly() {
+  const btn = document.getElementById('btn-test-omdb');
+  const statusEl = document.getElementById('omdb-test-status');
+  const key = document.getElementById('omdb-api-key').value.trim();
+  if (!key) return alert('Por favor, informe a chave da API do OMDb para testar.');
+
+  btn.disabled = true;
+  btn.innerText = 'Testando...';
+  if (statusEl) statusEl.innerText = 'Verificando...';
+
+  try {
+    const res = await fetch('/api/admin/meta/test', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ omdbKey: key })
     });
     const data = await res.json();
-    alert('Cache de metadados limpo com sucesso!');
+    const r = data.results?.omdb;
+    if (r) {
+      if (statusEl) {
+        statusEl.innerHTML = r.ok
+          ? '<span class="text-emerald-400 font-bold">🟢 Válida</span>'
+          : `<span class="text-rose-400 font-bold" title="${r.message}">🔴 Falhou</span>`;
+      }
+      alert('OMDb: ' + r.message);
+    }
+  } catch (err) {
+    alert('Erro ao testar OMDb: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Testar';
+  }
+}
+
+async function clearOmdbCache() {
+  if (!confirm('Deseja limpar todas as avaliações do OMDb salvas em cache no banco de dados?')) return;
+  try {
+    const res = await fetch('/api/admin/meta/clear-cache', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ provider: 'omdb' })
+    });
+    alert('Cache do OMDb limpo com sucesso!');
     loadMetadataStats();
   } catch (err) {
     alert('Erro: ' + err.message);

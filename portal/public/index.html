@@ -361,57 +361,102 @@
           </div>
 
           <!-- CARD 4: CHAVES DE METADADOS & CACHE GLOBAL (TMDB / OMDB) -->
-          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
-            <div class="flex items-center gap-2 text-white">
-              <div class="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center font-bold">🎬</div>
-              <div>
-                <h2 class="text-base font-bold">Metadados & Cache Global</h2>
-                <p class="text-xs text-gray-400">TMDB & OMDb (Economia de Cotas)</p>
+          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-5 lg:col-span-3">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-800 pb-3">
+              <div class="flex items-center gap-2 text-white">
+                <div class="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center font-bold">🎬</div>
+                <div>
+                  <h2 class="text-base font-bold">Metadados & Cache Global (TMDB & OMDb)</h2>
+                  <p class="text-xs text-gray-400">Configure e teste cada API individualmente com economia automática de cotas no banco de dados</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-400">Total em Cache no Banco:</span>
+                <span id="meta-cache-count" class="px-2.5 py-1 text-xs font-mono font-bold rounded-lg bg-surface-700 text-cyan-400 border border-gray-700">0 itens</span>
               </div>
             </div>
 
-            <p class="text-xs text-gray-400 leading-relaxed">
-              Armazene as chaves globais. Elas são sincronizadas com os aparelhos conectados e as consultas ficam salvas no banco de dados para não estourar o limite diário das APIs.
-            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+              <!-- PAINEL TMDB -->
+              <div class="p-4 bg-surface-800/80 rounded-2xl border border-gray-800 space-y-3.5 flex flex-col justify-between">
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-white font-bold text-sm">
+                      <span class="text-cyan-400">🎥</span> The Movie Database (TMDB)
+                    </div>
+                    <span id="tmdb-test-status" class="text-[11px] px-2 py-0.5 rounded-md bg-surface-700 text-gray-400">Não testada</span>
+                  </div>
 
-            <div class="space-y-3 text-xs">
-              <div>
-                <div class="flex items-center justify-between mb-1">
-                  <label class="font-semibold text-gray-300">Chave API TMDB</label>
-                  <span id="tmdb-test-status" class="text-[11px] text-gray-400">Não testada</span>
+                  <p class="text-[11px] text-gray-400 leading-relaxed">
+                    Responsável pelas sinopses em português, dados de temporadas e episódios, diretores, atores e capas em alta definição.
+                  </p>
+
+                  <div>
+                    <label class="block font-semibold text-gray-300 mb-1">Chave API TMDB (v3 auth)</label>
+                    <div class="relative">
+                      <input type="password" id="tmdb-api-key" placeholder="ex: 32 caracteres hexadecimais (themoviedb.org)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500 text-xs pr-16">
+                      <button type="button" onclick="togglePasswordVisibility('tmdb-api-key')" class="absolute right-2 top-2 text-[11px] text-gray-400 hover:text-white px-1.5 py-0.5 rounded">Ver</button>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between text-[11px] text-gray-400 bg-surface-900/60 p-2.5 rounded-xl border border-gray-800/80">
+                    <span>Sinopses e títulos em cache:</span>
+                    <strong id="meta-cache-tmdb" class="text-cyan-400 font-mono">0</strong>
+                  </div>
                 </div>
-                <input type="password" id="tmdb-api-key" placeholder="ex: 32 caracteres hexadecimais (themoviedb.org)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500 text-[11px]">
+
+                <div class="flex gap-2 pt-2 border-t border-gray-800/80">
+                  <button onclick="saveTmdbOnly()" class="flex-1 py-2 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition text-xs shadow-md shadow-cyan-600/20">
+                    Salvar TMDB
+                  </button>
+                  <button onclick="testTmdbOnly()" id="btn-test-tmdb" class="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition text-xs shadow-md shadow-emerald-600/20">
+                    Testar
+                  </button>
+                  <button onclick="clearTmdbCache()" class="py-2 px-2.5 rounded-xl bg-surface-700 hover:bg-rose-900/40 text-gray-300 hover:text-rose-300 border border-gray-700 text-xs transition" title="Limpar cache do TMDB">
+                    Limpar
+                  </button>
+                </div>
               </div>
 
-              <div>
-                <div class="flex items-center justify-between mb-1">
-                  <label class="font-semibold text-gray-300">Chave API OMDb (IMDb / Rotten)</label>
-                  <span id="omdb-test-status" class="text-[11px] text-gray-400">Não testada</span>
-                </div>
-                <input type="password" id="omdb-api-key" placeholder="ex: chave de 8 caracteres (omdbapi.com)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500 text-[11px]">
-              </div>
+              <!-- PAINEL OMDB -->
+              <div class="p-4 bg-surface-800/80 rounded-2xl border border-gray-800 space-y-3.5 flex flex-col justify-between">
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-white font-bold text-sm">
+                      <span class="text-amber-400">⭐</span> Open Movie Database (OMDb)
+                    </div>
+                    <span id="omdb-test-status" class="text-[11px] px-2 py-0.5 rounded-md bg-surface-700 text-gray-400">Não testada</span>
+                  </div>
 
-              <div class="p-3 bg-surface-800 rounded-xl border border-gray-800 space-y-1 text-[11px]">
-                <div class="flex justify-between items-center text-gray-300">
-                  <span>Itens em Cache no Banco:</span>
-                  <span id="meta-cache-count" class="font-bold text-white">0</span>
-                </div>
-                <div class="flex justify-between items-center text-gray-400 text-[10px]">
-                  <span>TMDB: <strong id="meta-cache-tmdb" class="text-cyan-400">0</strong></span>
-                  <span>OMDb: <strong id="meta-cache-omdb" class="text-amber-400">0</strong></span>
-                </div>
-              </div>
+                  <p class="text-[11px] text-gray-400 leading-relaxed">
+                    Responsável pelas notas oficiais do <strong>IMDb</strong> e <strong>Rotten Tomatoes</strong>. O cache protege a cota gratuita de 1.000 requisições/dia.
+                  </p>
 
-              <div class="flex gap-2 pt-1">
-                <button onclick="saveMetadataSettings()" class="flex-1 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition text-xs shadow-md">
-                  Salvar Chaves
-                </button>
-                <button onclick="testMetadataKeys()" id="btn-test-meta" class="py-2 px-3 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold transition text-xs shadow-md" title="Testa a validade das chaves na API oficial">
-                  Testar
-                </button>
-                <button onclick="clearMetadataCache()" class="py-2 px-2.5 rounded-xl bg-surface-700 hover:bg-rose-900/40 text-gray-300 hover:text-rose-300 border border-gray-700 text-xs transition" title="Limpar cache do banco de dados">
-                  Limpar
-                </button>
+                  <div>
+                    <label class="block font-semibold text-gray-300 mb-1">Chave API OMDb</label>
+                    <div class="relative">
+                      <input type="password" id="omdb-api-key" placeholder="ex: chave de 8 caracteres (omdbapi.com)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500 text-xs pr-16">
+                      <button type="button" onclick="togglePasswordVisibility('omdb-api-key')" class="absolute right-2 top-2 text-[11px] text-gray-400 hover:text-white px-1.5 py-0.5 rounded">Ver</button>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between text-[11px] text-gray-400 bg-surface-900/60 p-2.5 rounded-xl border border-gray-800/80">
+                    <span>Avaliações e notas em cache:</span>
+                    <strong id="meta-cache-omdb" class="text-amber-400 font-mono">0</strong>
+                  </div>
+                </div>
+
+                <div class="flex gap-2 pt-2 border-t border-gray-800/80">
+                  <button onclick="saveOmdbOnly()" class="flex-1 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold transition text-xs shadow-md shadow-amber-600/20">
+                    Salvar OMDb
+                  </button>
+                  <button onclick="testOmdbOnly()" id="btn-test-omdb" class="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition text-xs shadow-md shadow-emerald-600/20">
+                    Testar
+                  </button>
+                  <button onclick="clearOmdbCache()" class="py-2 px-2.5 rounded-xl bg-surface-700 hover:bg-rose-900/40 text-gray-300 hover:text-rose-300 border border-gray-700 text-xs transition" title="Limpar cache do OMDb">
+                    Limpar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -895,6 +940,6 @@
     </div>
   </div>
 
-  <script src="/app.js?v=20261116b"></script>
+  <script src="/app.js?v=20261116c"></script>
 </body>
 </html>
