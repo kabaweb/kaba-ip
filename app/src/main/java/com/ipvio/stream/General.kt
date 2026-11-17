@@ -264,8 +264,13 @@ object General {
 /** Starts the app after the device is switched on if the user has allowed it in the settings. */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
-        val a = i.action
-        if (a != Intent.ACTION_BOOT_COMPLETED && a != "android.intent.action.QUICKBOOT_POWERON") return
+        val a = i.action ?: return
+        val isBoot = a == Intent.ACTION_BOOT_COMPLETED ||
+                     a == Intent.ACTION_LOCKED_BOOT_COMPLETED ||
+                     a == "android.intent.action.QUICKBOOT_POWERON" ||
+                     a == "com.htc.intent.action.QUICKBOOT_POWERON" ||
+                     a == "android.intent.action.REBOOT"
+        if (!isBoot) return
         // Reminders for shows: set the alarm again after the restart
         runCatching { Reminders.schedule(c) }
         if (!General.autoStartEnabled(c) && !Boomer.isOn(c)) return

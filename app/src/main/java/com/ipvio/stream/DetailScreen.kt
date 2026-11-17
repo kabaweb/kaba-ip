@@ -194,7 +194,9 @@ private fun DetailScreenFull(
     fun save() = VariantPref.set(ctx, item.id, prefQ, prefLang, prefLabel)
     val qCap = remember { PlaybackPrefs.cap(ctx) }
     fun pick(ep: Episode) = pickVariant(ep, prefQ, prefLang, prefLabel, qCap)
-    val playUrl = if (item.kind == Kind.SERIES) eps.firstOrNull()?.let { pick(it).url }
+    val isDownDirect = item.id.startsWith("down:") || item.url.startsWith("file://")
+    val playUrl = if (isDownDirect) item.url
+        else if (item.kind == Kind.SERIES) eps.firstOrNull()?.let { pick(it).url }
         else movieVars.firstOrNull { it.label == prefLabel }?.url ?: item.url
 
     val tmdbId = meta?.tmdbId
@@ -493,7 +495,20 @@ private fun DetailScreenFull(
                         ) {
                             val bh = 44
                             Row(Modifier.onFocusChanged { topRowFocused = it.hasFocus }, horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
-                                if (resume != null) {
+                                if (isDownDirect) {
+                                    val resumeLabel = if (resume != null) "Fortsetzen · " + (resume.pos / 60000) + " Min" else "Abspielen"
+                                    HeroButton(resumeLabel, AIcon.Play, true, Modifier.focusRequester(playFocus), bh) {
+                                        onPlay(item.url, item.title, resume?.pos ?: 0L)
+                                    }
+                                    if (resume != null) {
+                                        HeroButton("Von vorn", AIcon.Rewind, false, Modifier, bh) { onPlay(item.url, item.title, 0L) }
+                                    }
+                                    HeroButton("Excluir Download", AIcon.Close, false, Modifier, bh) {
+                                        VodDownloader.deleteById(ctx, item.id)
+                                        Toast.makeText(ctx, "Arquivo baixado excluído", Toast.LENGTH_SHORT).show()
+                                        onBack()
+                                    }
+                                } else if (resume != null) {
                                     val oneSeason = seasons.size <= 1
                                     val label = when {
                                         item.kind != Kind.SERIES -> "Fortsetzen · " + (resume.pos / 60000) + " Min"
@@ -521,10 +536,10 @@ private fun DetailScreenFull(
                                 // Round 14: movies and series as favorites (appear under "Favorites")
                                 val fav = Library.isFav(item.id)
                                 HeroButton(if (fav) "Favorit" else "Zu Favoriten", if (fav) AIcon.HeartFilled else AIcon.Heart, false, Modifier, bh) { Library.toggleFav(ctx, item.id) }
-                                if (item.kind == Kind.MOVIE) {
-                                    val isDown = VodDownloader.isDownloaded(ctx, item.id)
-                                    val isTask = VodDownloader.isDownloading(item.id)
-                                    val downLabel = if (isDown) "Baixado (Excluir)" else if (isTask) "Baixando …" else "Baixar Filme"
+                                val isDown = isDownDirect || VodDownloader.isDownloaded(ctx, item.id)
+                                val isTask = VodDownloader.isDownloading(item.id)
+                                if (!isDownDirect && (item.kind == Kind.MOVIE || isDown)) {
+                                    val downLabel = if (isDown) "Excluir Download" else if (isTask) "Baixando …" else "Baixar Filme"
                                     val downIcon = if (isDown) AIcon.Close else if (isTask) AIcon.Refresh else AIcon.Download
                                     HeroButton(downLabel, downIcon, false, Modifier, bh) {
                                         if (isDown) {

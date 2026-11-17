@@ -81,8 +81,18 @@ object VodDownloader {
 
     private fun metaFile(f: File) = File(f.path.removeSuffix(".mp4") + ".json")
 
+    fun find(c: Context, idOrUrl: String): DownloadedItem? {
+        val clean = idOrUrl.removePrefix("file://")
+        return list(c).firstOrNull {
+            it.itemId == idOrUrl ||
+            it.file.absolutePath == clean ||
+            idOrUrl == "down:" + it.file.name.hashCode() ||
+            idOrUrl.endsWith(it.file.name.hashCode().toString())
+        }
+    }
+
     fun isDownloaded(c: Context, itemId: String): Boolean {
-        return list(c).any { it.itemId == itemId }
+        return find(c, itemId) != null
     }
 
     fun isDownloading(itemId: String): Boolean {
@@ -220,7 +230,7 @@ object VodDownloader {
     }
 
     fun deleteById(c: Context, itemId: String): Boolean {
-        val found = list(c).firstOrNull { it.itemId == itemId } ?: return false
+        val found = find(c, itemId) ?: return false
         delete(c, found)
         return true
     }

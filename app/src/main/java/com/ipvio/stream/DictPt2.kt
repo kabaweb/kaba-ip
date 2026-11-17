@@ -73,7 +73,7 @@ PIN entfernen¦Remover PIN
 Mit einer PIN lässt sich der Schutz nur nach Eingabe der PIN ändern. Die Erkennung arbeitet mit Stichwörtern in Kategorie- und Titelnamen und ist kein vollständiger Filter. Beim Zurücksetzen aller Einstellungen bleibt die PIN erhalten.¦Com um PIN definido, o bloqueio só pode ser alterado após informar o código. A detecção usa palavras-chave em categorias e títulos e não é um filtro absoluto. Ao redefinir todas as configurações, o PIN é mantido.
 Start¦Início
 Beim Einschalten des Geräts öffnen¦Abrir ao ligar o dispositivo
-IPVIO Stream startet automatisch, sobald der Fernseher oder die Box hochgefahren ist.¦O IPVIO Stream inicia automaticamente assim que a TV ou TV Box inicializar.
+IPVIO Stream startet automatisch, sobald der Fernseher oder die Box hochgefahren ist.¦O Korp TV inicia automaticamente assim que a TV ou TV Box ligar.
 Berechtigung erteilt¦Permissão concedida
 Berechtigung „Über anderen Apps einblenden“ fehlt¦Falta a permissão „Sobrepor a outros aplicativos“
 Einstellung öffnen¦Abrir configurações
