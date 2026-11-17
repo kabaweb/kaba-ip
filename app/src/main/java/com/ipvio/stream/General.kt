@@ -274,9 +274,22 @@ class BootReceiver : BroadcastReceiver() {
         // Reminders for shows: set the alarm again after the restart
         runCatching { Reminders.schedule(c) }
         if (!General.autoStartEnabled(c) && !Boomer.isOn(c)) return
-        try {
-            c.startActivity(Intent(c, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } catch (e: Exception) {
-        }
+
+        val pending = goAsync()
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            try {
+                val intent = Intent(c, MainActivity::class.java).apply {
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+                    )
+                }
+                c.startActivity(intent)
+            } catch (_: Exception) {
+            } finally {
+                pending.finish()
+            }
+        }, 3500)
     }
 }
