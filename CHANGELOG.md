@@ -1,6 +1,17 @@
 # Changelog
 
-## Unreleased
+## 1.5.2 (versionCode 19)
+- Live TV Touch: correção da seleção de categorias e canais via toque direto na tela em tablets e TVs touch, mantendo navegação por D-pad instantânea.
+- Portal Multi-Usuário (Admin & Operador): controle de acesso baseado em perfis, onde operadores visualizam apenas dispositivos sem dono ou atribuídos a eles.
+- Dono de Dispositivo: atribuição automática de operador ao vincular lista ou código de pareamento, com opção de redistribuição pelo administrador.
+- Alertas de Vencimento na TV: envio de avisos sob demanda para a tela da TV do cliente e WhatsApp, com verificação de datas nos formatos DD/MM/AAAA e AAAA-MM-DD.
+- Gestão de Operadores: painel administrativo nas Configurações para cadastro, edição de senhas e exclusão de acessos.
+- Arquitetura Cross-Platform: documentação e planejamento para expansão do player para Web e Windows Desktop via Tauri (`docs/ROADMAP_CROSS_PLATFORM.md`).
+
+## 1.5.0 / 1.5.1 (versionCode 17 / 18)
+- Boot Autostart: inicialização automática com atraso de estabilização do launcher Android TV via `goAsync`.
+- Download VOD: exclusão direta de mídias baixadas e melhorias no gerenciamento de armazenamento offline.
+- Metadados: integração com cache global de metadados TMDB e OMDb sincronizados pelo portal.
 
 ## 1.4.8 (versionCode 15)
 - Gravações: opção direta de exclusão de gravações na lista através do menu de contexto (OK longo / Menu).
