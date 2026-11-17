@@ -42,6 +42,8 @@ services:
     volumes:
       - ./portal/data:/app/data
       - ./portal/public/apks:/app/public/apks
+      - ./portal/src:/app/src
+      - ./portal/public:/app/public
     networks:
       - korp-network
 
