@@ -9,7 +9,7 @@ const AppInfoParser = require('app-info-parser');
 const db = require('../db');
 const config = require('../config');
 const { checkPlaylistValidity } = require('../services/playlistChecker');
-const { getSettings, saveSettings, migrateAllClientsUrl, runExpiryAutomations } = require('../services/automationService');
+const { getSettings, saveSettings, migrateAllClientsUrl, calculateDaysRemaining, runExpiryAutomations } = require('../services/automationService');
 const { sendWhatsAppMessage } = require('../services/whatsappService');
 const metadataService = require('../services/metadataService');
 
@@ -40,9 +40,12 @@ function safeCompare(a, b) {
 // Sessões ativas em memória e tokens assinados
 const activeSessions = new Map();
 
-function generateToken(username = 'admin') {
+function generateToken(user = { id: 0, username: 'admin', role: 'admin', name: 'Administrador' }) {
   const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 dias
-  const data = `${username}:${expiresAt}`;
+  const uid = user.id !== undefined ? user.id : 0;
+  const uname = user.username || 'admin';
+  const urole = user.role || 'operator';
+  const data = `${uid}:${uname}:${urole}:${expiresAt}`;
   const sig = crypto.createHmac('sha256', config.sessionSecret || 'ipvio-stream-secret-key').update(data).digest('hex');
   return `${Buffer.from(data).toString('base64url')}.${sig}`;
 }
@@ -50,10 +53,10 @@ function generateToken(username = 'admin') {
 function verifyToken(token) {
   if (!token) return null;
   if (config.adminKey && token === config.adminKey) {
-    return { username: 'admin' };
+    return { id: 0, username: 'admin', role: 'admin', name: 'Administrador' };
   }
 
-  // 1. Tenta validar token assinado (resiste a reinicializações)
+  // 1. Tenta validar token assinado
   try {
     const parts = token.split('.');
     if (parts.length === 2) {
@@ -61,10 +64,10 @@ function verifyToken(token) {
       const data = Buffer.from(payloadB64, 'base64url').toString('utf8');
       const expectedSig = crypto.createHmac('sha256', config.sessionSecret || 'ipvio-stream-secret-key').update(data).digest('hex');
       if (crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) {
-        const [username, expStr] = data.split(':');
+        const [uidStr, username, role, expStr] = data.split(':');
         const expiresAt = parseInt(expStr, 10);
         if (expiresAt > Date.now()) {
-          return { username, expiresAt };
+          return { id: parseInt(uidStr, 10) || 0, username, role: role || 'operator', expiresAt };
         }
       }
     }
@@ -105,27 +108,53 @@ const upload = multer({
   }
 });
 
-// 1. Rota de Login (Pública com proteção contra força bruta)
-router.post('/login', loginLimiter, (req, res) => {
+// 1. Rota de Login (Suporta múltiplos usuários e admin padrão)
+router.post('/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password) {
     return res.status(400).json({ success: false, error: 'Usuário e senha são obrigatórios.' });
   }
 
-  const validUser = safeCompare(username, config.adminUser);
-  const validPass = safeCompare(password, config.adminPass);
+  const cleanUser = String(username).trim();
 
-  if (validUser && validPass) {
-    const token = generateToken(username);
+  // 1.1 Tenta buscar usuário no banco
+  try {
+    const userRes = await db.query('SELECT * FROM portal_users WHERE LOWER(username) = LOWER(?)', [cleanUser]);
+    let user = userRes.rows[0];
+
+    // 1.2 Fallback para credenciais padrão do config se ainda não existir no banco
+    if (!user && safeCompare(cleanUser, config.adminUser) && safeCompare(password, config.adminPass)) {
+      user = { id: 0, username: config.adminUser, name: 'Administrador', role: 'admin' };
+    } else if (user) {
+      const validPass = db.verifyPassword(password, user.password_hash);
+      if (!validPass) {
+        return res.status(401).json({ success: false, error: 'Usuário ou senha incorretos.' });
+      }
+    } else {
+      return res.status(401).json({ success: false, error: 'Usuário ou senha incorretos.' });
+    }
+
+    const token = generateToken(user);
     const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000);
-    activeSessions.set(token, { username, expiresAt });
-    return res.json({ success: true, token, username, expiresAt });
-  }
+    activeSessions.set(token, { id: user.id, username: user.username, role: user.role, name: user.name, expiresAt });
 
-  return res.status(401).json({ success: false, error: 'Usuário ou senha incorretos.' });
+    return res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name || user.username,
+        role: user.role || 'operator'
+      },
+      expiresAt
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Erro no servidor: ' + err.message });
+  }
 });
 
-// Middleware de autenticação para as rotas abaixo
+// Middleware de autenticação
 function authMiddleware(req, res, next) {
   const token = req.headers['x-admin-token'] || 
                 req.headers['x-admin-key'] || 
@@ -138,19 +167,177 @@ function authMiddleware(req, res, next) {
 
   const session = verifyToken(token);
   if (session) {
-    req.user = session.username;
+    req.user = session;
     return next();
   }
 
   return res.status(401).json({ success: false, error: 'Sessão expirada. Faça login novamente.' });
 }
 
+// Middleware para restringir apenas administradores
+function requireAdmin(req, res, next) {
+  if (req.user && req.user.role === 'admin') {
+    return next();
+  }
+  return res.status(403).json({ success: false, error: 'Acesso restrito para administradores.' });
+}
+
+// Helper para verificar permissão do usuário sobre um dispositivo
+async function canAccessDevice(user, deviceId) {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  const res = await db.query('SELECT owner_id FROM devices WHERE id = ?', [deviceId]);
+  if (res.rows.length === 0) return false;
+  const ownerId = res.rows[0].owner_id;
+  // Operador só pode acessar se o aparelho estiver livre (sem dono) OU pertencer a ele
+  return ownerId === null || ownerId === undefined || Number(ownerId) === Number(user.id);
+}
+
 router.use(authMiddleware);
+
+// 1.1 Dados do usuário logado
+router.get('/me', async (req, res) => {
+  res.json({
+    success: true,
+    user: {
+      id: req.user.id,
+      username: req.user.username,
+      name: req.user.name || req.user.username,
+      role: req.user.role
+    }
+  });
+});
+
+// 1.2 Lista de operadores para seleção de responsável (Acessível a todos autenticados)
+router.get('/operators', async (req, res) => {
+  try {
+    const result = await db.query('SELECT id, username, name, role FROM portal_users ORDER BY name ASC');
+    res.json({ success: true, operators: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 1.3 Gerenciamento de Usuários (Apenas Administrador)
+router.get('/users', requireAdmin, async (req, res) => {
+  try {
+    const result = await db.query('SELECT id, username, name, role, created_at FROM portal_users ORDER BY id ASC');
+    res.json({ success: true, users: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/users', requireAdmin, async (req, res) => {
+  try {
+    const { username, password, name, role } = req.body;
+    if (!username || !password || !name) {
+      return res.status(400).json({ success: false, error: 'Nome, usuário e senha são obrigatórios.' });
+    }
+    const cleanUser = String(username).trim();
+    const existing = await db.query('SELECT id FROM portal_users WHERE LOWER(username) = LOWER(?)', [cleanUser]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ success: false, error: 'Este nome de usuário já está em uso.' });
+    }
+
+    const hash = db.hashPassword(password);
+    const assignedRole = role === 'admin' ? 'admin' : 'operator';
+    const now = Date.now();
+
+    await db.query(
+      'INSERT INTO portal_users (username, password_hash, name, role, created_at) VALUES (?, ?, ?, ?, ?)',
+      [cleanUser, hash, name.trim(), assignedRole, now]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.put('/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const { username, password, name, role } = req.body;
+    const userId = parseInt(req.params.id, 10);
+    const userRes = await db.query('SELECT * FROM portal_users WHERE id = ?', [userId]);
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Usuário não encontrado.' });
+    }
+
+    if (username) {
+      const cleanUser = String(username).trim();
+      const duplicate = await db.query('SELECT id FROM portal_users WHERE LOWER(username) = LOWER(?) AND id != ?', [cleanUser, userId]);
+      if (duplicate.rows.length > 0) {
+        return res.status(400).json({ success: false, error: 'Este nome de usuário já pertence a outra pessoa.' });
+      }
+    }
+
+    const assignedRole = role === 'admin' ? 'admin' : (role === 'operator' ? 'operator' : undefined);
+
+    if (password && String(password).trim().length > 0) {
+      const hash = db.hashPassword(String(password).trim());
+      await db.query(
+        `UPDATE portal_users SET 
+          username = COALESCE(?, username), 
+          password_hash = ?, 
+          name = COALESCE(?, name), 
+          role = COALESCE(?, role) 
+         WHERE id = ?`,
+        [username?.trim() || null, hash, name?.trim() || null, assignedRole || null, userId]
+      );
+    } else {
+      await db.query(
+        `UPDATE portal_users SET 
+          username = COALESCE(?, username), 
+          name = COALESCE(?, name), 
+          role = COALESCE(?, role) 
+         WHERE id = ?`,
+        [username?.trim() || null, name?.trim() || null, assignedRole || null, userId]
+      );
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.delete('/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    if (req.user.id === userId) {
+      return res.status(400).json({ success: false, error: 'Você não pode excluir sua própria conta.' });
+    }
+
+    // Reverte aparelhos desse usuário para sem dono
+    await db.query('UPDATE devices SET owner_id = NULL WHERE owner_id = ?', [userId]);
+    await db.query('DELETE FROM portal_users WHERE id = ?', [userId]);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // 2. Listar dispositivos
 router.get('/devices', async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM devices ORDER BY last_seen DESC');
+    let sql = `
+      SELECT d.*, u.name AS owner_name, u.username AS owner_username 
+      FROM devices d 
+      LEFT JOIN portal_users u ON d.owner_id = u.id
+    `;
+    const params = [];
+
+    // Se for operador, só vê aparelhos sem dono (livres) OU atribuídos a ele
+    if (req.user.role !== 'admin') {
+      sql += ' WHERE (d.owner_id IS NULL OR d.owner_id = ?) ';
+      params.push(req.user.id);
+    }
+
+    sql += ' ORDER BY d.last_seen DESC ';
+
+    const result = await db.query(sql, params);
     const now = Date.now();
     const devices = result.rows.map(d => {
       let code = d.pairing_code;
@@ -161,11 +348,14 @@ router.get('/devices', async (req, res) => {
       }
       const isOnline = (now - Number(d.last_seen || 0)) < 3 * 60 * 1000;
       const isPlaying = Boolean(isOnline && d.now_playing && (now - Number(d.now_playing_at || 0)) < 6 * 60 * 1000);
+      const daysLeft = calculateDaysRemaining(d.playlist_exp_date);
+
       return {
         ...d,
         pairing_code: code,
         isOnline,
         isPlaying,
+        daysLeft,
         currentPlaying: isPlaying ? d.now_playing : null,
         currentPlayingType: isPlaying ? d.now_playing_type : null
       };
@@ -179,7 +369,17 @@ router.get('/devices', async (req, res) => {
 // 3. Detalhes de um dispositivo
 router.get('/devices/:id', async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM devices WHERE id = ?', [req.params.id]);
+    const allowed = await canAccessDevice(req.user, req.params.id);
+    if (!allowed) {
+      return res.status(403).json({ success: false, error: 'Acesso negado a este dispositivo.' });
+    }
+    const result = await db.query(
+      `SELECT d.*, u.name AS owner_name, u.username AS owner_username 
+       FROM devices d 
+       LEFT JOIN portal_users u ON d.owner_id = u.id 
+       WHERE d.id = ?`,
+      [req.params.id]
+    );
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Dispositivo não encontrado' });
     }
@@ -192,9 +392,23 @@ router.get('/devices/:id', async (req, res) => {
 // 4. Atualizar dados básicos, telefone ou status do dispositivo
 router.put('/devices/:id', async (req, res) => {
   try {
-    const { name, status, clientPhone, clientName, notes, phone } = req.body;
+    const allowed = await canAccessDevice(req.user, req.params.id);
+    if (!allowed) {
+      return res.status(403).json({ success: false, error: 'Acesso negado a este dispositivo.' });
+    }
+
+    const { name, status, clientPhone, clientName, notes, phone, ownerId, expDate } = req.body;
     const finalPhone = clientPhone !== undefined ? clientPhone : (phone !== undefined ? phone : null);
     const finalName = clientName !== undefined ? clientName : (name !== undefined ? name : null);
+
+    let parsedOwner = undefined;
+    if (ownerId !== undefined) {
+      if (req.user.role === 'admin') {
+        parsedOwner = ownerId === '' || ownerId === null ? null : parseInt(ownerId, 10);
+      } else {
+        parsedOwner = ownerId === '' || ownerId === null ? null : req.user.id;
+      }
+    }
 
     await db.query(
       `UPDATE devices SET 
@@ -202,7 +416,9 @@ router.put('/devices/:id', async (req, res) => {
         status = COALESCE(?, status), 
         client_phone = COALESCE(?, client_phone),
         client_name = COALESCE(?, client_name),
-        notes = COALESCE(?, notes)
+        notes = COALESCE(?, notes),
+        owner_id = CASE WHEN ? = 1 THEN ? ELSE owner_id END,
+        playlist_exp_date = COALESCE(?, playlist_exp_date)
        WHERE id = ?`,
       [
         name !== undefined ? name : null,
@@ -210,6 +426,9 @@ router.put('/devices/:id', async (req, res) => {
         finalPhone,
         finalName,
         notes !== undefined ? notes : null,
+        parsedOwner !== undefined ? 1 : 0,
+        parsedOwner !== undefined ? parsedOwner : null,
+        expDate !== undefined ? expDate : null,
         req.params.id
       ]
     );
@@ -219,8 +438,8 @@ router.put('/devices/:id', async (req, res) => {
   }
 });
 
-// 4.1 Configurações globais e automações
-router.get('/settings', async (req, res) => {
+// 4.1 Configurações globais e automações (Apenas Administrador)
+router.get('/settings', requireAdmin, async (req, res) => {
   try {
     const settings = await getSettings();
     res.json({ success: true, settings });
@@ -229,7 +448,7 @@ router.get('/settings', async (req, res) => {
   }
 });
 
-router.post('/settings', async (req, res) => {
+router.post('/settings', requireAdmin, async (req, res) => {
   try {
     const updated = await saveSettings(req.body);
     res.json({ success: true, settings: updated });
@@ -238,8 +457,8 @@ router.post('/settings', async (req, res) => {
   }
 });
 
-// 4.2 Migração em massa da URL/Host IPTV para TODOS os clientes conectados
-router.post('/iptv/migrate-url', async (req, res) => {
+// 4.2 Migração em massa da URL/Host IPTV para TODOS os clientes conectados (Apenas Administrador)
+router.post('/iptv/migrate-url', requireAdmin, async (req, res) => {
   try {
     const { newUrl } = req.body;
     if (!newUrl) {
@@ -252,8 +471,8 @@ router.post('/iptv/migrate-url', async (req, res) => {
   }
 });
 
-// 4.3 Teste de envio de WhatsApp oficial
-router.post('/whatsapp/test', async (req, res) => {
+// 4.3 Teste de envio de WhatsApp oficial (Apenas Administrador)
+router.post('/whatsapp/test', requireAdmin, async (req, res) => {
   try {
     const { apiUrl, apiToken, phone, message } = req.body;
     const settings = await getSettings();
@@ -272,8 +491,8 @@ router.post('/whatsapp/test', async (req, res) => {
   }
 });
 
-// 4.4 Disparo manual/imediato das automações de vencimento
-router.post('/automations/run-expiry', async (req, res) => {
+// 4.4 Disparo manual/imediato das automações de vencimento (Apenas Administrador)
+router.post('/automations/run-expiry', requireAdmin, async (req, res) => {
   try {
     const result = await runExpiryAutomations();
     res.json(result);
@@ -282,8 +501,8 @@ router.post('/automations/run-expiry', async (req, res) => {
   }
 });
 
-// 4.5 Metadados (TMDB / OMDB): estatísticas de cache, teste de chaves e limpeza
-router.get('/meta/stats', async (req, res) => {
+// 4.5 Metadados (TMDB / OMDB): estatísticas de cache, teste de chaves e limpeza (Apenas Administrador)
+router.get('/meta/stats', requireAdmin, async (req, res) => {
   try {
     const stats = await metadataService.getStats();
     res.json({ success: true, stats });
@@ -292,7 +511,7 @@ router.get('/meta/stats', async (req, res) => {
   }
 });
 
-router.post('/meta/test', async (req, res) => {
+router.post('/meta/test', requireAdmin, async (req, res) => {
   try {
     const { tmdbKey, omdbKey } = req.body;
     const results = await metadataService.testKeys({ tmdbKey, omdbKey });
@@ -302,7 +521,7 @@ router.post('/meta/test', async (req, res) => {
   }
 });
 
-router.post('/meta/clear-cache', async (req, res) => {
+router.post('/meta/clear-cache', requireAdmin, async (req, res) => {
   try {
     const { provider } = req.body;
     const stats = await metadataService.clearCache(provider);
@@ -312,10 +531,10 @@ router.post('/meta/clear-cache', async (req, res) => {
   }
 });
 
-// 5. Atribuir ou atualizar playlist remotamente (com checagem de validade)
+// 5. Atribuir ou atualizar playlist remotamente (com checagem de validade e responsável)
 router.post('/devices/link-by-code', async (req, res) => {
   try {
-    const { code, type, url, host, user, pass, phone, name, notes } = req.body;
+    const { code, type, url, host, user, pass, phone, name, notes, ownerId, expDate: manualExp } = req.body;
     if (!code) {
       return res.status(400).json({ success: false, error: 'Código de pareamento ou MAC é obrigatório.' });
     }
@@ -336,24 +555,35 @@ router.post('/devices/link-by-code', async (req, res) => {
     }
 
     const dev = result.rows[0];
-    const now = Date.now();
+    const allowed = await canAccessDevice(req.user, dev.id);
+    if (!allowed) {
+      return res.status(403).json({ success: false, error: 'Este aparelho já está vinculado a outro operador.' });
+    }
 
+    const now = Date.now();
     const settings = await getSettings();
     const effectiveHost = (host && host.trim()) || (type === 'xtream' ? (settings.default_iptv_url || '') : '');
 
-    let expDate = null;
+    let expDate = manualExp || null;
     let plStatus = 'Active';
     let maxCons = 1;
 
     if (type !== 'none') {
       const checkRes = await checkPlaylistValidity({ type, url, host: effectiveHost, user, pass });
       if (checkRes.success) {
-        expDate = checkRes.expDateFormatted;
+        expDate = manualExp || checkRes.expDateFormatted;
         plStatus = checkRes.status;
         maxCons = checkRes.maxConnections || 1;
-      } else {
+      } else if (!manualExp) {
         expDate = 'Erro ao verificar';
       }
+    }
+
+    let parsedOwner = undefined;
+    if (ownerId !== undefined) {
+      parsedOwner = (req.user.role === 'admin') ? (ownerId ? parseInt(ownerId, 10) : null) : (ownerId ? req.user.id : null);
+    } else if (req.user.role !== 'admin' && dev.owner_id === null) {
+      parsedOwner = req.user.id;
     }
 
     await db.query(
@@ -370,9 +600,15 @@ router.post('/devices/link-by-code', async (req, res) => {
         playlist_status = ?,
         playlist_max_cons = ?,
         client_phone = COALESCE(?, client_phone),
-        notes = COALESCE(?, notes)
+        notes = COALESCE(?, notes),
+        owner_id = CASE WHEN ? = 1 THEN ? ELSE owner_id END
        WHERE id = ?`,
-      [name || null, name || null, type || 'none', url || '', effectiveHost || '', user || '', pass || '', now, expDate, plStatus, maxCons, phone || null, notes || null, dev.id]
+      [
+        name || null, name || null, type || 'none', url || '', effectiveHost || '', user || '', pass || '',
+        now, expDate, plStatus, maxCons, phone || null, notes || null,
+        parsedOwner !== undefined ? 1 : 0, parsedOwner !== undefined ? parsedOwner : null,
+        dev.id
+      ]
     );
 
     res.json({
@@ -390,13 +626,18 @@ router.post('/devices/link-by-code', async (req, res) => {
 
 router.post('/devices/:id/playlist', async (req, res) => {
   try {
-    const { type, url, host, user, pass, name, clientName, clientPhone, phone, notes } = req.body;
+    const allowed = await canAccessDevice(req.user, req.params.id);
+    if (!allowed) {
+      return res.status(403).json({ success: false, error: 'Acesso negado a este dispositivo.' });
+    }
+
+    const { type, url, host, user, pass, name, clientName, clientPhone, phone, notes, ownerId, expDate: manualExp } = req.body;
     const now = Date.now();
 
     const settings = await getSettings();
     const effectiveHost = (host && host.trim()) || (type === 'xtream' ? (settings.default_iptv_url || '') : '');
 
-    let expDate = null;
+    let expDate = manualExp || null;
     let plStatus = 'Active';
     let maxCons = 1;
 
@@ -404,16 +645,26 @@ router.post('/devices/:id/playlist', async (req, res) => {
     if (type !== 'none') {
       const checkRes = await checkPlaylistValidity({ type, url, host: effectiveHost, user, pass });
       if (checkRes.success) {
-        expDate = checkRes.expDateFormatted;
+        expDate = manualExp || checkRes.expDateFormatted;
         plStatus = checkRes.status;
         maxCons = checkRes.maxConnections || 1;
-      } else {
+      } else if (!manualExp) {
         expDate = 'Erro ao verificar';
       }
     }
 
     const finalPhone = clientPhone !== undefined ? clientPhone : (phone !== undefined ? phone : null);
     const finalName = clientName !== undefined ? clientName : (name !== undefined ? name : null);
+
+    let parsedOwner = undefined;
+    if (ownerId !== undefined) {
+      parsedOwner = (req.user.role === 'admin') ? (ownerId ? parseInt(ownerId, 10) : null) : (ownerId ? req.user.id : null);
+    } else if (req.user.role !== 'admin') {
+      const devRes = await db.query('SELECT owner_id FROM devices WHERE id = ?', [req.params.id]);
+      if (devRes.rows[0]?.owner_id === null) {
+        parsedOwner = req.user.id;
+      }
+    }
 
     await db.query(
       `UPDATE devices SET 
@@ -429,7 +680,8 @@ router.post('/devices/:id/playlist', async (req, res) => {
         playlist_updated_at = ?,
         playlist_exp_date = ?,
         playlist_status = ?,
-        playlist_max_cons = ?
+        playlist_max_cons = ?,
+        owner_id = CASE WHEN ? = 1 THEN ? ELSE owner_id END
        WHERE id = ?`,
       [
         finalName,
@@ -445,6 +697,8 @@ router.post('/devices/:id/playlist', async (req, res) => {
         expDate,
         plStatus,
         maxCons,
+        parsedOwner !== undefined ? 1 : 0,
+        parsedOwner !== undefined ? parsedOwner : null,
         req.params.id
       ]
     );
@@ -466,6 +720,11 @@ router.post('/devices/:id/playlist', async (req, res) => {
 // 6. Consultar / Atualizar validade da playlist sob demanda
 router.post('/devices/:id/check-validity', async (req, res) => {
   try {
+    const allowed = await canAccessDevice(req.user, req.params.id);
+    if (!allowed) {
+      return res.status(403).json({ success: false, error: 'Acesso negado a este dispositivo.' });
+    }
+
     const devRes = await db.query('SELECT * FROM devices WHERE id = ?', [req.params.id]);
     if (devRes.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Dispositivo não encontrado' });
@@ -510,6 +769,11 @@ router.post('/devices/:id/check-validity', async (req, res) => {
 // 7. Enviar mensagem push para tela do dispositivo
 router.post('/devices/:id/message', async (req, res) => {
   try {
+    const allowed = await canAccessDevice(req.user, req.params.id);
+    if (!allowed) {
+      return res.status(403).json({ success: false, error: 'Acesso negado a este dispositivo.' });
+    }
+
     const { message, type } = req.body;
     const msgId = 'msg_' + Date.now();
     await db.query(
@@ -522,15 +786,75 @@ router.post('/devices/:id/message', async (req, res) => {
   }
 });
 
+// 7.1 Enviar alerta de vencimento sob demanda para a TV/WhatsApp do cliente
+router.post('/devices/:id/expiry-reminder', async (req, res) => {
+  try {
+    const allowed = await canAccessDevice(req.user, req.params.id);
+    if (!allowed) {
+      return res.status(403).json({ success: false, error: 'Acesso negado a este dispositivo.' });
+    }
+
+    const devRes = await db.query('SELECT * FROM devices WHERE id = ?', [req.params.id]);
+    if (devRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Dispositivo não encontrado' });
+    }
+    const dev = devRes.rows[0];
+
+    const cfg = await getSettings();
+    const daysLeft = calculateDaysRemaining(dev.playlist_exp_date);
+    const daysStr = daysLeft !== null ? String(daysLeft) : '?';
+    const dateStr = dev.playlist_exp_date || 'em breve';
+
+    const messageText = (cfg.auto_expiry_message || 'Olá {{nome}}! Sua assinatura vence em {{dias}} dia(s) (no dia {{data}}). Renove para continuar assistindo!')
+      .replace(/\{\{nome\}\}/g, dev.client_name || dev.name || 'Cliente')
+      .replace(/\{\{dias\}\}/g, daysStr)
+      .replace(/\{\{data\}\}/g, dateStr)
+      .replace(/\{\{aparelho\}\}/g, dev.model || 'sua TV');
+
+    const msgId = 'exp_manual_' + Date.now();
+    await db.query(
+      'UPDATE devices SET message = ?, message_id = ?, message_type = ?, last_expiry_notified_at = ? WHERE id = ?',
+      [messageText, msgId, 'warning', Date.now(), dev.id]
+    );
+
+    let sentWa = false;
+    if (dev.client_phone && cfg.whatsapp_api_url && cfg.whatsapp_api_token) {
+      try {
+        await sendWhatsAppMessage({
+          apiUrl: cfg.whatsapp_api_url,
+          apiToken: cfg.whatsapp_api_token,
+          phone: dev.client_phone,
+          message: messageText
+        });
+        sentWa = true;
+      } catch (e) {
+        console.warn('[Manual Expiry WA Error]', e.message);
+      }
+    }
+
+    res.json({ success: true, message: messageText, sentWa, daysLeft });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 8. Enviar mensagem em massa (Broadcast)
 router.post('/devices/broadcast-message', async (req, res) => {
   try {
     const { message, type } = req.body;
     const msgId = 'broadcast_' + Date.now();
-    await db.query(
-      'UPDATE devices SET message = ?, message_id = ?, message_type = ? WHERE status = ?',
-      [message, msgId, type || 'info', 'active']
-    );
+
+    if (req.user.role === 'admin') {
+      await db.query(
+        'UPDATE devices SET message = ?, message_id = ?, message_type = ? WHERE status = ?',
+        [message, msgId, type || 'info', 'active']
+      );
+    } else {
+      await db.query(
+        'UPDATE devices SET message = ?, message_id = ?, message_type = ? WHERE status = ? AND owner_id = ?',
+        [message, msgId, type || 'info', 'active', req.user.id]
+      );
+    }
     res.json({ success: true, messageId: msgId });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -540,6 +864,11 @@ router.post('/devices/broadcast-message', async (req, res) => {
 // 9. Remover dispositivo
 router.delete('/devices/:id', async (req, res) => {
   try {
+    const allowed = await canAccessDevice(req.user, req.params.id);
+    if (!allowed) {
+      return res.status(403).json({ success: false, error: 'Acesso negado a este dispositivo.' });
+    }
+
     await db.query('DELETE FROM devices WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
@@ -558,7 +887,7 @@ router.get('/ota', async (req, res) => {
 });
 
 // 11. Registrar nova versão OTA manualmente
-router.post('/ota', async (req, res) => {
+router.post('/ota', requireAdmin, async (req, res) => {
   try {
     const { versionName, versionCode, downloadUrl, changelog, mandatory } = req.body;
     if (!versionName || !versionCode || !downloadUrl) {
@@ -577,7 +906,7 @@ router.post('/ota', async (req, res) => {
 });
 
 // 12. Upload direto do APK para servir via OTA (com extração automática de versão)
-router.post('/ota/upload', upload.single('apk'), async (req, res) => {
+router.post('/ota/upload', requireAdmin, upload.single('apk'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'Nenhum arquivo APK enviado.' });
@@ -631,7 +960,7 @@ router.post('/ota/upload', upload.single('apk'), async (req, res) => {
 });
 
 // 13. Excluir versão OTA e arquivo físico se existir
-router.delete('/ota/:id', async (req, res) => {
+router.delete('/ota/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const findRes = await db.query('SELECT * FROM ota_updates WHERE id = ?', [id]);
@@ -663,7 +992,7 @@ router.delete('/ota/:id', async (req, res) => {
 });
 
 // 14. Listar solicitações de teste geradas
-router.get('/tests', async (req, res) => {
+router.get('/tests', requireAdmin, async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM test_requests ORDER BY created_at DESC LIMIT 150');
     res.json({ success: true, tests: result.rows });
@@ -673,7 +1002,7 @@ router.get('/tests', async (req, res) => {
 });
 
 // 15. Excluir registro de teste
-router.delete('/tests/:id', async (req, res) => {
+router.delete('/tests/:id', requireAdmin, async (req, res) => {
   try {
     await db.query('DELETE FROM test_requests WHERE id = ?', [req.params.id]);
     res.json({ success: true });

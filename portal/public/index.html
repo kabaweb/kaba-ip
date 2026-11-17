@@ -205,6 +205,7 @@
                   <th class="py-4 px-5">Status</th>
                   <th class="py-4 px-5">Código de Ativação</th>
                   <th class="py-4 px-5">Dispositivo / Nome</th>
+                  <th class="py-4 px-5">Responsável</th>
                   <th class="py-4 px-5">MAC / ID</th>
                   <th class="py-4 px-5">IP / App</th>
                   <th class="py-4 px-5">Playlist</th>
@@ -216,7 +217,7 @@
               </thead>
               <tbody id="devices-tbody" class="divide-y divide-gray-800/60 text-gray-200">
                 <tr>
-                  <td colspan="10" class="text-center py-12 text-gray-500">Carregando dispositivos...</td>
+                  <td colspan="11" class="text-center py-12 text-gray-500">Carregando dispositivos...</td>
                 </tr>
               </tbody>
             </table>
@@ -530,6 +531,39 @@
             </div>
           </div>
 
+          <!-- CARD 5: GERENCIAMENTO DE OPERADORES & ACESSOS DO PORTAL -->
+          <div id="card-users-management" class="glass rounded-2xl p-6 border border-gray-800 space-y-4 lg:col-span-3">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-800 pb-3">
+              <div class="flex items-center gap-2 text-white">
+                <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">👥</div>
+                <div>
+                  <h2 class="text-base font-bold">Operadores & Controle de Acessos</h2>
+                  <p class="text-xs text-gray-400">Cadastre operadores com permissão para gerenciar clientes, vincular listas e enviar alertas</p>
+                </div>
+              </div>
+              <button onclick="openUserModal()" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/25 flex items-center gap-1.5 transition">
+                <span>➕</span> Novo Operador / Usuário
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="border-b border-gray-800 text-gray-400 font-semibold bg-surface-900/40">
+                    <th class="py-3 px-4">Nome</th>
+                    <th class="py-3 px-4">Usuário (Login)</th>
+                    <th class="py-3 px-4">Nível de Acesso</th>
+                    <th class="py-3 px-4">Cadastrado em</th>
+                    <th class="py-3 px-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="users-tbody" class="divide-y divide-gray-800/60">
+                  <tr><td colspan="5" class="text-center py-6 text-gray-500">Carregando usuários...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -702,10 +736,23 @@
           <input type="text" id="edit-device-name" placeholder="ex: João Silva - Sala" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
         </div>
 
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block font-medium text-gray-300 mb-1">Telefone / WhatsApp (com DDD)</label>
+            <input type="tel" id="edit-device-phone" placeholder="ex: 5581988985300" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+          </div>
+          <div>
+            <label class="block font-medium text-gray-300 mb-1">Data de Vencimento</label>
+            <input type="text" id="edit-device-exp" placeholder="DD/MM/AAAA" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+          </div>
+        </div>
+
         <div>
-          <label class="block font-medium text-gray-300 mb-1">Telefone / WhatsApp (com DDD)</label>
-          <input type="tel" id="edit-device-phone" placeholder="ex: 5581988985300" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
-          <p class="text-[11px] text-gray-400 mt-1">Usado nas automações para envio de avisos de vencimento e renovação.</p>
+          <label class="block font-medium text-gray-300 mb-1">Responsável pelo Dispositivo</label>
+          <select id="edit-device-owner" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+            <option value="">Livre (Sem responsável / Visível para todos)</option>
+          </select>
+          <p class="text-[11px] text-gray-400 mt-1">Quando atribuído a um operador, fica visível apenas para ele e administradores.</p>
         </div>
 
         <div>
@@ -777,6 +824,18 @@
           <div>
             <label class="block font-medium text-gray-400 mb-1">WhatsApp (com DDD)</label>
             <input type="tel" id="playlist-client-phone" placeholder="ex: 5581988985300" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block font-medium text-gray-400 mb-1">Responsável pelo Dispositivo</label>
+            <select id="playlist-owner-id" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+              <option value="">Livre (Sem responsável)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-medium text-gray-400 mb-1">Vencimento Manual (Opcional)</label>
+            <input type="text" id="playlist-exp-manual" placeholder="DD/MM/AAAA (ou auto via Xtream)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
           </div>
         </div>
         <div>
@@ -872,6 +931,18 @@
               <input type="tel" id="link-client-phone" placeholder="ex: 5581988985300" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
             </div>
           </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-gray-400 mb-1">Responsável pelo Aparelho</label>
+              <select id="link-owner-id" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+                <option value="">Livre (Sem responsável)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-gray-400 mb-1">Vencimento Manual (Opcional)</label>
+              <input type="text" id="link-exp-manual" placeholder="DD/MM/AAAA" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+            </div>
+          </div>
           <div>
             <label class="block text-gray-400 mb-1">Observações / Login / Anotações</label>
             <input type="text" id="link-client-notes" placeholder="ex: Login do Painel / Plano / Dispositivo" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
@@ -937,6 +1008,47 @@
           </a>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CRIAR / EDITAR USUÁRIO OU OPERADOR -->
+  <div id="user-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="glass rounded-2xl border border-indigo-500/30 max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <div>
+          <h3 id="user-modal-title" class="text-lg font-bold text-white">Novo Operador / Usuário</h3>
+          <p class="text-xs text-gray-400">Defina os dados de login e nível de acesso</p>
+        </div>
+        <button onclick="closeModal('user-modal')" class="text-gray-400 hover:text-white">&times;</button>
+      </div>
+
+      <form id="user-form" onsubmit="saveUser(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="user-id-input">
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">Nome Completo</label>
+          <input type="text" id="user-name-input" required placeholder="ex: Rodrigo Suporte" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">Nome de Usuário (Login)</label>
+          <input type="text" id="user-username-input" required placeholder="ex: rodrigo" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">Senha <span id="user-pass-hint" class="text-gray-400 font-normal"></span></label>
+          <input type="password" id="user-password-input" placeholder="••••••••" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block font-medium text-gray-300 mb-1">Função / Nível de Acesso</label>
+          <select id="user-role-input" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none">
+            <option value="operator">Operador (Acesso restrito a dispositivos atribuídos e novos sem dono)</option>
+            <option value="admin">Administrador (Acesso total a configurações, OTA e todos clientes)</option>
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3">
+          <button type="button" onclick="closeModal('user-modal')" class="px-4 py-2 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-gray-300">Cancelar</button>
+          <button type="submit" id="user-modal-btn" class="px-5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30">Salvar Usuário</button>
+        </div>
+      </form>
     </div>
   </div>
 

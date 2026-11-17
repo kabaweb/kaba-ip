@@ -1,8 +1,24 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const config = require('../config');
 
 let dbDriver = null;
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password, stored) {
+  if (!stored) return false;
+  const parts = stored.split(':');
+  if (parts.length !== 2) return false;
+  const [salt, hash] = parts;
+  const hashToVerify = crypto.scryptSync(password, salt, 64).toString('hex');
+  return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(hashToVerify));
+}
 
 // Normalize parameters from '?' to '$1, $2, ...' for Postgres
 function toPostgresSql(sql) {
@@ -181,6 +197,17 @@ async function createTables() {
     );
   `;
 
+  const createUsersTable = `
+    CREATE TABLE IF NOT EXISTS portal_users (
+      id ${isPg ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT'},
+      username VARCHAR(100) UNIQUE NOT NULL,
+      password_hash VARCHAR(255) NOT NULL,
+      name VARCHAR(150) NOT NULL,
+      role VARCHAR(20) NOT NULL DEFAULT 'operator',
+      created_at BIGINT NOT NULL
+    );
+  `;
+
   await dbDriver.exec(createDevicesTable);
   await dbDriver.exec(createOtaTable);
   await dbDriver.exec(createSettingsTable);
@@ -188,6 +215,7 @@ async function createTables() {
   await dbDriver.exec(createAccountSyncTable);
   await dbDriver.exec(createTestRequestsTable);
   await dbDriver.exec(createMetadataCacheTable);
+  await dbDriver.exec(createUsersTable);
 
   // Migrações suaves para colunas adicionais
   const alterColumns = [
@@ -202,6 +230,8 @@ async function createTables() {
     'ALTER TABLE devices ADD COLUMN client_name TEXT',
     'ALTER TABLE devices ADD COLUMN notes TEXT',
     'ALTER TABLE devices ADD COLUMN last_expiry_notified_at BIGINT DEFAULT 0',
+    'ALTER TABLE devices ADD COLUMN owner_id INTEGER',
+    'ALTER TABLE devices ADD COLUMN owner_name VARCHAR(150)',
     'ALTER TABLE test_requests ADD COLUMN is_valid_wa INTEGER DEFAULT 0',
     'ALTER TABLE test_requests ADD COLUMN wa_lid VARCHAR(100)'
   ];
@@ -211,6 +241,24 @@ async function createTables() {
     } catch (_) {
       // Ignora se a coluna já existir
     }
+  }
+
+  // Inicializa usuário admin padrão se tabela portal_users estiver vazia
+  try {
+    const userCountRes = await dbDriver.query('SELECT count(*) AS count FROM portal_users');
+    const userCount = parseInt(userCountRes.rows[0]?.count || 0, 10);
+    if (userCount === 0) {
+      const defaultUser = config.adminUser || 'admin';
+      const defaultPass = config.adminPass || 'admin123';
+      const hash = hashPassword(defaultPass);
+      await dbDriver.query(
+        'INSERT INTO portal_users (username, password_hash, name, role, created_at) VALUES (?, ?, ?, ?, ?)',
+        [defaultUser, hash, 'Administrador', 'admin', Date.now()]
+      );
+      console.log(`[DB] Usuário administrador padrão '${defaultUser}' inicializado.`);
+    }
+  } catch (err) {
+    console.warn('[DB] Verificação de usuários padrão:', err.message);
   }
 
   console.log('[DB] Tabelas verificadas/criadas com sucesso.');
@@ -361,5 +409,7 @@ module.exports = {
   query: (sql, params) => dbDriver.query(sql, params),
   exec: (sql) => dbDriver.exec(sql),
   close: () => dbDriver.close(),
-  get driver() { return dbDriver; }
+  get driver() { return dbDriver; },
+  hashPassword,
+  verifyPassword
 };

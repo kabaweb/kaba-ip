@@ -3,6 +3,8 @@ let selectedDeviceId = null;
 let isBroadcast = false;
 let currentPlaylistType = 'xtream';
 let systemSettings = {};
+let currentUser = null;
+let operatorsList = [];
 
 function getPublicBaseUrl() {
   if (systemSettings && systemSettings.portal_public_domain && systemSettings.portal_public_domain.trim()) {
@@ -47,11 +49,17 @@ async function handleLogin(e) {
     }
 
     localStorage.setItem('ipvio_admin_token', data.token);
-    localStorage.setItem('ipvio_admin_username', data.username);
+    localStorage.setItem('ipvio_admin_username', data.username || data.user?.username || username);
+    if (data.user) {
+      currentUser = data.user;
+      localStorage.setItem('ipvio_user_info', JSON.stringify(data.user));
+    }
 
-    showApp();
+    await showApp();
     loadDevices();
-    loadOtaUpdates();
+    if (currentUser?.role === 'admin') {
+      loadOtaUpdates();
+    }
   } catch (err) {
     errBox.innerText = err.message;
     errBox.classList.remove('hidden');
@@ -64,6 +72,8 @@ async function handleLogin(e) {
 function handleLogout() {
   localStorage.removeItem('ipvio_admin_token');
   localStorage.removeItem('ipvio_admin_username');
+  localStorage.removeItem('ipvio_user_info');
+  currentUser = null;
   showLogin();
 }
 
@@ -72,12 +82,59 @@ function showLogin() {
   document.getElementById('app-container').classList.add('hidden');
 }
 
-function showApp() {
+async function showApp() {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app-container').classList.remove('hidden');
-  const user = localStorage.getItem('ipvio_admin_username') || 'admin';
-  document.getElementById('user-display').innerText = user;
-  loadSettings();
+
+  try {
+    const raw = localStorage.getItem('ipvio_user_info');
+    if (raw) currentUser = JSON.parse(raw);
+  } catch (_) {}
+
+  try {
+    const meRes = await fetch('/api/admin/me', { headers: authHeaders() });
+    if (meRes.ok) {
+      const meData = await meRes.json();
+      if (meData.user) {
+        currentUser = meData.user;
+        localStorage.setItem('ipvio_user_info', JSON.stringify(currentUser));
+      }
+    }
+  } catch (_) {}
+
+  currentUser = currentUser || { username: 'admin', role: 'admin' };
+  applyUserRole();
+  await loadOperators();
+
+  if (currentUser.role === 'admin') {
+    loadSettings();
+    loadUsers();
+  }
+}
+
+function applyUserRole() {
+  const user = currentUser || { username: 'admin', role: 'admin' };
+  const userDisplay = document.getElementById('user-display');
+  const roleLabel = user.role === 'admin' ? 'Administrador' : 'Operador';
+  const roleColor = user.role === 'admin' ? 'text-emerald-400' : 'text-indigo-400';
+
+  if (userDisplay) {
+    userDisplay.innerHTML = `${escapeHtml(user.name || user.username)} <span class="block text-[10px] ${roleColor} font-semibold">${roleLabel}</span>`;
+  }
+
+  const tstBtn = document.getElementById('tab-tests-btn');
+  const autBtn = document.getElementById('tab-automations-btn');
+  const otaBtn = document.getElementById('tab-ota-btn');
+
+  if (user.role !== 'admin') {
+    if (tstBtn) tstBtn.classList.add('hidden');
+    if (autBtn) autBtn.classList.add('hidden');
+    if (otaBtn) otaBtn.classList.add('hidden');
+  } else {
+    if (tstBtn) tstBtn.classList.remove('hidden');
+    if (autBtn) autBtn.classList.remove('hidden');
+    if (otaBtn) otaBtn.classList.remove('hidden');
+  }
 }
 
 // Alternar abas
@@ -167,11 +224,37 @@ function getPairingCode(d) {
   return hex.length === 6 ? `${hex.slice(0, 3)}-${hex.slice(3)}` : (hex || '-');
 }
 
+// Carregar lista de operadores
+async function loadOperators() {
+  try {
+    const res = await fetch('/api/admin/operators', { headers: authHeaders() });
+    if (!res.ok) return;
+    const data = await res.json();
+    operatorsList = data.operators || [];
+
+    const selects = ['edit-device-owner', 'playlist-owner-id', 'link-owner-id'];
+    selects.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const currentVal = el.value;
+      let html = '<option value="">Livre (Sem responsável / Visível para todos)</option>';
+      operatorsList.forEach(op => {
+        const roleBadge = op.role === 'admin' ? ' (Admin)' : ' (Operador)';
+        html += `<option value="${op.id}">${escapeHtml(op.name || op.username)}${roleBadge}</option>`;
+      });
+      el.innerHTML = html;
+      el.value = currentVal;
+    });
+  } catch (err) {
+    console.warn('Erro ao carregar lista de operadores:', err);
+  }
+}
+
 // Renderizar tabela de dispositivos
 function renderDevices(list) {
   const tbody = document.getElementById('devices-tbody');
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-12 text-gray-500">Nenhum dispositivo registrado ainda.<br><span class="text-xs text-gray-600">Abra o app Korp TV no Android conectado a este portal.</span></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="text-center py-12 text-gray-500">Nenhum dispositivo registrado ainda.<br><span class="text-xs text-gray-600">Abra o app Korp TV no Android conectado a este portal.</span></td></tr>`;
     return;
   }
 
@@ -187,6 +270,14 @@ function renderDevices(list) {
       statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><span class="w-2 h-2 rounded-full bg-emerald-500 badge-pulse"></span> Online</span>`;
     } else {
       statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-500/10 text-gray-400 border border-gray-500/20"><span class="w-2 h-2 rounded-full bg-gray-500"></span> Offline</span>`;
+    }
+
+    const ownerName = d.owner_name || d.owner_username;
+    let ownerBadge = '';
+    if (ownerName) {
+      ownerBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-semibold" title="Gerenciado por ${escapeHtml(ownerName)}"><span>👤</span> ${escapeHtml(ownerName)}</span>`;
+    } else {
+      ownerBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-gray-800 text-gray-400 text-xs italic">Livre</span>`;
     }
 
     let plBadge = '<span class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 text-xs font-semibold border border-amber-500/20">Sem Lista</span>';
@@ -289,6 +380,7 @@ function renderDevices(list) {
           ${notesHtml}
           <div class="text-xs text-gray-400 mt-0.5">${escapeHtml(d.model || 'Android TV')}</div>
         </td>
+        <td class="py-4 px-5 whitespace-nowrap">${ownerBadge}</td>
         <td class="py-4 px-5">
           <div class="font-mono text-xs text-gray-200 flex items-center gap-1.5">
             ${escapeHtml(d.mac || d.id)}
@@ -315,6 +407,9 @@ function renderDevices(list) {
           </button>
           <button onclick="openMessageModal('${d.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface-700 hover:bg-yellow-600 text-gray-200 hover:text-white transition" title="Enviar Mensagem">
             Mensagem
+          </button>
+          <button onclick="triggerExpiryReminder('${d.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black transition" title="Enviar Aviso de Vencimento para a TV">
+            🔔 Aviso
           </button>
           <button onclick="toggleBlock('${d.id}', '${d.status}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg ${isBlocked ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-red-900/40 hover:bg-red-800 text-red-300'} transition" title="${isBlocked ? 'Desbloquear' : 'Bloquear'}">
             ${isBlocked ? 'Desbloquear' : 'Bloquear'}
@@ -370,7 +465,7 @@ async function refreshValidity(id) {
   }
 }
 
-// Modal de Edição de Cliente (Nome, WhatsApp e Notas)
+// Modal de Edição de Cliente (Nome, WhatsApp, Notas, Responsável e Vencimento)
 let editingDeviceId = null;
 function openEditDeviceModal(id) {
   editingDeviceId = id;
@@ -379,6 +474,17 @@ function openEditDeviceModal(id) {
   document.getElementById('edit-device-name').value = dev?.client_name || dev?.name || '';
   document.getElementById('edit-device-phone').value = dev?.client_phone || '';
   document.getElementById('edit-device-notes').value = dev?.notes || '';
+
+  const ownerSelect = document.getElementById('edit-device-owner');
+  if (ownerSelect) {
+    ownerSelect.value = dev?.owner_id !== null && dev?.owner_id !== undefined ? String(dev.owner_id) : '';
+  }
+
+  const expInput = document.getElementById('edit-device-exp');
+  if (expInput) {
+    expInput.value = dev?.playlist_exp_date || '';
+  }
+
   document.getElementById('edit-device-modal').classList.remove('hidden');
 }
 
@@ -387,15 +493,51 @@ async function saveDeviceEdit() {
   const name = document.getElementById('edit-device-name').value.trim();
   const phone = document.getElementById('edit-device-phone').value.trim();
   const notes = document.getElementById('edit-device-notes').value.trim();
+  const ownerId = document.getElementById('edit-device-owner')?.value;
+  const expDate = document.getElementById('edit-device-exp')?.value.trim();
 
   await fetch(`/api/admin/devices/${editingDeviceId}`, {
     method: 'PUT',
     headers: authHeaders(),
-    body: JSON.stringify({ name, clientName: name, clientPhone: phone, notes })
+    body: JSON.stringify({
+      name,
+      clientName: name,
+      clientPhone: phone,
+      notes,
+      ownerId: ownerId !== undefined ? ownerId : undefined,
+      expDate: expDate || undefined
+    })
   });
 
   closeModal('edit-device-modal');
   loadDevices();
+}
+
+// Lembrete manual de vencimento para a tela do cliente
+async function triggerExpiryReminder(id) {
+  const dev = devices.find(d => d.id === id);
+  const clientName = dev?.client_name || dev?.name || 'Cliente';
+  if (!confirm(`Deseja enviar um alerta de vencimento para a tela da TV de "${clientName}"?`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/devices/${id}/expiry-reminder`, {
+      method: 'POST',
+      headers: authHeaders()
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      let msg = `✅ Lembrete de vencimento enviado para a TV!\n\nMensagem na tela:\n"${data.message}"`;
+      if (data.sentWa) {
+        msg += `\n\n✓ Enviado também via WhatsApp!`;
+      }
+      alert(msg);
+      loadDevices();
+    } else {
+      alert(`Erro ao enviar aviso: ${data.error || 'Falha na requisição'}`);
+    }
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
 }
 
 // Renomear Dispositivo (compatibilidade)
@@ -449,6 +591,12 @@ function openPlaylistModal(id) {
   if (document.getElementById('playlist-client-notes')) {
     document.getElementById('playlist-client-notes').value = dev?.notes || '';
   }
+  if (document.getElementById('playlist-owner-id')) {
+    document.getElementById('playlist-owner-id').value = dev?.owner_id !== null && dev?.owner_id !== undefined ? String(dev.owner_id) : '';
+  }
+  if (document.getElementById('playlist-exp-manual')) {
+    document.getElementById('playlist-exp-manual').value = dev?.playlist_exp_date || '';
+  }
 
   document.getElementById('playlist-modal').classList.remove('hidden');
 }
@@ -485,7 +633,9 @@ async function savePlaylist() {
     clientName: document.getElementById('playlist-client-name')?.value.trim() || '',
     name: document.getElementById('playlist-client-name')?.value.trim() || '',
     clientPhone: document.getElementById('playlist-client-phone')?.value.trim() || '',
-    notes: document.getElementById('playlist-client-notes')?.value.trim() || ''
+    notes: document.getElementById('playlist-client-notes')?.value.trim() || '',
+    ownerId: document.getElementById('playlist-owner-id')?.value,
+    expDate: document.getElementById('playlist-exp-manual')?.value.trim() || undefined
   };
 
   const res = await fetch(`/api/admin/devices/${selectedDeviceId}/playlist`, {
@@ -561,6 +711,19 @@ function openLinkCodeModal(prefillCode = '') {
   if (document.getElementById('link-client-name')) document.getElementById('link-client-name').value = '';
   if (document.getElementById('link-client-phone')) document.getElementById('link-client-phone').value = '';
   if (document.getElementById('link-client-notes')) document.getElementById('link-client-notes').value = '';
+
+  const ownerSelect = document.getElementById('link-owner-id');
+  if (ownerSelect) {
+    if (currentUser && currentUser.role !== 'admin') {
+      ownerSelect.value = String(currentUser.id);
+    } else {
+      ownerSelect.value = '';
+    }
+  }
+  if (document.getElementById('link-exp-manual')) {
+    document.getElementById('link-exp-manual').value = '';
+  }
+
   document.getElementById('link-modal').classList.remove('hidden');
   if (!prefillCode) {
     document.getElementById('link-code-input').focus();
@@ -581,6 +744,8 @@ async function submitLinkByCode() {
   const name = document.getElementById('link-client-name')?.value.trim() || '';
   const phone = document.getElementById('link-client-phone')?.value.trim() || '';
   const notes = document.getElementById('link-client-notes')?.value.trim() || '';
+  const ownerId = document.getElementById('link-owner-id')?.value;
+  const expDate = document.getElementById('link-exp-manual')?.value.trim();
 
   if (!code) return alert('Por favor, informe o Código de Ativação do aparelho.');
   if (!host || !user || !pass) return alert('Por favor, preencha o Servidor (ou defina a URL Padrão nas Configurações), Usuário e Senha.');
@@ -601,7 +766,9 @@ async function submitLinkByCode() {
         pass,
         name,
         phone,
-        notes
+        notes,
+        ownerId: ownerId !== undefined ? ownerId : undefined,
+        expDate: expDate || undefined
       })
     });
 
@@ -1396,6 +1563,164 @@ async function clearOmdbCache() {
     });
     alert('Cache do OMDb limpo com sucesso!');
     loadMetadataStats();
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+// -------------------------------------------------------------
+// GERENCIAMENTO DE USUÁRIOS & OPERADORES
+// -------------------------------------------------------------
+let usersList = [];
+
+async function loadUsers() {
+  const tbody = document.getElementById('users-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-500">Carregando usuários...</td></tr>';
+
+  try {
+    const res = await fetch('/api/admin/users', { headers: authHeaders() });
+    if (!res.ok) {
+      if (res.status === 403) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-500">Apenas administradores podem gerenciar usuários.</td></tr>';
+      }
+      return;
+    }
+    const data = await res.json();
+    usersList = data.users || [];
+
+    if (usersList.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-500">Nenhum operador ou usuário cadastrado.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = usersList.map(u => {
+      const isAdm = u.role === 'admin';
+      const roleBadge = isAdm
+        ? '<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Administrador</span>'
+        : '<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/15 text-indigo-400 border border-indigo-500/20">Operador</span>';
+
+      const createdAtStr = u.created_at ? new Date(Number(u.created_at)).toLocaleDateString('pt-BR') : '-';
+      const isSelf = currentUser && currentUser.id === u.id;
+
+      return `
+        <tr class="hover:bg-surface-800/40 transition">
+          <td class="py-3 px-4 font-bold text-white">${escapeHtml(u.name || '-')}</td>
+          <td class="py-3 px-4 font-mono text-cyan-400 font-semibold">${escapeHtml(u.username)}</td>
+          <td class="py-3 px-4">${roleBadge}</td>
+          <td class="py-3 px-4 text-gray-400 font-mono">${createdAtStr}</td>
+          <td class="py-3 px-4 text-right space-x-1 whitespace-nowrap">
+            <button onclick="openUserModal(${u.id})" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface-700 hover:bg-indigo-600 text-gray-200 hover:text-white transition" title="Editar Usuário">
+              Editar
+            </button>
+            ${isSelf ? '' : `
+              <button onclick="deleteUser(${u.id}, '${escapeHtml(u.username)}')" class="p-1 text-xs text-gray-500 hover:text-red-400 transition" title="Excluir Usuário">
+                <svg class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              </button>
+            `}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('Erro ao listar usuários:', err);
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-red-400">Erro: ${err.message}</td></tr>`;
+  }
+}
+
+function openUserModal(userId = null) {
+  const modal = document.getElementById('user-modal');
+  const title = document.getElementById('user-modal-title');
+  const idInput = document.getElementById('user-id-input');
+  const nameInput = document.getElementById('user-name-input');
+  const userInput = document.getElementById('user-username-input');
+  const passInput = document.getElementById('user-password-input');
+  const passHint = document.getElementById('user-pass-hint');
+  const roleInput = document.getElementById('user-role-input');
+
+  if (userId) {
+    const user = usersList.find(u => u.id === userId);
+    if (!user) return;
+    title.innerText = `Editar Usuário (${user.username})`;
+    idInput.value = user.id;
+    nameInput.value = user.name || '';
+    userInput.value = user.username || '';
+    passInput.value = '';
+    passInput.required = false;
+    passHint.innerText = '(deixe em branco para manter a atual)';
+    roleInput.value = user.role || 'operator';
+  } else {
+    title.innerText = 'Novo Operador / Usuário';
+    idInput.value = '';
+    nameInput.value = '';
+    userInput.value = '';
+    passInput.value = '';
+    passInput.required = true;
+    passHint.innerText = '(obrigatória)';
+    roleInput.value = 'operator';
+  }
+
+  modal.classList.remove('hidden');
+}
+
+async function saveUser(e) {
+  e.preventDefault();
+  const id = document.getElementById('user-id-input').value;
+  const name = document.getElementById('user-name-input').value.trim();
+  const username = document.getElementById('user-username-input').value.trim();
+  const password = document.getElementById('user-password-input').value.trim();
+  const role = document.getElementById('user-role-input').value;
+  const btn = document.getElementById('user-modal-btn');
+
+  btn.disabled = true;
+  btn.innerText = 'Salvando...';
+
+  try {
+    const isEdit = Boolean(id);
+    const url = isEdit ? `/api/admin/users/${id}` : '/api/admin/users';
+    const method = isEdit ? 'PUT' : 'POST';
+
+    const payload = { name, username, role };
+    if (password) payload.password = password;
+
+    const res = await fetch(url, {
+      method,
+      headers: authHeaders(),
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Erro ao salvar usuário.');
+    }
+
+    closeModal('user-modal');
+    loadUsers();
+    loadOperators();
+    alert(isEdit ? 'Usuário atualizado com sucesso!' : 'Novo usuário cadastrado com sucesso!');
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Salvar Usuário';
+  }
+}
+
+async function deleteUser(id, username) {
+  if (!confirm(`Tem certeza que deseja excluir o usuário "${username}"?`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/users/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Erro ao excluir usuário.');
+    }
+    loadUsers();
+    loadOperators();
+    loadDevices();
   } catch (err) {
     alert('Erro: ' + err.message);
   }

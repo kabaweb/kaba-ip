@@ -73,19 +73,32 @@ async function migrateAllClientsUrl(rawNewUrl) {
   };
 }
 
-// Analisa a data de expiração (formato DD/MM/AAAA) e retorna dias restantes (-1 se já venceu ou inválido)
+// Analisa a data de expiração (formato DD/MM/AAAA ou AAAA-MM-DD) e retorna dias restantes
 function calculateDaysRemaining(expStr) {
   if (!expStr || typeof expStr !== 'string') return null;
   if (expStr.toLowerCase().includes('ilimitado')) return null;
 
-  const parts = expStr.trim().split('/');
-  if (parts.length === 3) {
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
-    const year = parseInt(parts[2], 10);
-    const expDate = new Date(year, month, day, 23, 59, 59);
-    const diffMs = expDate.getTime() - Date.now();
-    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const trimmed = expStr.trim().split(' ')[0];
+  if (trimmed.includes('/')) {
+    const parts = trimmed.split('/');
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      const expDate = new Date(year, month, day, 23, 59, 59);
+      const diffMs = expDate.getTime() - Date.now();
+      return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    }
+  } else if (trimmed.includes('-')) {
+    const parts = trimmed.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const expDate = new Date(year, month, day, 23, 59, 59);
+      const diffMs = expDate.getTime() - Date.now();
+      return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    }
   }
   return null;
 }
@@ -178,5 +191,6 @@ module.exports = {
   getSettings,
   saveSettings,
   migrateAllClientsUrl,
+  calculateDaysRemaining,
   runExpiryAutomations
 };
