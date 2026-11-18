@@ -1,16 +1,21 @@
 package com.ipvio.stream.shared.parser
 
-import com.ipvio.stream.shared.model.Episode
 import com.ipvio.stream.shared.model.Item
 import com.ipvio.stream.shared.model.Kind
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
 
+/**
+ * Classificador idêntico ao Android M3uParser original:
+ * 1. URLs com '/series/' ou padrão 'S01E01' -> SÉRIES
+ * 2. URLs com '/movie/' ou extensão .mp4 / .mkv / .avi -> FILMES
+ * 3. Canais ao vivo com .ts ou m3u8 (mesmo que o nome da categoria seja 'FILMES E SERIES') -> AO VIVO
+ */
 object SharedM3uParser {
     private val SE_RE = Regex("""^(.*?)[\s._-]*[Ss](\d{1,2})[\s._-]*[Ee](\d{1,4})""")
     private val YEAR_RE = Regex("""[\(\[]((?:19|20)\d{2})[\)\]]""")
-    private val VOD_GROUP = Regex("""film|movie|vod|kino|cinema""", RegexOption.IGNORE_CASE)
+    private val VIDEO_FILE_RE = Regex("""\.(mp4|mkv|avi)(\?.*)?$""", RegexOption.IGNORE_CASE)
 
     private fun attr(line: String, key: String): String? {
         val tag = "$key=\""
@@ -39,13 +44,17 @@ object SharedM3uParser {
                     val inf = info
                     val n = name
                     if (inf != null && n != null) {
-                        val isSeries = line.contains("/series/") || SE_RE.containsMatchIn(n)
-                        val isMovie = line.contains("/movie/") || VOD_GROUP.containsMatchIn(group)
+                        // Classificação exata do Android:
+                        val isSeriesUrl = line.contains("/series/")
+                        val hasSeasonEpisode = SE_RE.containsMatchIn(n)
+                        val isMovieUrl = line.contains("/movie/") || VIDEO_FILE_RE.containsMatchIn(line)
+
                         val kind = when {
-                            isSeries -> Kind.SERIES
-                            isMovie -> Kind.MOVIE
-                            else -> Kind.LIVE
+                            isSeriesUrl || hasSeasonEpisode -> Kind.SERIES
+                            isMovieUrl -> Kind.MOVIE
+                            else -> Kind.LIVE // Canais de TV .ts mesmo se a categoria for "FILMES E SERIES"
                         }
+
                         val logo = attr(inf, "tvg-logo")?.ifBlank { null }
                         val tvgId = attr(inf, "tvg-id")?.ifBlank { null }
                         val year = YEAR_RE.find(n)?.groupValues?.get(1)?.toIntOrNull()
