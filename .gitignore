@@ -24,3 +24,9 @@ docs/screenshots/*.png
 
 # Pasta temporaria de transferencia para o servidor
 transferencia/
+
+# Listas de exemplo e dados sensiveis (NUNCA SUBIR)
+lista-exemplo/
+*.m3u
+*.m3u8
+
