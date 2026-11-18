@@ -65,7 +65,7 @@ async function handleLogin(e) {
     errBox.classList.remove('hidden');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = `<span>Acessar Painel</span><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>`;
+    btn.innerHTML = `<span>Acessar Painel</span><i class="bi bi-arrow-right"></i>`;
   }
 }
 
@@ -116,10 +116,10 @@ function applyUserRole() {
   const user = currentUser || { username: 'admin', role: 'admin' };
   const userDisplay = document.getElementById('user-display');
   const roleLabel = user.role === 'admin' ? 'Administrador' : 'Operador';
-  const roleColor = user.role === 'admin' ? 'text-emerald-400' : 'text-indigo-400';
+  const roleBadge = user.role === 'admin' ? 'badge bg-success-subtle text-success border border-success-subtle' : 'badge bg-info-subtle text-info border border-info-subtle';
 
   if (userDisplay) {
-    userDisplay.innerHTML = `${escapeHtml(user.name || user.username)} <span class="block text-[10px] ${roleColor} font-semibold">${roleLabel}</span>`;
+    userDisplay.innerHTML = `<div class="fw-bold text-white small">${escapeHtml(user.name || user.username)}</div><span class="${roleBadge} rounded-pill" style="font-size: 0.65rem;">${roleLabel}</span>`;
   }
 
   const tstBtn = document.getElementById('tab-tests-btn');
@@ -139,43 +139,21 @@ function applyUserRole() {
 
 // Alternar abas
 function switchTab(tab) {
-  const devSec = document.getElementById('section-devices');
-  const tstSec = document.getElementById('section-tests');
-  const autSec = document.getElementById('section-automations');
-  const otaSec = document.getElementById('section-ota');
-  const devBtn = document.getElementById('tab-devices-btn');
-  const tstBtn = document.getElementById('tab-tests-btn');
-  const autBtn = document.getElementById('tab-automations-btn');
-  const otaBtn = document.getElementById('tab-ota-btn');
-
-  devSec.classList.add('hidden');
-  if (tstSec) tstSec.classList.add('hidden');
-  autSec.classList.add('hidden');
-  otaSec.classList.add('hidden');
-
-  const inactiveClass = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white';
-  const activeClass = 'px-4 py-1.5 text-sm font-medium rounded-lg transition-all bg-brand-600 text-white shadow';
-
-  devBtn.className = inactiveClass;
-  if (tstBtn) tstBtn.className = inactiveClass;
-  autBtn.className = inactiveClass;
-  otaBtn.className = inactiveClass;
+  const tabs = ['devices', 'tests', 'automations', 'ota'];
+  tabs.forEach(t => {
+    const btn = document.getElementById(`tab-${t}-btn`);
+    const sec = document.getElementById(`section-${t}`);
+    if (btn) btn.classList.toggle('active', t === tab);
+    if (sec) sec.classList.toggle('hidden', t !== tab);
+  });
 
   if (tab === 'devices') {
-    devSec.classList.remove('hidden');
-    devBtn.className = activeClass;
     loadDevices();
   } else if (tab === 'tests') {
-    if (tstSec) tstSec.classList.remove('hidden');
-    if (tstBtn) tstBtn.className = activeClass;
     loadTests();
   } else if (tab === 'automations') {
-    autSec.classList.remove('hidden');
-    autBtn.className = activeClass;
     loadSettings();
-  } else {
-    otaSec.classList.remove('hidden');
-    otaBtn.className = activeClass;
+  } else if (tab === 'ota') {
     loadOtaUpdates();
   }
 }
@@ -260,175 +238,318 @@ async function loadOperators() {
 // Renderizar tabela de dispositivos
 function renderDevices(list) {
   const tbody = document.getElementById('devices-tbody');
+  const mobileContainer = document.getElementById('devices-mobile-container');
+
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11" class="text-center py-12 text-gray-500">Nenhum dispositivo registrado ainda.<br><span class="text-xs text-gray-600">Abra o app Korp TV no Android conectado a este portal.</span></td></tr>`;
+    const emptyHtml = `Nenhum dispositivo registrado ainda.<br><span class="small text-body-secondary">Abra o app Korp TV no Android conectado a este portal.</span>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="text-center py-5 text-secondary">${emptyHtml}</td></tr>`;
+    if (mobileContainer) {
+      mobileContainer.innerHTML = `
+        <div class="glass-card p-4 text-center text-secondary">
+          <i class="bi bi-tv fs-2 mb-2 d-block text-secondary opacity-50"></i>
+          ${emptyHtml}
+        </div>
+      `;
+    }
     return;
   }
 
-  tbody.innerHTML = list.map(d => {
-    const isOnline = d.isOnline;
-    const isBlocked = d.status === 'blocked';
-    const pairingCode = getPairingCode(d);
+  // 1. Renderização Desktop (Tabela)
+  if (tbody) {
+    tbody.innerHTML = list.map(d => {
+      const isOnline = d.isOnline;
+      const isBlocked = d.status === 'blocked';
+      const pairingCode = getPairingCode(d);
 
-    let statusBadge = '';
-    if (isBlocked) {
-      statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20"><span class="w-2 h-2 rounded-full bg-red-500"></span> Bloqueado</span>`;
-    } else if (isOnline) {
-      statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><span class="w-2 h-2 rounded-full bg-emerald-500 badge-pulse"></span> Online</span>`;
-    } else {
-      statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-500/10 text-gray-400 border border-gray-500/20"><span class="w-2 h-2 rounded-full bg-gray-500"></span> Offline</span>`;
-    }
-
-    const ownerName = d.owner_name || d.owner_username;
-    let ownerBadge = '';
-    if (ownerName) {
-      ownerBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-semibold" title="Gerenciado por ${escapeHtml(ownerName)}"><span>👤</span> ${escapeHtml(ownerName)}</span>`;
-    } else {
-      ownerBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-gray-800 text-gray-400 text-xs italic">Livre</span>`;
-    }
-
-    const effectivePlType = getEffectivePlaylistType(d);
-    let plBadge = '<span class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 text-xs font-semibold border border-amber-500/20">Sem Lista</span>';
-    if (effectivePlType === 'xtream') {
-      plBadge = `<span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-xs font-mono font-bold" title="${d.xtream_host || ''}">Xtream</span>`;
-    } else if (effectivePlType === 'm3u') {
-      plBadge = `<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 text-xs font-mono font-bold" title="${d.playlist_url || ''}">M3U</span>`;
-    }
-
-    // Assistindo Agora (Now Playing)
-    let nowPlayingBadge = '<span class="text-xs text-gray-500 font-mono">-</span>';
-    if (d.isPlaying && d.currentPlaying) {
-      let typeIcon = '🔴';
-      if (d.currentPlayingType === 'movie') typeIcon = '🎬';
-      else if (d.currentPlayingType === 'series') typeIcon = '🍿';
-      else if (d.currentPlayingType === 'live') typeIcon = '🔴';
-
-      nowPlayingBadge = `
-        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-medium max-w-[200px]" title="${escapeHtml(d.currentPlaying)}">
-          <span>${typeIcon}</span>
-          <span class="truncate font-semibold">${escapeHtml(d.currentPlaying)}</span>
-        </div>
-      `;
-    } else if (d.now_playing && !d.isPlaying) {
-      nowPlayingBadge = `<span class="text-[11px] text-gray-500 truncate max-w-[150px] inline-block" title="Último reproduzido: ${escapeHtml(d.now_playing)}">Pausado (${escapeHtml(d.now_playing.slice(0, 16))}...)</span>`;
-    }
-
-    // Badge de Validade
-    let expBadge = '<span class="text-gray-500 text-xs">-</span>';
-    if (effectivePlType !== 'none') {
-      const expStr = d.playlist_exp_date || 'Não consultada';
-      if (expStr.includes('/')) {
-        // Formato DD/MM/AAAA
-        const parts = expStr.split('/');
-        const expDate = new Date(parts[2], parts[1] - 1, parts[0]);
-        const diffDays = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
-
-        if (diffDays <= 0) {
-          expBadge = `<span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 text-xs font-bold font-mono" title="Vencido">🔴 ${expStr} (Vencida)</span>`;
-        } else if (diffDays <= 5) {
-          expBadge = `<span class="px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-300 text-xs font-bold font-mono" title="Vence em breve">🟡 ${expStr} (${diffDays}d)</span>`;
-        } else {
-          expBadge = `<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-xs font-bold font-mono" title="Válida">🟢 ${expStr} (${diffDays}d)</span>`;
-        }
-      } else if (expStr.toLowerCase().includes('ilimitado')) {
-        expBadge = `<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-xs font-bold font-mono">🟢 Ilimitada</span>`;
+      let statusBadge = '';
+      if (isBlocked) {
+        statusBadge = `<span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle d-inline-flex align-items-center gap-1.5 px-2.5 py-1"><span class="pulse-dot bg-danger"></span> Bloqueado</span>`;
+      } else if (isOnline) {
+        statusBadge = `<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1.5 px-2.5 py-1"><span class="pulse-dot bg-success"></span> Online</span>`;
       } else {
-        expBadge = `<span class="text-xs text-gray-400 font-mono">${escapeHtml(expStr)}</span>`;
+        statusBadge = `<span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle d-inline-flex align-items-center gap-1.5 px-2.5 py-1"><span class="pulse-dot bg-secondary"></span> Offline</span>`;
       }
 
-      expBadge += `
-        <button onclick="refreshValidity('${d.id}')" class="ml-1 text-gray-500 hover:text-cyan-400 inline" title="Verificar validade no provedor agora">
-          <svg class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-        </button>
-      `;
-    }
+      const ownerName = d.owner_name || d.owner_username;
+      let ownerBadge = '';
+      if (ownerName) {
+        ownerBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1" title="Gerenciado por ${escapeHtml(ownerName)}"><i class="bi bi-person me-1"></i>${escapeHtml(ownerName)}</span>`;
+      } else {
+        ownerBadge = `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-0.5">Livre</span>`;
+      }
 
-    let phoneHtml = '';
-    if (d.client_phone) {
-      const cleanPhone = String(d.client_phone).replace(/\D/g, '');
-      phoneHtml = `
-        <div class="mt-0.5">
-          <a href="https://wa.me/${cleanPhone}" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-emerald-400 hover:text-emerald-300 font-mono" title="Abrir conversa no WhatsApp">
-            <span>💬</span> ${escapeHtml(d.client_phone)}
+      const effectivePlType = getEffectivePlaylistType(d);
+      let plBadge = '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-1">Sem Lista</span>';
+      if (effectivePlType === 'xtream') {
+        plBadge = `<span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1 font-monospace" title="${d.xtream_host || ''}">Xtream</span>`;
+      } else if (effectivePlType === 'm3u') {
+        plBadge = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2 py-1 font-monospace" title="${d.playlist_url || ''}">M3U</span>`;
+      }
+
+      // Assistindo Agora (Now Playing)
+      let nowPlayingBadge = '<span class="small text-body-secondary font-monospace">-</span>';
+      if (d.isPlaying && d.currentPlaying) {
+        let typeIcon = '<i class="bi bi-broadcast text-danger"></i>';
+        if (d.currentPlayingType === 'movie') typeIcon = '<i class="bi bi-film text-info"></i>';
+        else if (d.currentPlayingType === 'series') typeIcon = '<i class="bi bi-collection-play text-warning"></i>';
+
+        nowPlayingBadge = `
+          <div class="d-inline-flex align-items-center gap-1.5 px-2.5 py-1 rounded-pill bg-success-subtle border border-success-subtle text-success small" style="max-width: 190px;" title="${escapeHtml(d.currentPlaying)}">
+            <span>${typeIcon}</span>
+            <span class="text-truncate fw-semibold">${escapeHtml(d.currentPlaying)}</span>
+          </div>
+        `;
+      } else if (d.now_playing && !d.isPlaying) {
+        nowPlayingBadge = `<span class="text-secondary small text-truncate d-inline-block" style="max-width: 150px;" title="Último reproduzido: ${escapeHtml(d.now_playing)}">Pausado (${escapeHtml(d.now_playing.slice(0, 16))}...)</span>`;
+      }
+
+      // Badge de Validade
+      let expBadge = '<span class="text-secondary small">-</span>';
+      if (effectivePlType !== 'none') {
+        const expStr = d.playlist_exp_date || 'Não consultada';
+        if (expStr.includes('/')) {
+          const parts = expStr.split('/');
+          const expDate = new Date(parts[2], parts[1] - 1, parts[0]);
+          const diffDays = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
+
+          if (diffDays <= 0) {
+            expBadge = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-1 font-monospace" title="Vencido"><i class="bi bi-x-circle me-1"></i>${expStr} (Vencida)</span>`;
+          } else if (diffDays <= 5) {
+            expBadge = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2 py-1 font-monospace" title="Vence em breve"><i class="bi bi-exclamation-triangle me-1"></i>${expStr} (${diffDays}d)</span>`;
+          } else {
+            expBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 font-monospace" title="Válida"><i class="bi bi-check-circle me-1"></i>${expStr} (${diffDays}d)</span>`;
+          }
+        } else if (expStr.toLowerCase().includes('ilimitado')) {
+          expBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 font-monospace"><i class="bi bi-infinity me-1"></i>Ilimitada</span>`;
+        } else {
+          expBadge = `<span class="badge bg-body-tertiary text-light border border-secondary-subtle rounded-pill px-2 py-1 font-monospace">${escapeHtml(expStr)}</span>`;
+        }
+
+        expBadge += `
+          <button onclick="refreshValidity('${d.id}')" class="btn btn-sm btn-link text-info p-0 ms-1 align-baseline" title="Verificar validade no provedor agora">
+            <i class="bi bi-arrow-repeat"></i>
+          </button>
+        `;
+      }
+
+      let phoneHtml = '';
+      if (d.client_phone) {
+        const cleanPhone = String(d.client_phone).replace(/\D/g, '');
+        phoneHtml = `
+          <div class="mt-0.5">
+            <a href="https://wa.me/${cleanPhone}" target="_blank" class="text-decoration-none d-inline-flex align-items-center gap-1 text-success small font-monospace" title="Abrir conversa no WhatsApp">
+              <i class="bi bi-whatsapp"></i> ${escapeHtml(d.client_phone)}
+            </a>
+          </div>
+        `;
+      }
+
+      let notesHtml = '';
+      if (d.notes) {
+        notesHtml = `
+          <div class="mt-1 text-warning small bg-warning-subtle px-2 py-0.5 rounded border border-warning-subtle text-truncate" style="max-width: 200px;" title="${escapeHtml(d.notes)}">
+            <i class="bi bi-sticky me-1"></i>${escapeHtml(d.notes)}
+          </div>
+        `;
+      }
+
+      const displayName = d.client_name || d.name || 'Sem nome';
+
+      return `
+        <tr>
+          <td>${statusBadge}</td>
+          <td>
+            <div class="d-inline-flex align-items-center gap-1.5 px-2.5 py-1 rounded-3 bg-info-subtle border border-info-subtle text-info font-monospace fw-bold small">
+              <span style="letter-spacing: 0.05em;">${escapeHtml(pairingCode)}</span>
+              <button onclick="navigator.clipboard.writeText('${pairingCode}'); alert('Código ${pairingCode} copiado!')" class="btn btn-sm btn-link text-info p-0 ms-1" title="Copiar Código">
+                <i class="bi bi-clipboard"></i>
+              </button>
+            </div>
+          </td>
+          <td>
+            <div class="fw-bold text-white d-flex align-items-center gap-2">
+              ${escapeHtml(displayName)}
+              <button onclick="openEditDeviceModal('${d.id}')" class="btn btn-sm btn-link text-secondary p-0" title="Editar Nome, WhatsApp e Notas">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </div>
+            ${phoneHtml}
+            ${notesHtml}
+            <div class="text-secondary small mt-0.5" style="font-size: 0.75rem;">${escapeHtml(d.model || 'Android TV')}</div>
+          </td>
+          <td class="text-nowrap">${ownerBadge}</td>
+          <td>
+            <div class="font-monospace small text-light d-flex align-items-center gap-1.5">
+              ${escapeHtml(d.mac || d.id)}
+              <button onclick="navigator.clipboard.writeText('${d.mac || d.id}'); alert('Copiado!')" class="btn btn-sm btn-link text-secondary p-0" title="Copiar">
+                <i class="bi bi-clipboard"></i>
+              </button>
+            </div>
+            <div class="text-body-tertiary font-monospace" style="font-size: 0.7rem;">${escapeHtml(d.id.slice(0, 16))}...</div>
+          </td>
+          <td>
+            <div class="small text-light font-monospace">${escapeHtml(d.ip || '0.0.0.0')}</div>
+            <div class="text-info small fw-medium" style="font-size: 0.72rem;">v${escapeHtml(d.app_version || '1.0')}</div>
+          </td>
+          <td>${plBadge}</td>
+          <td>${nowPlayingBadge}</td>
+          <td class="text-nowrap">${expBadge}</td>
+          <td class="text-secondary small">${formatTimeAgo(d.last_seen)}</td>
+          <td class="text-end text-nowrap">
+            <div class="d-flex align-items-center justify-content-end gap-1">
+              <button onclick="openLinkCodeModal('${escapeHtml(pairingCode)}')" class="btn btn-sm btn-info text-white fw-bold px-2.5 py-1 rounded-pill" title="Vincular Lista por Código">
+                ⚡ Vincular
+              </button>
+              <button onclick="openPlaylistModal('${d.id}')" class="btn btn-sm btn-outline-light px-2.5 py-1 rounded-pill" title="Configurar Playlist">
+                Playlist
+              </button>
+              <button onclick="openMessageModal('${d.id}')" class="btn btn-sm btn-outline-secondary px-2.5 py-1 rounded-pill" title="Enviar Mensagem">
+                Mensagem
+              </button>
+              <button onclick="triggerExpiryReminder('${d.id}')" class="btn btn-sm btn-outline-warning px-2.5 py-1 rounded-pill" title="Enviar Aviso de Vencimento para a TV">
+                🔔 Aviso
+              </button>
+              <button onclick="toggleBlock('${d.id}', '${d.status}')" class="btn btn-sm ${isBlocked ? 'btn-outline-success' : 'btn-outline-danger'} px-2.5 py-1 rounded-pill" title="${isBlocked ? 'Desbloquear' : 'Bloquear'}">
+                ${isBlocked ? 'Desbloquear' : 'Bloquear'}
+              </button>
+              <button onclick="deleteDevice('${d.id}')" class="btn btn-sm btn-link text-danger p-1" title="Excluir">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // 2. Renderização Mobile (Cards Touch-Friendly)
+  if (mobileContainer) {
+    mobileContainer.innerHTML = list.map(d => {
+      const isOnline = d.isOnline;
+      const isBlocked = d.status === 'blocked';
+      const pairingCode = getPairingCode(d);
+      const effectivePlType = getEffectivePlaylistType(d);
+      const displayName = d.client_name || d.name || 'Sem nome';
+
+      let statusBadge = '';
+      if (isBlocked) {
+        statusBadge = `<span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle d-inline-flex align-items-center gap-1 px-2 py-0.5"><span class="pulse-dot bg-danger"></span> Bloqueado</span>`;
+      } else if (isOnline) {
+        statusBadge = `<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1 px-2 py-0.5"><span class="pulse-dot bg-success"></span> Online</span>`;
+      } else {
+        statusBadge = `<span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle d-inline-flex align-items-center gap-1 px-2 py-0.5"><span class="pulse-dot bg-secondary"></span> Offline</span>`;
+      }
+
+      const ownerName = d.owner_name || d.owner_username;
+      let ownerBadge = ownerName
+        ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.7rem;"><i class="bi bi-person me-0.5"></i>${escapeHtml(ownerName)}</span>`
+        : `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.7rem;">Livre</span>`;
+
+      let plBadge = '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.7rem;">Sem Lista</span>';
+      if (effectivePlType === 'xtream') {
+        plBadge = `<span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-0.5 font-monospace" style="font-size: 0.7rem;">Xtream</span>`;
+      } else if (effectivePlType === 'm3u') {
+        plBadge = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2 py-0.5 font-monospace" style="font-size: 0.7rem;">M3U</span>`;
+      }
+
+      let phoneBtn = '';
+      if (d.client_phone) {
+        const cleanPhone = String(d.client_phone).replace(/\D/g, '');
+        phoneBtn = `
+          <a href="https://wa.me/${cleanPhone}" target="_blank" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill" style="font-size: 0.75rem;">
+            <i class="bi bi-whatsapp"></i> ${escapeHtml(d.client_phone)}
           </a>
+        `;
+      }
+
+      let nowPlayingMobile = '';
+      if (d.isPlaying && d.currentPlaying) {
+        nowPlayingMobile = `
+          <div class="d-flex align-items-center gap-1.5 p-2 rounded-3 bg-success-subtle border border-success-subtle text-success small mt-2">
+            <i class="bi bi-broadcast text-danger"></i>
+            <span class="fw-semibold text-truncate">${escapeHtml(d.currentPlaying)}</span>
+          </div>
+        `;
+      }
+
+      let expBadgeMobile = '';
+      if (effectivePlType !== 'none') {
+        const expStr = d.playlist_exp_date || 'Não consultada';
+        expBadgeMobile = `<span class="badge bg-body-tertiary text-light border border-secondary-subtle rounded-pill px-2 py-0.5 font-monospace" style="font-size: 0.7rem;">${escapeHtml(expStr)}</span>`;
+      }
+
+      return `
+        <div class="device-card-mobile shadow-sm">
+          <!-- Topo do Card Mobile -->
+          <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom border-secondary-subtle">
+            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+              ${statusBadge}
+              ${ownerBadge}
+              ${plBadge}
+            </div>
+            <!-- Código de Ativação Mobile -->
+            <div class="d-inline-flex align-items-center gap-1 px-2 py-0.5 rounded-3 bg-info-subtle border border-info-subtle text-info font-monospace fw-bold small">
+              <span>${escapeHtml(pairingCode)}</span>
+              <button onclick="navigator.clipboard.writeText('${pairingCode}'); alert('Código ${pairingCode} copiado!')" class="btn btn-sm btn-link text-info p-0 ms-1" title="Copiar">
+                <i class="bi bi-clipboard"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Informações Principais -->
+          <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+            <div>
+              <div class="fw-bold text-white fs-6 d-flex align-items-center gap-1.5">
+                ${escapeHtml(displayName)}
+                <button onclick="openEditDeviceModal('${d.id}')" class="btn btn-sm btn-link text-secondary p-0" title="Editar">
+                  <i class="bi bi-pencil-square"></i>
+                </button>
+              </div>
+              <div class="text-secondary small" style="font-size: 0.75rem;">
+                ${escapeHtml(d.model || 'Android TV')} · <span class="font-monospace text-light">${escapeHtml(d.mac || d.id)}</span>
+              </div>
+              <div class="text-body-tertiary font-monospace" style="font-size: 0.7rem;">
+                IP: ${escapeHtml(d.ip || '0.0.0.0')} · v${escapeHtml(d.app_version || '1.0')} · ${formatTimeAgo(d.last_seen)}
+              </div>
+            </div>
+            ${phoneBtn}
+          </div>
+
+          ${nowPlayingMobile}
+
+          <!-- Linha de Validade / Notas -->
+          <div class="d-flex align-items-center justify-content-between gap-2 mt-2 pt-2 border-top border-secondary-subtle">
+            <div class="small text-secondary" style="font-size: 0.75rem;">
+              Validade: ${expBadgeMobile || '<span class="text-body-tertiary">Sem lista</span>'}
+            </div>
+            ${d.notes ? `<div class="badge bg-warning-subtle text-warning border border-warning-subtle text-truncate" style="max-width: 140px;" title="${escapeHtml(d.notes)}">${escapeHtml(d.notes)}</div>` : ''}
+          </div>
+
+          <!-- Ações Rápidas Mobile (Botões de Toque) -->
+          <div class="d-grid gap-2 mt-3" style="grid-template-columns: repeat(3, 1fr);">
+            <button onclick="openLinkCodeModal('${escapeHtml(pairingCode)}')" class="btn btn-sm btn-info text-white fw-bold py-1.5 rounded-pill text-truncate">
+              ⚡ Vincular
+            </button>
+            <button onclick="openPlaylistModal('${d.id}')" class="btn btn-sm btn-outline-light py-1.5 rounded-pill text-truncate">
+              Playlist
+            </button>
+            <button onclick="openMessageModal('${d.id}')" class="btn btn-sm btn-outline-secondary py-1.5 rounded-pill text-truncate">
+              Mensagem
+            </button>
+            <button onclick="triggerExpiryReminder('${d.id}')" class="btn btn-sm btn-outline-warning py-1.5 rounded-pill text-truncate">
+              🔔 Aviso
+            </button>
+            <button onclick="toggleBlock('${d.id}', '${d.status}')" class="btn btn-sm ${isBlocked ? 'btn-outline-success' : 'btn-outline-danger'} py-1.5 rounded-pill text-truncate">
+              ${isBlocked ? 'Desbloquear' : 'Bloquear'}
+            </button>
+            <button onclick="deleteDevice('${d.id}')" class="btn btn-sm btn-outline-danger py-1.5 rounded-pill text-truncate">
+              <i class="bi bi-trash me-1"></i>Excluir
+            </button>
+          </div>
         </div>
       `;
-    }
-
-    let notesHtml = '';
-    if (d.notes) {
-      notesHtml = `
-        <div class="mt-1 text-[11px] text-amber-300/90 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 max-w-[220px] truncate" title="${escapeHtml(d.notes)}">
-          📝 ${escapeHtml(d.notes)}
-        </div>
-      `;
-    }
-
-    const displayName = d.client_name || d.name || 'Sem nome';
-
-    return `
-      <tr class="hover:bg-surface-800/40 transition">
-        <td class="py-4 px-5">${statusBadge}</td>
-        <td class="py-4 px-5">
-          <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-950/70 border border-cyan-500/40 text-cyan-300 font-mono font-black text-sm tracking-wider shadow-sm">
-            <span>${escapeHtml(pairingCode)}</span>
-            <button onclick="navigator.clipboard.writeText('${pairingCode}'); alert('Código ${pairingCode} copiado!')" class="text-cyan-500 hover:text-cyan-200 ml-1" title="Copiar Código">
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-            </button>
-          </div>
-        </td>
-        <td class="py-4 px-5">
-          <div class="font-bold text-white flex items-center gap-2">
-            ${escapeHtml(displayName)}
-            <button onclick="openEditDeviceModal('${d.id}')" class="text-gray-500 hover:text-brand-400" title="Editar Nome, WhatsApp e Notas">
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-            </button>
-          </div>
-          ${phoneHtml}
-          ${notesHtml}
-          <div class="text-xs text-gray-400 mt-0.5">${escapeHtml(d.model || 'Android TV')}</div>
-        </td>
-        <td class="py-4 px-5 whitespace-nowrap">${ownerBadge}</td>
-        <td class="py-4 px-5">
-          <div class="font-mono text-xs text-gray-200 flex items-center gap-1.5">
-            ${escapeHtml(d.mac || d.id)}
-            <button onclick="navigator.clipboard.writeText('${d.mac || d.id}'); alert('Copiado!')" class="text-gray-500 hover:text-white" title="Copiar">
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-            </button>
-          </div>
-          <div class="text-[10px] text-gray-500 font-mono">${escapeHtml(d.id.slice(0, 16))}...</div>
-        </td>
-        <td class="py-4 px-5">
-          <div class="text-xs text-gray-300 font-mono">${escapeHtml(d.ip || '0.0.0.0')}</div>
-          <div class="text-[11px] text-brand-400 font-medium">v${escapeHtml(d.app_version || '1.0')}</div>
-        </td>
-        <td class="py-4 px-5">${plBadge}</td>
-        <td class="py-4 px-5">${nowPlayingBadge}</td>
-        <td class="py-4 px-5 whitespace-nowrap">${expBadge}</td>
-        <td class="py-4 px-5 text-xs text-gray-400">${formatTimeAgo(d.last_seen)}</td>
-        <td class="py-4 px-5 text-right space-x-1 whitespace-nowrap">
-          <button onclick="openLinkCodeModal('${escapeHtml(pairingCode)}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-cyan-700/60 hover:bg-cyan-600 text-cyan-100 hover:text-white transition" title="Vincular Lista por Código">
-            ⚡ Vincular
-          </button>
-          <button onclick="openPlaylistModal('${d.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface-700 hover:bg-brand-600 text-gray-200 hover:text-white transition" title="Configurar Playlist">
-            Playlist
-          </button>
-          <button onclick="openMessageModal('${d.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface-700 hover:bg-yellow-600 text-gray-200 hover:text-white transition" title="Enviar Mensagem">
-            Mensagem
-          </button>
-          <button onclick="triggerExpiryReminder('${d.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black transition" title="Enviar Aviso de Vencimento para a TV">
-            🔔 Aviso
-          </button>
-          <button onclick="toggleBlock('${d.id}', '${d.status}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg ${isBlocked ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-red-900/40 hover:bg-red-800 text-red-300'} transition" title="${isBlocked ? 'Desbloquear' : 'Bloquear'}">
-            ${isBlocked ? 'Desbloquear' : 'Bloquear'}
-          </button>
-          <button onclick="deleteDevice('${d.id}')" class="p-1 text-xs text-gray-500 hover:text-red-400 transition" title="Excluir">
-            <svg class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-          </button>
-        </td>
-      </tr>
-    `;
-  }).join('');
+    }).join('');
+  }
 }
 
 // Filtro em tempo real
@@ -619,9 +740,9 @@ function setPlaylistType(type) {
   const fX = document.getElementById('fields-xtream');
   const fM = document.getElementById('fields-m3u');
 
-  btnX.className = type === 'xtream' ? 'flex-1 py-1.5 rounded-lg bg-brand-600 text-white' : 'flex-1 py-1.5 rounded-lg text-gray-400 hover:text-white';
-  btnM.className = type === 'm3u' ? 'flex-1 py-1.5 rounded-lg bg-brand-600 text-white' : 'flex-1 py-1.5 rounded-lg text-gray-400 hover:text-white';
-  btnN.className = type === 'none' ? 'flex-1 py-1.5 rounded-lg bg-brand-600 text-white' : 'flex-1 py-1.5 rounded-lg text-gray-400 hover:text-white';
+  btnX.className = type === 'xtream' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-secondary';
+  btnM.className = type === 'm3u' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-secondary';
+  btnN.className = type === 'none' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-secondary';
 
   fX.classList.toggle('hidden', type !== 'xtream');
   fM.classList.toggle('hidden', type !== 'm3u');
@@ -834,22 +955,24 @@ async function loadOtaUpdates() {
 
     const tbody = document.getElementById('ota-history-tbody');
     if (list.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-gray-500">Nenhuma versão publicada ainda.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-secondary">Nenhuma versão publicada ainda.</td></tr>';
       return;
     }
 
     tbody.innerHTML = list.map(u => `
-      <tr class="hover:bg-surface-800/40">
-        <td class="py-3 px-3 font-bold text-white">${escapeHtml(u.version_name)}</td>
-        <td class="py-3 px-3 font-mono text-xs text-gray-400">${u.version_code}</td>
-        <td class="py-3 px-3">${u.mandatory ? '<span class="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold">Sim</span>' : '<span class="text-xs text-gray-500">Não</span>'}</td>
-        <td class="py-3 px-3 text-xs text-gray-400">${new Date(Number(u.released_at)).toLocaleDateString('pt-BR')}</td>
-        <td class="py-3 px-3">
-          <a href="${escapeHtml(u.download_url)}" target="_blank" class="text-xs text-brand-400 hover:underline font-mono">Download APK</a>
+      <tr>
+        <td class="fw-bold text-white">${escapeHtml(u.version_name)}</td>
+        <td class="font-monospace small text-body-secondary">${u.version_code}</td>
+        <td>${u.mandatory ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Sim</span>' : '<span class="badge bg-secondary-subtle text-secondary rounded-pill">Não</span>'}</td>
+        <td class="small text-secondary">${new Date(Number(u.released_at)).toLocaleDateString('pt-BR')}</td>
+        <td>
+          <a href="${escapeHtml(u.download_url)}" target="_blank" class="btn btn-sm btn-link text-info p-0 font-monospace text-decoration-none">
+            <i class="bi bi-download me-1"></i>Baixar APK
+          </a>
         </td>
-        <td class="py-3 px-3 text-right">
-          <button onclick="deleteOtaUpdate(${u.id}, '${escapeHtml(u.version_name)}')" class="px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/25 text-red-400 hover:text-red-300 transition text-xs font-semibold inline-flex items-center gap-1" title="Excluir versão e arquivo do servidor">
-            🗑️ Excluir
+        <td class="text-end">
+          <button onclick="deleteOtaUpdate(${u.id}, '${escapeHtml(u.version_name)}')" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1" title="Excluir versão e arquivo do servidor">
+            <i class="bi bi-trash me-1"></i>Excluir
           </button>
         </td>
       </tr>
@@ -1279,48 +1402,50 @@ async function loadTests() {
       const dateStr = t.created_at ? new Date(Number(t.created_at)).toLocaleString('pt-BR') : '-';
 
       const typeBadge = isAdult
-        ? '<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/30 text-[11px]">🔞 Com Adultos</span>'
-        : '<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30 text-[11px]">🟢 Sem Adultos</span>';
+        ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">🔞 Com Adultos</span>'
+        : '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">🟢 Sem Adultos</span>';
 
       let waBadge = '';
       if (t.is_valid_wa) {
-        waBadge = `<span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold" title="WhatsApp Válido${t.wa_lid ? ' (LID: ' + t.wa_lid + ')' : ''}">✓ WA Válido</span>`;
+        waBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle font-monospace ms-1" style="font-size: 0.65rem;" title="WhatsApp Válido${t.wa_lid ? ' (LID: ' + t.wa_lid + ')' : ''}">✓ Válido</span>`;
       } else {
-        waBadge = `<span class="px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-400 font-mono text-[10px]">Não verificado</span>`;
+        waBadge = `<span class="badge bg-secondary-subtle text-secondary font-monospace ms-1" style="font-size: 0.65rem;">Não verificado</span>`;
       }
 
       let lidHtml = '';
       if (t.wa_lid) {
-        lidHtml = `<div class="text-[10px] text-gray-500 font-mono" title="WhatsApp LID">${escapeHtml(t.wa_lid)}</div>`;
+        lidHtml = `<div class="text-body-tertiary font-monospace" style="font-size: 0.7rem;" title="WhatsApp LID">${escapeHtml(t.wa_lid)}</div>`;
       }
 
       return `
-        <tr class="hover:bg-surface-800/40 transition">
-          <td class="py-3 px-4 text-gray-400 font-mono">${dateStr}</td>
-          <td class="py-3 px-4">
-            <div class="font-bold text-white flex items-center gap-1.5">
+        <tr>
+          <td class="text-secondary font-monospace small">${dateStr}</td>
+          <td>
+            <div class="fw-bold text-white d-flex align-items-center">
               <span>${escapeHtml(t.name || 'Cliente')}</span>
               ${waBadge}
             </div>
-            <div class="flex items-center gap-1">
-              <a href="https://wa.me/${cleanPhone}" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-emerald-400 hover:text-emerald-300 font-mono">
-                <span>💬</span> ${escapeHtml(t.phone)}
+            <div class="mt-0.5">
+              <a href="https://wa.me/${cleanPhone}" target="_blank" class="text-decoration-none d-inline-flex align-items-center gap-1 text-success small font-monospace">
+                <i class="bi bi-whatsapp"></i> ${escapeHtml(t.phone)}
               </a>
             </div>
             ${lidHtml}
           </td>
-          <td class="py-3 px-4">${typeBadge}</td>
-          <td class="py-3 px-4 font-mono font-bold text-cyan-300 select-all">${escapeHtml(t.username || '-')}</td>
-          <td class="py-3 px-4 font-mono text-gray-300 select-all">${escapeHtml(t.password || '-')}</td>
-          <td class="py-3 px-4 font-mono text-yellow-300 whitespace-nowrap">${escapeHtml(t.expires_at_formatted || '-')}</td>
-          <td class="py-3 px-4 text-right space-x-1 whitespace-nowrap">
-            ${t.pay_url ? `<a href="${escapeHtml(t.pay_url)}" target="_blank" class="px-2 py-1 text-xs rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black font-semibold transition inline-block" title="Checkout Painel Slim">Checkout</a>` : ''}
-            <a href="https://wa.me/${cleanPhone}" target="_blank" class="px-2.5 py-1 text-xs rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white transition inline-block">
-              Conversar
-            </a>
-            <button onclick="deleteTest(${t.id})" class="p-1 text-gray-500 hover:text-red-400 transition" title="Excluir">
-              <svg class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            </button>
+          <td>${typeBadge}</td>
+          <td class="font-monospace fw-bold text-info select-all">${escapeHtml(t.username || '-')}</td>
+          <td class="font-monospace text-light select-all">${escapeHtml(t.password || '-')}</td>
+          <td class="font-monospace text-warning text-nowrap">${escapeHtml(t.expires_at_formatted || '-')}</td>
+          <td class="text-end text-nowrap">
+            <div class="d-flex align-items-center justify-content-end gap-1">
+              ${t.pay_url ? `<a href="${escapeHtml(t.pay_url)}" target="_blank" class="btn btn-sm btn-outline-warning rounded-pill px-2.5 py-1" title="Checkout Painel Slim"><i class="bi bi-credit-card me-1"></i>Checkout</a>` : ''}
+              <a href="https://wa.me/${cleanPhone}" target="_blank" class="btn btn-sm btn-success fw-semibold rounded-pill px-2.5 py-1">
+                <i class="bi bi-whatsapp me-1"></i>Conversar
+              </a>
+              <button onclick="deleteTest(${t.id})" class="btn btn-sm btn-link text-danger p-1" title="Excluir">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -1615,27 +1740,29 @@ async function loadUsers() {
     tbody.innerHTML = usersList.map(u => {
       const isAdm = u.role === 'admin';
       const roleBadge = isAdm
-        ? '<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Administrador</span>'
-        : '<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/15 text-indigo-400 border border-indigo-500/20">Operador</span>';
+        ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">Administrador</span>'
+        : '<span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">Operador</span>';
 
       const createdAtStr = u.created_at ? new Date(Number(u.created_at)).toLocaleDateString('pt-BR') : '-';
       const isSelf = currentUser && currentUser.id === u.id;
 
       return `
-        <tr class="hover:bg-surface-800/40 transition">
-          <td class="py-3 px-4 font-bold text-white">${escapeHtml(u.name || '-')}</td>
-          <td class="py-3 px-4 font-mono text-cyan-400 font-semibold">${escapeHtml(u.username)}</td>
-          <td class="py-3 px-4">${roleBadge}</td>
-          <td class="py-3 px-4 text-gray-400 font-mono">${createdAtStr}</td>
-          <td class="py-3 px-4 text-right space-x-1 whitespace-nowrap">
-            <button onclick="openUserModal(${u.id})" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface-700 hover:bg-indigo-600 text-gray-200 hover:text-white transition" title="Editar Usuário">
-              Editar
-            </button>
-            ${isSelf ? '' : `
-              <button onclick="deleteUser(${u.id}, '${escapeHtml(u.username)}')" class="p-1 text-xs text-gray-500 hover:text-red-400 transition" title="Excluir Usuário">
-                <svg class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+        <tr>
+          <td class="fw-bold text-white">${escapeHtml(u.name || '-')}</td>
+          <td class="font-monospace text-info fw-semibold">${escapeHtml(u.username)}</td>
+          <td>${roleBadge}</td>
+          <td class="text-secondary font-monospace small">${createdAtStr}</td>
+          <td class="text-end text-nowrap">
+            <div class="d-flex align-items-center justify-content-end gap-1">
+              <button onclick="openUserModal(${u.id})" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1" title="Editar Usuário">
+                Editar
               </button>
-            `}
+              ${isSelf ? '' : `
+                <button onclick="deleteUser(${u.id}, '${escapeHtml(u.username)}')" class="btn btn-sm btn-link text-danger p-1" title="Excluir Usuário">
+                  <i class="bi bi-trash"></i>
+                </button>
+              `}
+            </div>
           </td>
         </tr>
       `;

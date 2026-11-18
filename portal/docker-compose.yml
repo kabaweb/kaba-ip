@@ -41,7 +41,7 @@ services:
       - PORTAL_PUBLIC_DOMAIN=${PORTAL_PUBLIC_DOMAIN:-http://localhost:3000}
     volumes:
       - ./data:/app/data
-      - ./public/apks:/app/public/apks
+      - ./public:/app/public
     networks:
       - korp-network
 

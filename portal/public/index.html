@@ -1,1057 +1,1521 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR" data-bs-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Korp TV · Gerenciador de Dispositivos</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Bootstrap 5.3.3 CSS Oficial -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  
+  <!-- Bootstrap Icons 1.11.3 Oficial -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  
+  <!-- QRCode.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#f5f3ff',
-              500: '#8b5cf6',
-              600: '#7c3aed',
-              700: '#6d28d9',
-              800: '#5b21b6',
-              900: '#4c1d95',
-            },
-            surface: {
-              900: '#0b0c14',
-              800: '#13141f',
-              700: '#1b1d2d',
-              600: '#26293f',
-            }
-          }
-        }
+
+  <style>
+    :root {
+      --bs-body-bg: #0d131f;
+      --bs-body-color: #f1f5f9;
+      --korp-primary: #6366f1;
+      --korp-primary-hover: #4f46e5;
+      --korp-surface: #131c2e;
+      --korp-surface-card: rgba(19, 28, 46, 0.85);
+      --korp-surface-elevated: #19253d;
+      --korp-border: rgba(255, 255, 255, 0.08);
+      --korp-text-muted: #94a3b8;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bs-body-bg);
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(99, 102, 241, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 90% 5%, rgba(14, 165, 233, 0.07) 0%, transparent 40%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Utilitário essencial para compatibilidade com app.js */
+    .hidden {
+      display: none !important;
+    }
+
+    /* Glassmorphism e Superfícies Suaves */
+    .glass-header {
+      background: rgba(13, 19, 31, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--korp-border);
+    }
+
+    .glass-card {
+      background: var(--korp-surface-card);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--korp-border);
+      border-radius: 1rem;
+    }
+
+    .kpi-card {
+      background: var(--korp-surface-card);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--korp-border);
+      border-radius: 0.95rem;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(99, 102, 241, 0.35) !important;
+      box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.4);
+    }
+
+    .icon-box {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0.75rem;
+      font-size: 1.25rem;
+    }
+
+    @media (max-width: 576px) {
+      .icon-box {
+        width: 36px;
+        height: 36px;
+        font-size: 1.1rem;
+        border-radius: 0.65rem;
       }
     }
-  </script>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    .glass { background: rgba(19, 20, 31, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-    .badge-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+
+    /* Customização dos Modais Responsivos para Celular */
+    .custom-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 12, 20, 0.82);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 1055;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+
+    @media (max-width: 576px) {
+      .custom-modal-overlay {
+        padding: 0.5rem;
+        align-items: flex-end;
+      }
+    }
+
+    .custom-modal-card {
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 1.25rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    @media (max-width: 576px) {
+      .custom-modal-card {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        max-height: 94vh;
+      }
+    }
+
+    /* Pulse animado para status online */
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      animation: pulse-kf 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-kf {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.85); }
+    }
+
+    /* Formulários e Inputs Modernos */
+    .form-control, .form-select {
+      background-color: #0b0f19;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #f8fafc;
+      border-radius: 0.65rem;
+    }
+
+    .form-control:focus, .form-select:focus {
+      background-color: #0f1523;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25);
+      color: #ffffff;
+    }
+
+    .form-control::placeholder {
+      color: #64748b;
+    }
+
+    /* Tabela elegante */
+    .table-modern {
+      --bs-table-bg: transparent;
+      --bs-table-hover-bg: rgba(255, 255, 255, 0.035);
+      --bs-table-border-color: rgba(255, 255, 255, 0.06);
+    }
+
+    .table-modern thead th {
+      background: rgba(19, 28, 46, 0.95);
+      color: #94a3b8;
+      font-size: 0.725rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 0.85rem 1rem;
+      white-space: nowrap;
+    }
+
+    .table-modern tbody td {
+      padding: 0.85rem 1rem;
+      vertical-align: middle;
+      font-size: 0.85rem;
+    }
+
+    /* Nav Pills do Painel Touch-Friendly e Scrollável no Celular */
+    .nav-pills-dashboard {
+      background: rgba(13, 19, 31, 0.9);
+      border: 1px solid var(--korp-border);
+      border-radius: 2rem;
+      padding: 0.25rem;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .nav-pills-dashboard::-webkit-scrollbar {
+      display: none;
+    }
+
+    .nav-pills-dashboard .nav-link {
+      color: #94a3b8;
+      font-size: 0.825rem;
+      font-weight: 600;
+      border-radius: 1.5rem;
+      padding: 0.45rem 0.95rem;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .nav-pills-dashboard .nav-link:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .nav-pills-dashboard .nav-link.active {
+      color: #ffffff;
+      background: #4f46e5;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+    }
+
+    /* Card Mobile de Dispositivo */
+    .device-card-mobile {
+      background: var(--korp-surface-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--korp-border);
+      border-radius: 1rem;
+      padding: 1rem;
+      transition: border-color 0.2s ease;
+    }
+
+    .device-card-mobile:active {
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+
+    /* Scrollbar sutil */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+      display: inline-block;
+      animation: pulse-kf 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-kf {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.85); }
+    }
+
+    /* Formulários e Inputs Modernos */
+    .form-control, .form-select {
+      background-color: #0b0f19;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: #f8fafc;
+      border-radius: 0.65rem;
+    }
+
+    .form-control:focus, .form-select:focus {
+      background-color: #0d1322;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25);
+      color: #ffffff;
+    }
+
+    .form-control::placeholder {
+      color: #64748b;
+    }
+
+    /* Tabela elegante */
+    .table-modern {
+      --bs-table-bg: transparent;
+      --bs-table-hover-bg: rgba(255, 255, 255, 0.035);
+      --bs-table-border-color: rgba(255, 255, 255, 0.06);
+    }
+
+    .table-modern thead th {
+      background: rgba(17, 23, 38, 0.85);
+      color: #94a3b8;
+      font-size: 0.725rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 0.85rem 1rem;
+      white-space: nowrap;
+    }
+
+    .table-modern tbody td {
+      padding: 0.85rem 1rem;
+      vertical-align: middle;
+      font-size: 0.85rem;
+    }
+
+    /* Nav Pills do Painel */
+    .nav-pills-dashboard {
+      background: rgba(11, 15, 25, 0.85);
+      border: 1px solid var(--korp-border);
+      border-radius: 0.85rem;
+      padding: 0.3rem;
+    }
+
+    .nav-pills-dashboard .nav-link {
+      color: #94a3b8;
+      font-size: 0.825rem;
+      font-weight: 600;
+      border-radius: 0.65rem;
+      padding: 0.45rem 0.95rem;
+      transition: all 0.2s ease;
+    }
+
+    .nav-pills-dashboard .nav-link:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-pills-dashboard .nav-link.active {
+      color: #ffffff;
+      background: #4f46e5;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+    }
+
+    /* Scrollbar sutil */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
   </style>
 </head>
-<body class="bg-[#08090f] text-gray-100 min-h-screen flex flex-col antialiased">
+<body class="d-flex flex-column min-vh-100 antialiased">
 
-  <!-- TELA DE LOGIN (Exibida se não autenticado) -->
-  <div id="login-screen" class="fixed inset-0 z-50 bg-[#08090f] flex items-center justify-center p-4">
-    <div class="glass rounded-3xl border border-gray-800 max-w-md w-full p-8 space-y-6 shadow-2xl relative overflow-hidden">
-      <div class="absolute -top-12 -right-12 w-40 h-40 bg-brand-600/20 rounded-full blur-3xl"></div>
+  <!-- ========================================== -->
+  <!-- TELA DE LOGIN (Exibida se não autenticado)  -->
+  <!-- ========================================== -->
+  <div id="login-screen" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3" style="z-index: 1060; background: #080b13;">
+    <div class="glass-card shadow-lg p-4 p-sm-5 position-relative overflow-hidden" style="max-width: 420px; width: 100%;">
+      <!-- Brilho Decorativo -->
+      <div class="position-absolute top-0 end-0 translate-middle-y rounded-circle" style="width: 180px; height: 180px; background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, transparent 70%); filter: blur(30px); pointer-events: none;"></div>
       
-      <div class="text-center space-y-2">
-        <div class="w-16 h-16 mx-auto flex items-center justify-center mb-2">
-          <img src="/logo-icon.svg" alt="Korp TV" class="w-16 h-16 drop-shadow-xl" />
+      <div class="text-center mb-4">
+        <div class="mb-3 d-inline-flex p-3 rounded-4 shadow-sm" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25);">
+          <img src="/logo-icon.svg" alt="Korp TV" width="48" height="48" class="img-fluid drop-shadow">
         </div>
-        <h2 class="text-2xl font-bold text-white tracking-tight">Korp TV Portal</h2>
-        <p class="text-xs text-gray-400">Entre com usuário e senha para gerenciar os dispositivos</p>
+        <h2 class="h4 fw-bold text-white mb-1">Korp TV Portal</h2>
+        <p class="text-secondary small mb-0">Entre com usuário e senha para gerenciar os dispositivos</p>
       </div>
 
-      <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+      <form id="login-form" onsubmit="handleLogin(event)" class="d-flex flex-column gap-3">
         <div>
-          <label class="block text-xs font-semibold text-gray-300 mb-1">Usuário</label>
-          <input type="text" id="login-user" required placeholder="admin" value="admin"
-            class="w-full bg-surface-700 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 transition">
+          <label for="login-user" class="form-label small fw-semibold text-light mb-1">Usuário</label>
+          <div class="input-group">
+            <span class="input-group-text bg-body-tertiary border-secondary-subtle text-secondary"><i class="bi bi-person"></i></span>
+            <input type="text" id="login-user" required placeholder="admin" value="admin" class="form-control">
+          </div>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-gray-300 mb-1">Senha</label>
-          <input type="password" id="login-pass" required placeholder="••••••••" value="admin123"
-            class="w-full bg-surface-700 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 transition">
+          <label for="login-pass" class="form-label small fw-semibold text-light mb-1">Senha</label>
+          <div class="input-group">
+            <span class="input-group-text bg-body-tertiary border-secondary-subtle text-secondary"><i class="bi bi-lock"></i></span>
+            <input type="password" id="login-pass" required placeholder="••••••••" value="admin123" class="form-control">
+          </div>
         </div>
 
-        <div id="login-error" class="hidden text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-2.5 text-center"></div>
+        <div id="login-error" class="hidden alert alert-danger py-2 px-3 small border-0 text-center mb-0" role="alert"></div>
 
-        <button type="submit" id="login-btn"
-          class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold transition shadow-lg shadow-brand-500/30 flex items-center justify-center gap-2">
+        <button type="submit" id="login-btn" class="btn btn-primary fw-bold py-2 mt-2 shadow-sm d-flex align-items-center justify-content-center gap-2">
           <span>Acessar Painel</span>
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+          <i class="bi bi-arrow-right"></i>
         </button>
       </form>
+
+      <div class="text-center mt-4 pt-2 border-top border-secondary-subtle">
+        <small class="text-body-tertiary" style="font-size: 0.75rem;">Korp TV · Sistema Remoto de Dispositivos & OTA</small>
+      </div>
     </div>
   </div>
 
-  <!-- CONTEÚDO AUTENTICADO DO PAINEL -->
-  <div id="app-container" class="hidden flex flex-col min-h-screen">
-    <!-- Header -->
-    <header class="glass sticky top-0 z-30 border-b border-gray-800/80 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <img src="/logo-icon.svg" alt="Korp TV" class="w-10 h-10 drop-shadow-md rounded-xl" />
-        <div>
-          <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            Korp TV
-            <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 font-semibold border border-cyan-500/30">Portal Admin</span>
-          </h1>
-          <p class="text-xs text-gray-400">Gerenciamento Remoto de Dispositivos, Playlists & OTA</p>
-        </div>
-      </div>
-
-      <!-- Navegação de abas & Logout -->
-      <div class="flex items-center gap-3">
-        <button onclick="openQrModal()" class="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/20 flex items-center gap-1.5 transition">
-          <span>📱</span> QR Code & Download APK
-        </button>
-
-        <nav class="flex bg-surface-800 p-1 rounded-xl border border-gray-800">
-          <button id="tab-devices-btn" onclick="switchTab('devices')" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all bg-brand-600 text-white shadow">Dispositivos</button>
-          <button id="tab-tests-btn" onclick="switchTab('tests')" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white flex items-center gap-1.5">
-            <span>⚡</span> Testes Solicitados
-          </button>
-          <button id="tab-automations-btn" onclick="switchTab('automations')" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white">Configurações & Automações</button>
-          <button id="tab-ota-btn" onclick="switchTab('ota')" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-gray-400 hover:text-white">Atualizações OTA</button>
-        </nav>
-
-        <div class="flex items-center gap-3 pl-2 border-l border-gray-800">
-          <div class="text-xs text-right hidden sm:block">
-            <p id="user-display" class="font-bold text-white">admin</p>
-            <p class="text-[10px] text-emerald-400">Autenticado</p>
+  <!-- ========================================== -->
+  <!-- CONTEÚDO AUTENTICADO DO PAINEL             -->
+  <!-- ========================================== -->
+  <div id="app-container" class="hidden d-flex flex-column min-vh-100">
+    
+    <!-- Header Fixo -->
+    <header class="glass-header sticky-top z-3 px-3 px-lg-4 py-2.5">
+      <div class="container-fluid d-flex flex-wrap align-items-center justify-content-between gap-3 px-0">
+        
+        <!-- Marca / Título -->
+        <div class="d-flex align-items-center gap-3">
+          <img src="/logo-icon.svg" alt="Korp TV" width="38" height="38" class="rounded-3 shadow-sm">
+          <div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="h5 mb-0 fw-bold text-white tracking-tight">Korp TV</span>
+              <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-1" style="font-size: 0.7rem;">Portal Admin</span>
+            </div>
+            <p class="text-secondary small mb-0 d-none d-sm-block" style="font-size: 0.75rem;">Gerenciamento Remoto de Dispositivos, Playlists & OTA</p>
           </div>
-          <button onclick="handleLogout()" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-red-900/40 text-gray-300 hover:text-red-300 transition flex items-center gap-1.5" title="Sair da conta">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-            Sair
+        </div>
+
+        <!-- Ações, Abas e Usuário -->
+        <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
+          
+          <!-- Botão QR Code & APK -->
+          <button onclick="openQrModal()" class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1.5 shadow-sm px-3 py-1.5 rounded-pill">
+            <i class="bi bi-qr-code"></i>
+            <span>QR Code & APK</span>
           </button>
+
+          <!-- Navegação por Abas -->
+          <nav class="nav nav-pills nav-pills-dashboard d-flex align-items-center" role="tablist">
+            <button id="tab-devices-btn" onclick="switchTab('devices')" class="nav-link active d-flex align-items-center gap-1.5" type="button">
+              <i class="bi bi-display"></i>
+              <span>Dispositivos</span>
+            </button>
+            <button id="tab-tests-btn" onclick="switchTab('tests')" class="nav-link d-flex align-items-center gap-1.5" type="button">
+              <i class="bi bi-lightning-charge text-warning"></i>
+              <span>Testes Solicitados</span>
+            </button>
+            <button id="tab-automations-btn" onclick="switchTab('automations')" class="nav-link d-flex align-items-center gap-1.5" type="button">
+              <i class="bi bi-sliders"></i>
+              <span>Configurações</span>
+            </button>
+            <button id="tab-ota-btn" onclick="switchTab('ota')" class="nav-link d-flex align-items-center gap-1.5" type="button">
+              <i class="bi bi-cloud-arrow-down"></i>
+              <span>OTA Updates</span>
+            </button>
+          </nav>
+
+          <!-- Perfil e Logout -->
+          <div class="d-flex align-items-center gap-2 ps-2 border-start border-secondary-subtle">
+            <div class="text-end d-none d-md-block" style="line-height: 1.2;">
+              <div id="user-display" class="fw-bold text-white small">admin</div>
+            </div>
+            <button onclick="handleLogout()" class="btn btn-sm btn-outline-danger border-0 rounded-circle p-2" title="Sair da conta" style="width: 34px; height: 34px;">
+              <i class="bi bi-box-arrow-right"></i>
+            </button>
+          </div>
+
         </div>
       </div>
     </header>
 
     <!-- Conteúdo Principal -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+    <main class="flex-grow-1 container-fluid px-3 px-lg-4 py-4">
+      <div class="mx-auto" style="max-width: 1440px;">
 
-      <!-- Métricas -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="glass rounded-2xl p-5 border border-gray-800/80 flex items-center justify-between">
-          <div>
-            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Total Dispositivos</p>
-            <p id="stat-total" class="text-3xl font-extrabold text-white mt-1">0</p>
-          </div>
-          <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
-            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-          </div>
-        </div>
-
-        <div class="glass rounded-2xl p-5 border border-gray-800/80 flex items-center justify-between">
-          <div>
-            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Online Agora</p>
-            <p id="stat-online" class="text-3xl font-extrabold text-emerald-400 mt-1">0</p>
-          </div>
-          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
-          </div>
-        </div>
-
-        <div class="glass rounded-2xl p-5 border border-gray-800/80 flex items-center justify-between">
-          <div>
-            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Com Playlist Ativa</p>
-            <p id="stat-playlists" class="text-3xl font-extrabold text-purple-400 mt-1">0</p>
-          </div>
-          <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
-            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-          </div>
-        </div>
-
-        <div class="glass rounded-2xl p-5 border border-gray-800/80 flex items-center justify-between">
-          <div>
-            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Versão OTA Ativa</p>
-            <p id="stat-ota-version" class="text-2xl font-extrabold text-cyan-400 mt-1">-</p>
-          </div>
-          <div class="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
-            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-          </div>
-        </div>
-      </div>
-
-      <!-- SEÇÃO 1: DISPOSITIVOS -->
-      <section id="section-devices" class="space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div class="flex items-center gap-3">
-            <input type="text" id="search-input" onkeyup="filterDevices()" placeholder="Buscar por Nome, MAC, ID ou IP..." 
-              class="bg-surface-800 border border-gray-800 text-sm rounded-xl px-4 py-2 w-72 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500">
-            <select id="status-filter" onchange="filterDevices()" class="bg-surface-800 border border-gray-800 text-sm rounded-xl px-3 py-2 text-white focus:outline-none">
-              <option value="all">Todos os status</option>
-              <option value="online">Online</option>
-              <option value="offline">Offline</option>
-              <option value="blocked">Bloqueados</option>
-            </select>
-          </div>
-          <div class="flex items-center gap-2">
-            <button onclick="openLinkCodeModal()" class="px-4 py-2 text-sm font-semibold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-500/25 transition flex items-center gap-2">
-              <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
-              Vincular por Código
-            </button>
-            <button onclick="openBroadcastModal()" class="px-4 py-2 text-sm font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-white transition flex items-center gap-2">
-              <svg class="w-4 h-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
-              Mensagem Geral
-            </button>
-            <button onclick="loadDevices()" class="px-4 py-2 text-sm font-semibold rounded-xl bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/25 transition flex items-center gap-2">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-              Atualizar
-            </button>
-          </div>
-        </div>
-
-        <!-- Tabela de Dispositivos -->
-        <div class="glass rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr class="bg-surface-800/80 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-800">
-                  <th class="py-4 px-5">Status</th>
-                  <th class="py-4 px-5">Código de Ativação</th>
-                  <th class="py-4 px-5">Dispositivo / Nome</th>
-                  <th class="py-4 px-5">Responsável</th>
-                  <th class="py-4 px-5">MAC / ID</th>
-                  <th class="py-4 px-5">IP / App</th>
-                  <th class="py-4 px-5">Playlist</th>
-                  <th class="py-4 px-5">Assistindo Agora</th>
-                  <th class="py-4 px-5">Validade</th>
-                  <th class="py-4 px-5">Último Acesso</th>
-                  <th class="py-4 px-5 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody id="devices-tbody" class="divide-y divide-gray-800/60 text-gray-200">
-                <tr>
-                  <td colspan="11" class="text-center py-12 text-gray-500">Carregando dispositivos...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- SEÇÃO 2: AUTOMAÇÕES, WHATSAPP & IPTV EM MASSA -->
-      <section id="section-automations" class="hidden space-y-6">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          <!-- CARD 1: SERVIDOR IPTV & MIGRAÇÃO EM MASSA -->
-          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
-            <div class="flex items-center gap-2 text-white">
-              <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">🌐</div>
+        <!-- ========================================== -->
+        <!-- MÉTRICAS / KPIS                            -->
+        <!-- ========================================== -->
+        <section class="row g-2 g-md-3 mb-4">
+          <!-- Total Dispositivos -->
+          <div class="col-6 col-lg-3">
+            <div class="kpi-card p-3 p-md-4 d-flex align-items-center justify-content-between">
               <div>
-                <h2 class="text-base font-bold">Servidor IPTV Padrão</h2>
-                <p class="text-xs text-gray-400">Migração em massa de URL</p>
+                <span class="text-secondary small fw-bold text-uppercase tracking-wider" style="font-size: 0.7rem;">Total Dispositivos</span>
+                <h3 id="stat-total" class="fw-bolder text-white mb-0 mt-1">0</h3>
+                <small class="text-body-secondary d-none d-sm-block" style="font-size: 0.72rem;">Registrados no portal</small>
               </div>
-            </div>
-
-            <p class="text-xs text-gray-400 leading-relaxed">
-              Defina o endereço do servidor IPTV padrão. Caso mude de servidor ou DNS, altere todos os clientes de uma só vez!
-            </p>
-
-            <div class="space-y-3 text-xs">
-              <div>
-                <label class="block font-semibold text-gray-300 mb-1">Host / URL do Servidor IPTV</label>
-                <input type="text" id="iptv-default-url" placeholder="http://meuservidor.com:8080" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+              <div class="icon-box bg-primary-subtle text-primary border border-primary-subtle">
+                <i class="bi bi-tv"></i>
               </div>
-
-              <div class="flex gap-2">
-                <button onclick="saveDefaultIptvUrl()" class="flex-1 py-2 px-3 rounded-xl bg-surface-700 hover:bg-surface-600 text-white font-semibold transition text-xs">
-                  Salvar Padrão
-                </button>
-                <button onclick="migrateAllIptvUrl()" class="flex-1 py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition text-xs shadow-lg shadow-purple-500/20" title="Muda o host de TODOS os clientes Xtream ativos">
-                  ⚡ Mudar de Todos
-                </button>
-              </div>
-            </div>
-
-            <div class="p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl text-[11px] text-purple-300 space-y-1">
-              <p class="font-bold">Como funciona a migração em massa?</p>
-              <p>Ao clicar em "Mudar de Todos", o portal atualiza o servidor de todas as TVs e celulares vinculados. No próximo sinal (heartbeat), os aparelhos recarregam automaticamente a lista sem precisar refazer o login!</p>
             </div>
           </div>
 
-          <!-- CARD 2: API OFICIAL DO WHATSAPP -->
-          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
-            <div class="flex items-center gap-2 text-white">
-              <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">💬</div>
+          <!-- Online Agora -->
+          <div class="col-6 col-lg-3">
+            <div class="kpi-card p-3 p-md-4 d-flex align-items-center justify-content-between">
               <div>
-                <h2 class="text-base font-bold">API Oficial do WhatsApp</h2>
-                <p class="text-xs text-gray-400">Meta Cloud API / Gateway</p>
+                <span class="text-secondary small fw-bold text-uppercase tracking-wider" style="font-size: 0.7rem;">Online Agora</span>
+                <h3 id="stat-online" class="fw-bolder text-success mb-0 mt-1">0</h3>
+                <small class="text-success-emphasis d-none d-sm-block" style="font-size: 0.72rem;"><span class="pulse-dot bg-success me-1"></span>Sinal ativo</small>
+              </div>
+              <div class="icon-box bg-success-subtle text-success border border-success-subtle">
+                <i class="bi bi-broadcast"></i>
               </div>
             </div>
+          </div>
 
-            <p class="text-xs text-gray-400 leading-relaxed">
-              Integração padrão oficial da Meta (WhatsApp Cloud API) para disparo de mensagens de cobrança e avisos.
-            </p>
-
-            <div class="space-y-3 text-xs">
+          <!-- Com Playlist Ativa -->
+          <div class="col-6 col-lg-3">
+            <div class="kpi-card p-3 p-md-4 d-flex align-items-center justify-content-between">
               <div>
-                <label class="block font-semibold text-gray-300 mb-1">URL / Endpoint da API</label>
-                <input type="url" id="wa-api-url" placeholder="https://graph.facebook.com/v20.0/{PHONE_ID}/messages" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500 text-[11px]">
+                <span class="text-secondary small fw-bold text-uppercase tracking-wider" style="font-size: 0.7rem;">Com Playlist</span>
+                <h3 id="stat-playlists" class="fw-bolder text-info mb-0 mt-1">0</h3>
+                <small class="text-body-secondary d-none d-sm-block" style="font-size: 0.72rem;">Xtream ou M3U</small>
               </div>
+              <div class="icon-box bg-info-subtle text-info border border-info-subtle">
+                <i class="bi bi-collection-play"></i>
+              </div>
+            </div>
+          </div>
 
+          <!-- Versão OTA Ativa -->
+          <div class="col-6 col-lg-3">
+            <div class="kpi-card p-3 p-md-4 d-flex align-items-center justify-content-between">
               <div>
-                <label class="block font-semibold text-gray-300 mb-1">Token de Acesso (Bearer Token)</label>
-                <input type="password" id="wa-api-token" placeholder="EAABw..." class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500 text-[11px]">
+                <span class="text-secondary small fw-bold text-uppercase tracking-wider" style="font-size: 0.7rem;">Versão OTA</span>
+                <h3 id="stat-ota-version" class="fw-bolder text-warning mb-0 mt-1 fs-4">-</h3>
+                <small class="text-body-secondary d-none d-sm-block" style="font-size: 0.72rem;">Último APK</small>
               </div>
+              <div class="icon-box bg-warning-subtle text-warning border border-warning-subtle">
+                <i class="bi bi-cloud-check"></i>
+              </div>
+            </div>
+          </div>
+        </section>
 
-              <button onclick="saveWhatsAppApiSettings()" class="w-full py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition text-xs shadow-md">
-                Salvar Credenciais WhatsApp
+        <!-- ========================================== -->
+        <!-- SEÇÃO 1: DISPOSITIVOS                      -->
+        <!-- ========================================== -->
+        <section id="section-devices" class="d-flex flex-column gap-3">
+          
+          <!-- Barra de Busca, Filtros e Ações de Dispositivos -->
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1" style="max-width: 580px;">
+              <div class="input-group flex-grow-1" style="min-width: 260px;">
+                <span class="input-group-text bg-body-tertiary border-secondary-subtle text-secondary"><i class="bi bi-search"></i></span>
+                <input type="text" id="search-input" onkeyup="filterDevices()" placeholder="Buscar por Nome, MAC, ID ou IP..." class="form-control form-control-sm">
+              </div>
+              <select id="status-filter" onchange="filterDevices()" class="form-select form-select-sm" style="width: auto; min-width: 150px;">
+                <option value="all">Todos os status</option>
+                <option value="online">🟢 Online</option>
+                <option value="offline">⚪ Offline</option>
+                <option value="blocked">🔴 Bloqueados</option>
+              </select>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              <button onclick="openLinkCodeModal()" class="btn btn-sm btn-info text-white fw-bold d-flex align-items-center gap-1.5 shadow-sm rounded-pill px-3">
+                <i class="bi bi-link-45deg"></i>
+                <span>Vincular por Código</span>
               </button>
-
-              <div class="pt-3 border-t border-gray-800 space-y-2">
-                <p class="font-semibold text-gray-300 text-[11px]">Testar Envio de Mensagem</p>
-                <div class="flex gap-2">
-                  <input type="tel" id="wa-test-phone" placeholder="5511999999999" class="flex-1 bg-surface-700 border border-gray-700 rounded-xl px-3 py-1.5 text-white text-xs font-mono">
-                  <button onclick="testWhatsAppMessage()" id="btn-test-wa" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs whitespace-nowrap">
-                    Testar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- CARD 3: REGRAS DE RENOVAÇÃO & AVISOS -->
-          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
-            <div class="flex items-center gap-2 text-white">
-              <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">⏰</div>
-              <div>
-                <h2 class="text-base font-bold">Automação de Vencimento</h2>
-                <p class="text-xs text-gray-400">Lembretes na TV e no WhatsApp</p>
-              </div>
-            </div>
-
-            <div class="space-y-3 text-xs">
-              <div class="flex items-center justify-between p-2.5 bg-surface-800 rounded-xl border border-gray-800">
-                <span class="font-semibold text-white">Ativar Automações de Vencimento</span>
-                <input type="checkbox" id="auto-expiry-enabled" class="rounded bg-surface-700 border-gray-700 text-brand-600 w-4 h-4">
-              </div>
-
-              <div>
-                <label class="block font-semibold text-gray-300 mb-1">Avisar com quantos dias de antecedência?</label>
-                <div class="flex items-center gap-2">
-                  <input type="number" id="auto-expiry-days" min="1" max="30" value="3" class="w-24 bg-surface-700 border border-gray-700 rounded-xl px-3 py-1.5 text-white font-bold focus:outline-none focus:border-brand-500">
-                  <span class="text-gray-400">dia(s) antes do vencimento</span>
-                </div>
-              </div>
-
-              <div class="space-y-1.5 p-2.5 bg-surface-800 rounded-xl border border-gray-800">
-                <p class="font-semibold text-gray-300 mb-1">Canais de Notificação:</p>
-                <label class="flex items-center gap-2 cursor-pointer text-gray-200">
-                  <input type="checkbox" id="auto-expiry-notify-tv" class="rounded bg-surface-700 border-gray-700 text-brand-600">
-                  <span>📺 <strong>Lembrar cliente no app da TV</strong> (mensagem em tela)</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer text-gray-200">
-                  <input type="checkbox" id="auto-expiry-notify-wa" class="rounded bg-surface-700 border-gray-700 text-emerald-600">
-                  <span>💬 <strong>Enviar mensagem via WhatsApp</strong> (ao número cadastrado)</span>
-                </label>
-              </div>
-
-              <div>
-                <label class="block font-semibold text-gray-300 mb-1">
-                  Modelo da Mensagem
-                  <span class="text-[10px] text-gray-400 font-normal">({{nome}}, {{dias}}, {{data}}, {{aparelho}})</span>
-                </label>
-                <textarea id="auto-expiry-message" rows="3" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-brand-500 leading-relaxed"></textarea>
-              </div>
-
-              <div class="flex gap-2 pt-1">
-                <button onclick="saveAutomationRules()" class="flex-1 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition text-xs shadow-md">
-                  Salvar Regras
-                </button>
-                <button onclick="runAutomationsNow()" id="btn-run-automations" class="py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold transition text-xs shadow-md" title="Executa a verificação e envia avisos para todos os que estão para vencer agora">
-                  ⚡ Executar Agora
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- CARD 4: CHAVES DE METADADOS & CACHE GLOBAL (TMDB / OMDB) -->
-          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-5 lg:col-span-3">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-800 pb-3">
-              <div class="flex items-center gap-2 text-white">
-                <div class="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center font-bold">🎬</div>
-                <div>
-                  <h2 class="text-base font-bold">Metadados & Cache Global (TMDB & OMDb)</h2>
-                  <p class="text-xs text-gray-400">Configure e teste cada API individualmente com economia automática de cotas no banco de dados</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="text-xs text-gray-400">Total em Cache no Banco:</span>
-                <span id="meta-cache-count" class="px-2.5 py-1 text-xs font-mono font-bold rounded-lg bg-surface-700 text-cyan-400 border border-gray-700">0 itens</span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
-              <!-- PAINEL TMDB -->
-              <div class="p-4 bg-surface-800/80 rounded-2xl border border-gray-800 space-y-3.5 flex flex-col justify-between">
-                <div class="space-y-3">
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2 text-white font-bold text-sm">
-                      <span class="text-cyan-400">🎥</span> The Movie Database (TMDB)
-                    </div>
-                    <span id="tmdb-test-status" class="text-[11px] px-2 py-0.5 rounded-md bg-surface-700 text-gray-400">Não testada</span>
-                  </div>
-
-                  <p class="text-[11px] text-gray-400 leading-relaxed">
-                    Responsável pelas sinopses em português, dados de temporadas e episódios, diretores, atores e capas em alta definição.
-                  </p>
-
-                  <div>
-                    <label class="block font-semibold text-gray-300 mb-1">Chave API TMDB (v3 auth)</label>
-                    <div class="relative">
-                      <input type="password" id="tmdb-api-key" placeholder="ex: 32 caracteres hexadecimais (themoviedb.org)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500 text-xs pr-16">
-                      <button type="button" onclick="togglePasswordVisibility('tmdb-api-key')" class="absolute right-2 top-2 text-[11px] text-gray-400 hover:text-white px-1.5 py-0.5 rounded">Ver</button>
-                    </div>
-                  </div>
-
-                  <div class="flex items-center justify-between text-[11px] text-gray-400 bg-surface-900/60 p-2.5 rounded-xl border border-gray-800/80">
-                    <span>Sinopses e títulos em cache:</span>
-                    <strong id="meta-cache-tmdb" class="text-cyan-400 font-mono">0</strong>
-                  </div>
-                </div>
-
-                <div class="flex gap-2 pt-2 border-t border-gray-800/80">
-                  <button onclick="saveTmdbOnly()" class="flex-1 py-2 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition text-xs shadow-md shadow-cyan-600/20">
-                    Salvar TMDB
-                  </button>
-                  <button onclick="testTmdbOnly()" id="btn-test-tmdb" class="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition text-xs shadow-md shadow-emerald-600/20">
-                    Testar
-                  </button>
-                  <button onclick="clearTmdbCache()" class="py-2 px-2.5 rounded-xl bg-surface-700 hover:bg-rose-900/40 text-gray-300 hover:text-rose-300 border border-gray-700 text-xs transition" title="Limpar cache do TMDB">
-                    Limpar
-                  </button>
-                </div>
-              </div>
-
-              <!-- PAINEL OMDB -->
-              <div class="p-4 bg-surface-800/80 rounded-2xl border border-gray-800 space-y-3.5 flex flex-col justify-between">
-                <div class="space-y-3">
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2 text-white font-bold text-sm">
-                      <span class="text-amber-400">⭐</span> Open Movie Database (OMDb)
-                    </div>
-                    <span id="omdb-test-status" class="text-[11px] px-2 py-0.5 rounded-md bg-surface-700 text-gray-400">Não testada</span>
-                  </div>
-
-                  <p class="text-[11px] text-gray-400 leading-relaxed">
-                    Responsável pelas notas oficiais do <strong>IMDb</strong> e <strong>Rotten Tomatoes</strong>. O cache protege a cota gratuita de 1.000 requisições/dia.
-                  </p>
-
-                  <div>
-                    <label class="block font-semibold text-gray-300 mb-1">Chave API OMDb</label>
-                    <div class="relative">
-                      <input type="password" id="omdb-api-key" placeholder="ex: chave de 8 caracteres (omdbapi.com)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500 text-xs pr-16">
-                      <button type="button" onclick="togglePasswordVisibility('omdb-api-key')" class="absolute right-2 top-2 text-[11px] text-gray-400 hover:text-white px-1.5 py-0.5 rounded">Ver</button>
-                    </div>
-                  </div>
-
-                  <div class="flex items-center justify-between text-[11px] text-gray-400 bg-surface-900/60 p-2.5 rounded-xl border border-gray-800/80">
-                    <span>Avaliações e notas em cache:</span>
-                    <strong id="meta-cache-omdb" class="text-amber-400 font-mono">0</strong>
-                  </div>
-                </div>
-
-                <div class="flex gap-2 pt-2 border-t border-gray-800/80">
-                  <button onclick="saveOmdbOnly()" class="flex-1 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold transition text-xs shadow-md shadow-amber-600/20">
-                    Salvar OMDb
-                  </button>
-                  <button onclick="testOmdbOnly()" id="btn-test-omdb" class="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition text-xs shadow-md shadow-emerald-600/20">
-                    Testar
-                  </button>
-                  <button onclick="clearOmdbCache()" class="py-2 px-2.5 rounded-xl bg-surface-700 hover:bg-rose-900/40 text-gray-300 hover:text-rose-300 border border-gray-700 text-xs transition" title="Limpar cache do OMDb">
-                    Limpar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- CARD 4: GERADOR DE TESTES AUTOMÁTICOS (PAINEL SLIM) -->
-          <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4 lg:col-span-3">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-800 pb-3">
-              <div class="flex items-center gap-2 text-white">
-                <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">⚡</div>
-                <div>
-                  <h2 class="text-base font-bold">Solicitação de Testes & Integração Painel Slim</h2>
-                  <p class="text-xs text-gray-400">Página pública com geração de acessos e envio de link de download do APK</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="text-xs text-gray-400">Página do Cliente:</span>
-                <a id="link-public-teste" href="/teste" target="_blank" class="text-xs font-mono font-bold text-cyan-400 hover:text-cyan-300 underline">/teste</a>
-                <button onclick="copyTesteLink()" class="px-2.5 py-1 text-xs rounded-lg bg-surface-700 hover:bg-surface-600 text-gray-200">Copiar Link</button>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div>
-                <label class="block font-semibold text-gray-300 mb-1">URL API Teste (Sem Adultos)</label>
-                <input type="url" id="test-api-without-adults" placeholder="https://painelslim.site/api/chatbot/..." class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
-                <p class="text-[11px] text-gray-400 mt-1">Chatbot para listas familiares padrão.</p>
-              </div>
-
-              <div>
-                <label class="block font-semibold text-gray-300 mb-1">URL API Teste (Com Adultos)</label>
-                <input type="url" id="test-api-with-adults" placeholder="https://painelslim.site/api/chatbot/..." class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
-                <p class="text-[11px] text-gray-400 mt-1">Cole aqui o segundo link do Painel Slim com canais +18.</p>
-              </div>
-
-              <div>
-                <label class="block font-semibold text-gray-300 mb-1">Domínio Público do Portal (HTTPS)</label>
-                <input type="url" id="portal-public-domain" placeholder="https://seu-dominio.com" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
-                <p class="text-[11px] text-gray-400 mt-1">Domínio oficial usado para gerar links públicos e WhatsApp (sem localhost).</p>
-              </div>
-
-              <div>
-                <label class="block font-semibold text-gray-300 mb-1">Código do Downloader (AFTVnews)</label>
-                <input type="text" id="downloader-code" placeholder="Ex: 123456" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
-                <p class="text-[11px] text-gray-400 mt-1">Gerado em <a href="https://go.aftvnews.com" target="_blank" class="text-cyan-400 hover:underline">go.aftvnews.com</a> para instalar na TV sem digitar o link.</p>
-              </div>
-
-              <div>
-                <label class="block font-semibold text-gray-300 mb-1">URL de Download do APK Enviada ao Cliente</label>
-                <input type="url" id="test-app-url" placeholder="Deixe em branco para usar {Dominio}/app.apk" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
-                <p class="text-[11px] text-gray-400 mt-1">Se preenchido, o WhatsApp e o QR Code direcionam para este link customizado.</p>
-              </div>
-
-              <div class="flex items-center gap-2 pt-5">
-                <input type="checkbox" id="test-auto-whatsapp" class="rounded bg-surface-700 border-gray-700 text-cyan-600 focus:ring-0">
-                <label for="test-auto-whatsapp" class="text-xs text-gray-200 font-medium">Enviar WhatsApp automaticamente com o APK e os dados de login assim que o teste for gerado</label>
-              </div>
-
-              <div class="md:col-span-2">
-                <label class="block font-semibold text-gray-300 mb-1">
-                  Mensagem WhatsApp para o Cliente 
-                  <span class="text-gray-500 font-normal">(Variáveis: {{nome}}, {{usuario}}, {{senha}}, {{vencimento}}, {{app_url}}, {{codigo_downloader}}, {{dns}})</span>
-                </label>
-                <textarea id="test-whatsapp-message" rows="3" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"></textarea>
-              </div>
-            </div>
-
-            <div class="flex justify-end pt-2">
-              <button onclick="saveTestSettings()" class="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20">
-                Salvar Configurações de Teste
+              <button onclick="openBroadcastModal()" class="btn btn-sm btn-secondary fw-semibold d-flex align-items-center gap-1.5 rounded-pill px-3">
+                <i class="bi bi-megaphone text-warning"></i>
+                <span>Mensagem Geral</span>
+              </button>
+              <button onclick="loadDevices()" class="btn btn-sm btn-primary fw-semibold d-flex align-items-center gap-1.5 shadow-sm rounded-pill px-3">
+                <i class="bi bi-arrow-clockwise"></i>
+                <span>Atualizar</span>
               </button>
             </div>
           </div>
 
-          <!-- CARD 5: GERENCIAMENTO DE OPERADORES & ACESSOS DO PORTAL -->
-          <div id="card-users-management" class="glass rounded-2xl p-6 border border-gray-800 space-y-4 lg:col-span-3">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-800 pb-3">
-              <div class="flex items-center gap-2 text-white">
-                <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">👥</div>
-                <div>
-                  <h2 class="text-base font-bold">Operadores & Controle de Acessos</h2>
-                  <p class="text-xs text-gray-400">Cadastre operadores com permissão para gerenciar clientes, vincular listas e enviar alertas</p>
-                </div>
-              </div>
-              <button onclick="openUserModal()" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/25 flex items-center gap-1.5 transition">
-                <span>➕</span> Novo Operador / Usuário
-              </button>
-            </div>
-
-            <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse text-xs">
+          <!-- Tabela de Dispositivos (Desktop) -->
+          <div class="d-none d-lg-block glass-card shadow-sm overflow-hidden">
+            <div class="table-responsive">
+              <table class="table table-modern align-middle mb-0">
                 <thead>
-                  <tr class="border-b border-gray-800 text-gray-400 font-semibold bg-surface-900/40">
-                    <th class="py-3 px-4">Nome</th>
-                    <th class="py-3 px-4">Usuário (Login)</th>
-                    <th class="py-3 px-4">Nível de Acesso</th>
-                    <th class="py-3 px-4">Cadastrado em</th>
-                    <th class="py-3 px-4 text-right">Ações</th>
+                  <tr>
+                    <th>Status</th>
+                    <th>Código de Ativação</th>
+                    <th>Dispositivo / Nome</th>
+                    <th>Responsável</th>
+                    <th>MAC / ID</th>
+                    <th>IP / App</th>
+                    <th>Playlist</th>
+                    <th>Assistindo Agora</th>
+                    <th>Validade</th>
+                    <th>Último Acesso</th>
+                    <th class="text-end">Ações</th>
                   </tr>
                 </thead>
-                <tbody id="users-tbody" class="divide-y divide-gray-800/60">
-                  <tr><td colspan="5" class="text-center py-6 text-gray-500">Carregando usuários...</td></tr>
+                <tbody id="devices-tbody">
+                  <tr>
+                    <td colspan="11" class="text-center py-5 text-secondary">
+                      <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                      Carregando dispositivos...
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-        </div>
-      </section>
+          <!-- Cards de Dispositivos (Mobile / Celular) -->
+          <div id="devices-mobile-container" class="d-lg-none d-flex flex-column gap-3">
+            <div class="glass-card p-4 text-center text-secondary">
+              <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+              Carregando dispositivos...
+            </div>
+          </div>
+        </section>
 
-      <!-- SEÇÃO NOVA: TESTES SOLICITADOS -->
-      <section id="section-tests" class="hidden space-y-6">
-        <div class="glass rounded-2xl p-6 border border-gray-800 space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-800 pb-4">
+        <!-- ========================================== -->
+        <!-- SEÇÃO 2: TESTES SOLICITADOS                -->
+        <!-- ========================================== -->
+        <section id="section-tests" class="hidden d-flex flex-column gap-3">
+          <div class="glass-card p-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom border-secondary-subtle">
+              <div>
+                <h2 class="h5 fw-bold text-white mb-1 d-flex align-items-center gap-2">
+                  <span class="badge bg-warning-subtle text-warning border border-warning-subtle p-2 rounded-3"><i class="bi bi-lightning-charge-fill"></i></span>
+                  Solicitações de Testes Realizadas
+                </h2>
+                <p class="text-secondary small mb-0">Clientes que solicitaram teste pela página pública com dados de contato</p>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <button onclick="loadTests()" class="btn btn-sm btn-secondary d-flex align-items-center gap-1.5 rounded-pill px-3">
+                  <i class="bi bi-arrow-clockwise"></i>
+                  <span>Atualizar</span>
+                </button>
+                <a href="/teste" target="_blank" class="btn btn-sm btn-primary fw-bold d-flex align-items-center gap-1.5 rounded-pill px-3">
+                  <span>Abrir Página de Teste</span>
+                  <i class="bi bi-box-arrow-up-right"></i>
+                </a>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-modern align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Data / Hora</th>
+                    <th>WhatsApp / Cliente</th>
+                    <th>Pacote</th>
+                    <th>Usuário</th>
+                    <th>Senha</th>
+                    <th>Vencimento</th>
+                    <th class="text-end">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tests-tbody">
+                  <tr>
+                    <td colspan="7" class="text-center py-5 text-secondary">Carregando testes...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- SEÇÃO 3: CONFIGURAÇÕES & AUTOMAÇÕES        -->
+        <!-- ========================================== -->
+        <section id="section-automations" class="hidden d-flex flex-column gap-4">
+          <div class="row g-4">
+
+            <!-- CARD 1: SERVIDOR IPTV & MIGRAÇÃO EM MASSA -->
+            <div class="col-12 col-lg-4">
+              <div class="glass-card p-4 h-100 d-flex flex-column justify-content-between">
+                <div>
+                  <div class="d-flex align-items-center gap-2 mb-3">
+                    <div class="icon-box bg-primary-subtle text-primary border border-primary-subtle" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                      <i class="bi bi-globe"></i>
+                    </div>
+                    <div>
+                      <h2 class="h6 fw-bold text-white mb-0">Servidor IPTV Padrão</h2>
+                      <small class="text-secondary">Migração em massa de URL</small>
+                    </div>
+                  </div>
+
+                  <p class="text-secondary small leading-relaxed mb-3">
+                    Defina o endereço do servidor IPTV padrão. Caso mude de servidor ou DNS, altere todos os clientes de uma só vez!
+                  </p>
+
+                  <div class="mb-3">
+                    <label for="iptv-default-url" class="form-label small fw-semibold text-light mb-1">Host / URL do Servidor IPTV</label>
+                    <input type="text" id="iptv-default-url" placeholder="http://meuservidor.com:8080" class="form-control form-control-sm font-monospace">
+                  </div>
+                </div>
+
+                <div>
+                  <div class="d-flex gap-2 mb-3">
+                    <button onclick="saveDefaultIptvUrl()" class="btn btn-sm btn-secondary flex-grow-1 fw-semibold">
+                      Salvar Padrão
+                    </button>
+                    <button onclick="migrateAllIptvUrl()" class="btn btn-sm btn-primary flex-grow-1 fw-bold shadow-sm" title="Muda o host de TODOS os clientes Xtream ativos">
+                      ⚡ Mudar de Todos
+                    </button>
+                  </div>
+
+                  <div class="p-2.5 rounded-3 border border-secondary-subtle bg-body-tertiary" style="font-size: 0.75rem;">
+                    <strong class="text-primary d-block mb-1"><i class="bi bi-info-circle me-1"></i>Como funciona a migração em massa?</strong>
+                    <span class="text-secondary">Ao clicar em "Mudar de Todos", o portal atualiza o host de todas as TVs vinculadas. No próximo sinal (heartbeat), os aparelhos recarregam a lista automaticamente!</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CARD 2: API OFICIAL DO WHATSAPP -->
+            <div class="col-12 col-lg-4">
+              <div class="glass-card p-4 h-100 d-flex flex-column justify-content-between">
+                <div>
+                  <div class="d-flex align-items-center gap-2 mb-3">
+                    <div class="icon-box bg-success-subtle text-success border border-success-subtle" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                      <i class="bi bi-whatsapp"></i>
+                    </div>
+                    <div>
+                      <h2 class="h6 fw-bold text-white mb-0">API Oficial do WhatsApp</h2>
+                      <small class="text-secondary">Meta Cloud API / Gateway</small>
+                    </div>
+                  </div>
+
+                  <p class="text-secondary small leading-relaxed mb-3">
+                    Integração padrão oficial da Meta (WhatsApp Cloud API) para disparo de mensagens de cobrança e avisos.
+                  </p>
+
+                  <div class="d-flex flex-column gap-2 mb-3">
+                    <div>
+                      <label for="wa-api-url" class="form-label small fw-semibold text-light mb-1">URL / Endpoint da API</label>
+                      <input type="url" id="wa-api-url" placeholder="https://graph.facebook.com/v20.0/{PHONE_ID}/messages" class="form-control form-control-sm font-monospace" style="font-size: 0.75rem;">
+                    </div>
+                    <div>
+                      <label for="wa-api-token" class="form-label small fw-semibold text-light mb-1">Token de Acesso (Bearer Token)</label>
+                      <input type="password" id="wa-api-token" placeholder="EAABw..." class="form-control form-control-sm font-monospace" style="font-size: 0.75rem;">
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <button onclick="saveWhatsAppApiSettings()" class="btn btn-sm btn-primary w-100 fw-semibold mb-3 shadow-sm">
+                    Salvar Credenciais WhatsApp
+                  </button>
+
+                  <div class="pt-2 border-top border-secondary-subtle">
+                    <label for="wa-test-phone" class="form-label small fw-semibold text-secondary mb-1" style="font-size: 0.75rem;">Testar Envio de Mensagem</label>
+                    <div class="input-group input-group-sm">
+                      <input type="tel" id="wa-test-phone" placeholder="5511999999999" class="form-control font-monospace">
+                      <button onclick="testWhatsAppMessage()" id="btn-test-wa" class="btn btn-success fw-bold">Testar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CARD 3: REGRAS DE RENOVAÇÃO & AVISOS -->
+            <div class="col-12 col-lg-4">
+              <div class="glass-card p-4 h-100 d-flex flex-column justify-content-between">
+                <div>
+                  <div class="d-flex align-items-center gap-2 mb-3">
+                    <div class="icon-box bg-warning-subtle text-warning border border-warning-subtle" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                      <i class="bi bi-alarm"></i>
+                    </div>
+                    <div>
+                      <h2 class="h6 fw-bold text-white mb-0">Automação de Vencimento</h2>
+                      <small class="text-secondary">Lembretes na TV e no WhatsApp</small>
+                    </div>
+                  </div>
+
+                  <div class="form-check form-switch mb-3 p-2 bg-body-tertiary rounded-3 border border-secondary-subtle d-flex justify-content-between align-items-center">
+                    <label class="form-check-label fw-bold text-white small" for="auto-expiry-enabled">Ativar Automações de Vencimento</label>
+                    <input class="form-check-input ms-0" type="checkbox" role="switch" id="auto-expiry-enabled" style="cursor: pointer;">
+                  </div>
+
+                  <div class="mb-3">
+                    <label for="auto-expiry-days" class="form-label small fw-semibold text-light mb-1">Avisar com antecedência de:</label>
+                    <div class="d-flex align-items-center gap-2">
+                      <input type="number" id="auto-expiry-days" min="1" max="30" value="3" class="form-control form-control-sm text-center fw-bold" style="width: 70px;">
+                      <span class="text-secondary small">dia(s) antes do vencimento</span>
+                    </div>
+                  </div>
+
+                  <div class="p-2.5 bg-body-tertiary rounded-3 border border-secondary-subtle mb-3 d-flex flex-column gap-1.5" style="font-size: 0.8rem;">
+                    <span class="fw-semibold text-secondary">Canais de Notificação:</span>
+                    <div class="form-check mb-0">
+                      <input class="form-check-input" type="checkbox" id="auto-expiry-notify-tv">
+                      <label class="form-check-label text-light" for="auto-expiry-notify-tv">📺 Lembrar cliente no app da TV</label>
+                    </div>
+                    <div class="form-check mb-0">
+                      <input class="form-check-input" type="checkbox" id="auto-expiry-notify-wa">
+                      <label class="form-check-label text-light" for="auto-expiry-notify-wa">💬 Enviar mensagem via WhatsApp</label>
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label for="auto-expiry-message" class="form-label small fw-semibold text-light mb-1">
+                      Modelo da Mensagem
+                      <span class="text-secondary fw-normal" style="font-size: 0.7rem;">({{nome}}, {{dias}}, {{data}}, {{aparelho}})</span>
+                    </label>
+                    <textarea id="auto-expiry-message" rows="3" class="form-control form-control-sm" style="font-size: 0.78rem;"></textarea>
+                  </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                  <button onclick="saveAutomationRules()" class="btn btn-sm btn-primary flex-grow-1 fw-semibold shadow-sm">
+                    Salvar Regras
+                  </button>
+                  <button onclick="runAutomationsNow()" id="btn-run-automations" class="btn btn-sm btn-warning fw-bold" title="Executa a verificação e envia avisos para todos os que estão para vencer agora">
+                    ⚡ Executar Agora
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- CARD 4: CHAVES DE METADADOS & CACHE GLOBAL (TMDB / OMDB) -->
+            <div class="col-12">
+              <div class="glass-card p-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom border-secondary-subtle">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="icon-box bg-danger-subtle text-danger border border-danger-subtle" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                      <i class="bi bi-film"></i>
+                    </div>
+                    <div>
+                      <h2 class="h6 fw-bold text-white mb-0">Metadados & Cache Global (TMDB & OMDb)</h2>
+                      <small class="text-secondary">Configure e teste cada API individualmente com economia automática de cotas no banco</small>
+                    </div>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="text-secondary small">Total em Cache no Banco:</span>
+                    <span id="meta-cache-count" class="badge bg-body-tertiary text-info border border-secondary-subtle font-monospace px-2.5 py-1">0 itens</span>
+                  </div>
+                </div>
+
+                <div class="row g-3">
+                  <!-- PAINEL TMDB -->
+                  <div class="col-12 col-md-6">
+                    <div class="p-3 bg-body-tertiary rounded-3 border border-secondary-subtle d-flex flex-column justify-content-between h-100">
+                      <div>
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                          <span class="fw-bold text-white small d-flex align-items-center gap-1.5">
+                            <i class="bi bi-camera-reels text-info"></i> The Movie Database (TMDB)
+                          </span>
+                          <span id="tmdb-test-status" class="badge bg-secondary-subtle text-secondary" style="font-size: 0.7rem;">Não testada</span>
+                        </div>
+                        <p class="text-secondary small mb-3" style="font-size: 0.75rem;">
+                          Responsável pelas sinopses em português, dados de temporadas e episódios, diretores, atores e capas em alta definição.
+                        </p>
+
+                        <div class="mb-3">
+                          <label for="tmdb-api-key" class="form-label small fw-semibold text-light mb-1" style="font-size: 0.75rem;">Chave API TMDB (v3 auth)</label>
+                          <div class="input-group input-group-sm">
+                            <input type="password" id="tmdb-api-key" placeholder="ex: 32 caracteres hexadecimais (themoviedb.org)" class="form-control font-monospace" style="font-size: 0.75rem;">
+                            <button type="button" onclick="togglePasswordVisibility('tmdb-api-key')" class="btn btn-outline-secondary"><i class="bi bi-eye"></i></button>
+                          </div>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between p-2 rounded-2 bg-dark-subtle border border-secondary-subtle mb-3" style="font-size: 0.75rem;">
+                          <span class="text-secondary">Sinopses e títulos em cache:</span>
+                          <strong id="meta-cache-tmdb" class="text-info font-monospace">0</strong>
+                        </div>
+                      </div>
+
+                      <div class="d-flex gap-2 pt-2 border-top border-secondary-subtle">
+                        <button onclick="saveTmdbOnly()" class="btn btn-sm btn-info text-white flex-grow-1 fw-semibold">Salvar TMDB</button>
+                        <button onclick="testTmdbOnly()" id="btn-test-tmdb" class="btn btn-sm btn-success fw-bold">Testar</button>
+                        <button onclick="clearTmdbCache()" class="btn btn-sm btn-outline-danger" title="Limpar cache do TMDB"><i class="bi bi-trash"></i></button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- PAINEL OMDB -->
+                  <div class="col-12 col-md-6">
+                    <div class="p-3 bg-body-tertiary rounded-3 border border-secondary-subtle d-flex flex-column justify-content-between h-100">
+                      <div>
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                          <span class="fw-bold text-white small d-flex align-items-center gap-1.5">
+                            <i class="bi bi-star-fill text-warning"></i> Open Movie Database (OMDb)
+                          </span>
+                          <span id="omdb-test-status" class="badge bg-secondary-subtle text-secondary" style="font-size: 0.7rem;">Não testada</span>
+                        </div>
+                        <p class="text-secondary small mb-3" style="font-size: 0.75rem;">
+                          Responsável pelas notas oficiais do <strong>IMDb</strong> e <strong>Rotten Tomatoes</strong>. O cache protege a cota de 1.000 req/dia.
+                        </p>
+
+                        <div class="mb-3">
+                          <label for="omdb-api-key" class="form-label small fw-semibold text-light mb-1" style="font-size: 0.75rem;">Chave API OMDb</label>
+                          <div class="input-group input-group-sm">
+                            <input type="password" id="omdb-api-key" placeholder="ex: chave de 8 caracteres (omdbapi.com)" class="form-control font-monospace" style="font-size: 0.75rem;">
+                            <button type="button" onclick="togglePasswordVisibility('omdb-api-key')" class="btn btn-outline-secondary"><i class="bi bi-eye"></i></button>
+                          </div>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between p-2 rounded-2 bg-dark-subtle border border-secondary-subtle mb-3" style="font-size: 0.75rem;">
+                          <span class="text-secondary">Avaliações e notas em cache:</span>
+                          <strong id="meta-cache-omdb" class="text-warning font-monospace">0</strong>
+                        </div>
+                      </div>
+
+                      <div class="d-flex gap-2 pt-2 border-top border-secondary-subtle">
+                        <button onclick="saveOmdbOnly()" class="btn btn-sm btn-warning flex-grow-1 fw-semibold text-dark">Salvar OMDb</button>
+                        <button onclick="testOmdbOnly()" id="btn-test-omdb" class="btn btn-sm btn-success fw-bold">Testar</button>
+                        <button onclick="clearOmdbCache()" class="btn btn-sm btn-outline-danger" title="Limpar cache do OMDb"><i class="bi bi-trash"></i></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CARD 5: GERADOR DE TESTES AUTOMÁTICOS (PAINEL SLIM) -->
+            <div class="col-12">
+              <div class="glass-card p-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom border-secondary-subtle">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="icon-box bg-info-subtle text-info border border-info-subtle" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                      <i class="bi bi-lightning-charge"></i>
+                    </div>
+                    <div>
+                      <h2 class="h6 fw-bold text-white mb-0">Solicitação de Testes & Integração Painel Slim</h2>
+                      <small class="text-secondary">Página pública com geração de acessos e envio de link de download do APK</small>
+                    </div>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="text-secondary small">Página do Cliente:</span>
+                    <a id="link-public-teste" href="/teste" target="_blank" class="badge bg-info-subtle text-info border border-info-subtle font-monospace text-decoration-none px-2.5 py-1">/teste</a>
+                    <button onclick="copyTesteLink()" class="btn btn-sm btn-outline-secondary px-2.5 py-1" style="font-size: 0.75rem;">Copiar Link</button>
+                  </div>
+                </div>
+
+                <div class="row g-3">
+                  <div class="col-12 col-md-6">
+                    <label for="test-api-without-adults" class="form-label small fw-semibold text-light mb-1">URL API Teste (Sem Adultos)</label>
+                    <input type="url" id="test-api-without-adults" placeholder="https://painelslim.site/api/chatbot/..." class="form-control form-control-sm font-monospace">
+                    <small class="text-secondary" style="font-size: 0.72rem;">Chatbot para listas familiares padrão.</small>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <label for="test-api-with-adults" class="form-label small fw-semibold text-light mb-1">URL API Teste (Com Adultos)</label>
+                    <input type="url" id="test-api-with-adults" placeholder="https://painelslim.site/api/chatbot/..." class="form-control form-control-sm font-monospace">
+                    <small class="text-secondary" style="font-size: 0.72rem;">Cole aqui o segundo link do Painel Slim com canais +18.</small>
+                  </div>
+
+                  <div class="col-12 col-md-4">
+                    <label for="portal-public-domain" class="form-label small fw-semibold text-light mb-1">Domínio Público do Portal (HTTPS)</label>
+                    <input type="url" id="portal-public-domain" placeholder="https://seu-dominio.com" class="form-control form-control-sm font-monospace">
+                    <small class="text-secondary" style="font-size: 0.72rem;">Domínio oficial usado para links públicos e WhatsApp.</small>
+                  </div>
+
+                  <div class="col-12 col-md-4">
+                    <label for="downloader-code" class="form-label small fw-semibold text-light mb-1">Código do Downloader (AFTVnews)</label>
+                    <input type="text" id="downloader-code" placeholder="Ex: 123456" class="form-control form-control-sm font-monospace">
+                    <small class="text-secondary" style="font-size: 0.72rem;">Gerado em <a href="https://go.aftvnews.com" target="_blank" class="text-info text-decoration-none">go.aftvnews.com</a> para TV.</small>
+                  </div>
+
+                  <div class="col-12 col-md-4">
+                    <label for="test-app-url" class="form-label small fw-semibold text-light mb-1">URL Download APK Enviada ao Cliente</label>
+                    <input type="url" id="test-app-url" placeholder="Deixe em branco para usar {Dominio}/app.apk" class="form-control form-control-sm font-monospace">
+                    <small class="text-secondary" style="font-size: 0.72rem;">Se preenchido, direciona para link customizado.</small>
+                  </div>
+
+                  <div class="col-12">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="test-auto-whatsapp">
+                      <label class="form-check-label text-light small fw-medium" for="test-auto-whatsapp">
+                        Enviar WhatsApp automaticamente com o APK e os dados de login assim que o teste for gerado
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="col-12">
+                    <label for="test-whatsapp-message" class="form-label small fw-semibold text-light mb-1">
+                      Mensagem WhatsApp para o Cliente 
+                      <span class="text-secondary fw-normal" style="font-size: 0.72rem;">({{nome}}, {{usuario}}, {{senha}}, {{vencimento}}, {{app_url}}, {{codigo_downloader}}, {{dns}})</span>
+                    </label>
+                    <textarea id="test-whatsapp-message" rows="3" class="form-control form-control-sm font-monospace" style="font-size: 0.78rem;"></textarea>
+                  </div>
+
+                  <div class="col-12 text-end pt-2">
+                    <button onclick="saveTestSettings()" class="btn btn-sm btn-primary fw-bold px-4 py-2 shadow-sm rounded-pill">
+                      Salvar Configurações de Teste
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CARD 6: GERENCIAMENTO DE OPERADORES & ACESSOS DO PORTAL -->
+            <div id="card-users-management" class="col-12">
+              <div class="glass-card p-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom border-secondary-subtle">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="icon-box bg-primary-subtle text-primary border border-primary-subtle" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                      <i class="bi bi-people"></i>
+                    </div>
+                    <div>
+                      <h2 class="h6 fw-bold text-white mb-0">Operadores & Controle de Acessos</h2>
+                      <small class="text-secondary">Cadastre operadores com permissão para gerenciar clientes, vincular listas e enviar alertas</small>
+                    </div>
+                  </div>
+                  <button onclick="openUserModal()" class="btn btn-sm btn-primary fw-bold d-flex align-items-center gap-1.5 shadow-sm rounded-pill px-3">
+                    <i class="bi bi-person-plus"></i>
+                    <span>Novo Operador / Usuário</span>
+                  </button>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="table table-modern align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th>Nome</th>
+                        <th>Usuário (Login)</th>
+                        <th>Nível de Acesso</th>
+                        <th>Cadastrado em</th>
+                        <th class="text-end">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody id="users-tbody">
+                      <tr>
+                        <td colspan="5" class="text-center py-4 text-secondary">Carregando usuários...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- SEÇÃO 4: ATUALIZAÇÕES OTA                  -->
+        <!-- ========================================== -->
+        <section id="section-ota" class="hidden d-flex flex-column gap-4">
+          
+          <!-- Card Link Permanente de Download -->
+          <div class="glass-card p-4 border border-success-subtle bg-success-subtle bg-opacity-10 d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
             <div>
-              <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                <span class="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-sm font-bold">⚡</span>
-                Solicitações de Testes Realizadas
-              </h2>
-              <p class="text-xs text-gray-400">Clientes que solicitaram teste pela página pública com dados de contato</p>
+              <div class="d-flex align-items-center gap-2 text-success fw-bold mb-1">
+                <i class="bi bi-link-45deg fs-5"></i>
+                <span>Link Fixo Permanente para Primeira Instalação</span>
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill ms-1" style="font-size: 0.65rem;">URL Única</span>
+              </div>
+              <p class="text-secondary small mb-0">
+                Envie este link fixo para os clientes baixarem o app na 1ª instalação. Ele sempre entrega o APK mais recente publicado.
+              </p>
             </div>
-            <div class="flex items-center gap-2">
-              <button onclick="loadTests()" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-gray-200 flex items-center gap-1.5 transition">
-                <svg class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                Atualizar
+            <div class="d-flex align-items-center gap-2 w-100 w-md-auto" style="max-width: 420px;">
+              <input type="text" id="permanent-download-link" readonly class="form-control form-control-sm font-monospace text-success border-success-subtle select-all">
+              <button type="button" onclick="copyPermanentLink()" class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1.5 rounded-pill px-3 text-nowrap">
+                <i class="bi bi-clipboard"></i>
+                <span>Copiar</span>
               </button>
-              <a href="/teste" target="_blank" class="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white transition flex items-center gap-1.5 shadow-md shadow-cyan-500/20">
-                Abrir Página de Teste ↗
-              </a>
             </div>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr class="border-b border-gray-800 text-gray-400 font-semibold bg-surface-900/40">
-                  <th class="py-3 px-4">Data / Hora</th>
-                  <th class="py-3 px-4">WhatsApp / Cliente</th>
-                  <th class="py-3 px-4">Pacote</th>
-                  <th class="py-3 px-4">Usuário</th>
-                  <th class="py-3 px-4">Senha</th>
-                  <th class="py-3 px-4">Vencimento</th>
-                  <th class="py-3 px-4 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody id="tests-tbody" class="divide-y divide-gray-800/60">
-                <tr><td colspan="7" class="text-center py-8 text-gray-500">Carregando testes...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+          <div class="row g-4">
+            <!-- Formulário de Nova Versão -->
+            <div class="col-12 col-lg-5">
+              <div class="glass-card p-4">
+                <h2 class="h6 fw-bold text-white mb-2 d-flex align-items-center gap-2">
+                  <i class="bi bi-cloud-arrow-up text-primary fs-5"></i>
+                  Publicar Atualização OTA
+                </h2>
+                <p class="text-secondary small leading-relaxed mb-3">
+                  Faça o upload do APK gerado aqui. O portal hospeda o arquivo e o app das TVs fará o download e a atualização automaticamente!
+                </p>
 
-      <!-- SEÇÃO 3: ATUALIZAÇÕES OTA -->
-      <section id="section-ota" class="hidden space-y-6">
-        <!-- Card Link Permanente de Download -->
-        <div class="glass rounded-2xl p-5 border border-emerald-500/30 bg-emerald-500/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div class="space-y-1">
-            <div class="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
-              <span>Link Fixo Permanente para Primeira Instalação</span>
-              <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-[10px] uppercase tracking-wider font-extrabold text-emerald-300">URL Única</span>
-            </div>
-            <p class="text-xs text-gray-300">
-              Envie este link fixo para os clientes baixarem o app na 1ª instalação. Ele sempre entrega o APK mais recente publicado (não precisa ficar gerando links novos).
-            </p>
-          </div>
-          <div class="flex items-center gap-2 w-full md:w-auto">
-            <input type="text" id="permanent-download-link" readonly class="w-full md:w-72 bg-surface-900/80 border border-emerald-500/40 rounded-xl px-3 py-2 text-emerald-300 font-mono text-xs select-all">
-            <button type="button" onclick="copyPermanentLink()" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-md whitespace-nowrap flex items-center gap-1.5">
-              📋 Copiar
-            </button>
-          </div>
-        </div>
+                <form id="ota-form" onsubmit="submitOta(event)" class="d-flex flex-column gap-3">
+                  <div>
+                    <label for="ota-version-name" class="form-label small fw-semibold text-light mb-1">
+                      Nome da Versão (ex: 1.5.0) 
+                      <span class="text-info fw-normal" style="font-size: 0.7rem;">(Detectado automático no APK)</span>
+                    </label>
+                    <input type="text" id="ota-version-name" placeholder="Automático do APK (ou digite ex: 1.5.0)" class="form-control form-control-sm">
+                  </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <!-- Formulário de Nova Versão -->
-          <div class="glass rounded-2xl p-6 border border-gray-800 lg:col-span-1 space-y-4">
-            <h2 class="text-lg font-bold text-white flex items-center gap-2">
-              <svg class="w-5 h-5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-              Publicar Atualização OTA
-            </h2>
-            <p class="text-xs text-gray-400 leading-relaxed">
-              Faça o upload do APK gerado aqui. O portal hospeda o arquivo e o app das TVs fará o download e a atualização automaticamente!
-            </p>
+                  <div>
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                      <label for="ota-version-code" class="form-label small fw-semibold text-light mb-0">
+                        Código da Versão (VersionCode numérico)
+                        <span class="text-info fw-normal" style="font-size: 0.7rem;">(Automático)</span>
+                      </label>
+                      <span class="text-info small cursor-pointer" onclick="alert('Se você fizer o upload do arquivo .apk, o portal lê o VersionCode e o VersionName diretamente de dentro do APK automaticamente!')" style="font-size: 0.72rem; cursor: pointer;">Como funciona? 💡</span>
+                    </div>
+                    <input type="number" id="ota-version-code" placeholder="Automático do APK (ou digite ex: 10)" class="form-control form-control-sm">
+                  </div>
 
-            <form id="ota-form" onsubmit="submitOta(event)" class="space-y-4 text-sm">
-              <div>
-                <label class="block text-xs font-medium text-gray-300 mb-1">
-                  Nome da Versão (ex: 1.4.4) 
-                  <span class="text-brand-400 font-normal">(Opcional no APK - detectado automático)</span>
-                </label>
-                <input type="text" id="ota-version-name" placeholder="Automático do APK (ou digite ex: 1.4.4)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+                  <div class="p-3 bg-body-tertiary rounded-3 border border-secondary-subtle d-flex flex-column gap-2">
+                    <label for="ota-apk-file" class="form-label small fw-bold text-white mb-0">Opção 1: Upload do Arquivo APK (Recomendado)</label>
+                    <input type="file" id="ota-apk-file" accept=".apk" class="form-control form-control-sm">
+                    <small class="text-secondary" style="font-size: 0.72rem;">O APK fica hospedado no portal para os clientes baixarem.</small>
+
+                    <div class="pt-2 border-top border-secondary-subtle">
+                      <label for="ota-download-url" class="form-label small fw-semibold text-secondary mb-1">Opção 2: Ou Link de Download Externo (GitHub)</label>
+                      <input type="url" id="ota-download-url" placeholder="https://github.com/.../app-release.apk" class="form-control form-control-sm" style="font-size: 0.75rem;">
+                    </div>
+                  </div>
+
+                  <div>
+                    <label for="ota-changelog" class="form-label small fw-semibold text-light mb-1">Notas da Versão (Changelog)</label>
+                    <textarea id="ota-changelog" rows="3" placeholder="- Nova tela inicial&#10;- Correção na reprodução" class="form-control form-control-sm" style="font-size: 0.78rem;"></textarea>
+                  </div>
+
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="ota-mandatory">
+                    <label class="form-check-label text-light small fw-medium" for="ota-mandatory">
+                      Atualização Obrigatória (bloqueia o app até atualizar)
+                    </label>
+                  </div>
+
+                  <button type="submit" id="ota-submit-btn" class="btn btn-primary fw-semibold py-2 shadow-sm rounded-pill mt-1">
+                    Publicar Versão
+                  </button>
+                </form>
               </div>
+            </div>
 
-              <div>
-                <div class="flex items-center justify-between mb-1">
-                  <label class="text-xs font-medium text-gray-300">
-                    Código da Versão (VersionCode numérico)
-                    <span class="text-brand-400 font-normal">(Opcional no APK - detectado automático)</span>
-                  </label>
-                  <span class="text-[10px] text-cyan-400 cursor-pointer" onclick="alert('Se você fizer o upload do arquivo .apk, o portal lê o VersionCode e o VersionName diretamente de dentro do APK automaticamente! Não precisa digitar.')">Como funciona? 💡</span>
+            <!-- Histórico de Versões OTA -->
+            <div class="col-12 col-lg-7">
+              <div class="glass-card p-4">
+                <h2 class="h6 fw-bold text-white mb-3 d-flex align-items-center gap-2">
+                  <i class="bi bi-clock-history text-info fs-5"></i>
+                  Histórico de Atualizações Publicadas
+                </h2>
+
+                <div class="table-responsive">
+                  <table class="table table-modern align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th>Versão</th>
+                        <th>Código</th>
+                        <th>Obrigatória</th>
+                        <th>Data</th>
+                        <th>Link</th>
+                        <th class="text-end">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ota-history-tbody">
+                      <tr>
+                        <td colspan="6" class="py-4 text-center text-secondary">Nenhuma versão publicada ainda.</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-                <input type="number" id="ota-version-code" placeholder="Automático do APK (ou digite ex: 9)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
               </div>
-
-              <div class="p-3 bg-surface-800 rounded-xl border border-gray-700/80 space-y-2">
-                <label class="block text-xs font-semibold text-white">Opção 1: Upload do Arquivo APK (Recomendado)</label>
-                <input type="file" id="ota-apk-file" accept=".apk" class="w-full text-xs text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-600 file:text-white hover:file:bg-brand-500 cursor-pointer">
-                <p class="text-[11px] text-gray-400">O APK fica hospedado no portal para os clientes baixarem.</p>
-
-                <div class="pt-2 border-t border-gray-700/60">
-                  <label class="block text-xs font-semibold text-gray-400 mb-1">Opção 2: Ou Link de Download Externo (GitHub)</label>
-                  <input type="url" id="ota-download-url" placeholder="https://github.com/.../app-release.apk" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-xs">
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-300 mb-1">Notas da Versão (Changelog)</label>
-                <textarea id="ota-changelog" rows="3" placeholder="- Nova tela inicial&#10;- Correção na reprodução" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500 text-xs"></textarea>
-              </div>
-
-              <div class="flex items-center gap-2">
-                <input type="checkbox" id="ota-mandatory" class="rounded bg-surface-700 border-gray-700 text-brand-600 focus:ring-0">
-                <label for="ota-mandatory" class="text-xs text-gray-300">Atualização Obrigatória (bloqueia o app até atualizar)</label>
-              </div>
-
-              <button type="submit" id="ota-submit-btn" class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition shadow-lg shadow-brand-500/25">
-                Publicar Versão
-              </button>
-            </form>
-          </div>
-
-          <!-- Histórico de Versões OTA -->
-          <div class="glass rounded-2xl p-6 border border-gray-800 lg:col-span-2 space-y-4">
-            <h2 class="text-lg font-bold text-white flex items-center gap-2">
-              <svg class="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              Histórico de Atualizações Publicadas
-            </h2>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-sm">
-                <thead>
-                  <tr class="text-gray-400 text-xs uppercase border-b border-gray-800">
-                    <th class="py-3 px-3">Versão</th>
-                    <th class="py-3 px-3">Código</th>
-                    <th class="py-3 px-3">Obrigatória</th>
-                    <th class="py-3 px-3">Data</th>
-                    <th class="py-3 px-3">Link</th>
-                    <th class="py-3 px-3 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody id="ota-history-tbody" class="divide-y divide-gray-800 text-gray-300">
-                  <tr><td colspan="6" class="py-8 text-center text-gray-500">Nenhuma versão publicada ainda.</td></tr>
-                </tbody>
-              </table>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+      </div>
     </main>
   </div>
 
-  <!-- MODAL: EDITAR CLIENTE (NOME & WHATSAPP) -->
-  <div id="edit-device-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="glass rounded-2xl border border-gray-700 max-w-md w-full p-6 space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+  <!-- ========================================== -->
+  <!-- MODAL: EDITAR CLIENTE                      -->
+  <!-- ========================================== -->
+  <div id="edit-device-modal" class="custom-modal-overlay hidden">
+    <div class="custom-modal-card p-4" style="max-width: 480px;">
+      <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom border-secondary-subtle">
         <div>
-          <h3 class="text-lg font-bold text-white">Editar Dados do Cliente</h3>
-          <p id="edit-device-subtitle" class="text-xs text-gray-400">Dispositivo: -</p>
+          <h3 class="h6 fw-bold text-white mb-0">Editar Dados do Cliente</h3>
+          <small id="edit-device-subtitle" class="text-secondary">Dispositivo: -</small>
         </div>
-        <button onclick="closeModal('edit-device-modal')" class="text-gray-400 hover:text-white">&times;</button>
+        <button type="button" onclick="closeModal('edit-device-modal')" class="btn-close btn-close-white" aria-label="Fechar"></button>
       </div>
 
-      <div class="space-y-3 text-xs">
+      <div class="d-flex flex-column gap-3">
         <div>
-          <label class="block font-medium text-gray-300 mb-1">Nome / Identificação do Cliente</label>
-          <input type="text" id="edit-device-name" placeholder="ex: João Silva - Sala" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+          <label for="edit-device-name" class="form-label small fw-semibold text-light mb-1">Nome / Identificação do Cliente</label>
+          <input type="text" id="edit-device-name" placeholder="ex: João Silva - Sala" class="form-control form-control-sm">
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div>
-            <label class="block font-medium text-gray-300 mb-1">Telefone / WhatsApp (com DDD)</label>
-            <input type="tel" id="edit-device-phone" placeholder="ex: 5581988985300" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+        <div class="row g-2">
+          <div class="col-12 col-sm-6">
+            <label for="edit-device-phone" class="form-label small fw-semibold text-light mb-1">WhatsApp (com DDD)</label>
+            <input type="tel" id="edit-device-phone" placeholder="ex: 5581988985300" class="form-control form-control-sm font-monospace">
           </div>
-          <div>
-            <label class="block font-medium text-gray-300 mb-1">Data de Vencimento</label>
-            <input type="text" id="edit-device-exp" placeholder="DD/MM/AAAA" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+          <div class="col-12 col-sm-6">
+            <label for="edit-device-exp" class="form-label small fw-semibold text-light mb-1">Data de Vencimento</label>
+            <input type="text" id="edit-device-exp" placeholder="DD/MM/AAAA" class="form-control form-control-sm font-monospace">
           </div>
         </div>
 
         <div>
-          <label class="block font-medium text-gray-300 mb-1">Responsável pelo Dispositivo</label>
-          <select id="edit-device-owner" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+          <label for="edit-device-owner" class="form-label small fw-semibold text-light mb-1">Responsável pelo Dispositivo</label>
+          <select id="edit-device-owner" class="form-select form-select-sm">
             <option value="">Livre (Sem responsável / Visível para todos)</option>
           </select>
-          <p class="text-[11px] text-gray-400 mt-1">Quando atribuído a um operador, fica visível apenas para ele e administradores.</p>
+          <small class="text-secondary" style="font-size: 0.72rem;">Quando atribuído a um operador, fica visível apenas para ele e administradores.</small>
         </div>
 
         <div>
-          <label class="block font-medium text-gray-300 mb-1">Observações / Login / Anotações do Cliente</label>
-          <textarea id="edit-device-notes" rows="3" placeholder="ex: Login do Painel: user123 / Plano Anual / TV Quarto" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-brand-500"></textarea>
+          <label for="edit-device-notes" class="form-label small fw-semibold text-light mb-1">Observações / Anotações</label>
+          <textarea id="edit-device-notes" rows="3" placeholder="ex: Login do Painel: user123 / Plano Anual / TV Quarto" class="form-control form-control-sm" style="font-size: 0.78rem;"></textarea>
         </div>
       </div>
 
-      <div class="flex justify-end gap-3 pt-2">
-        <button onclick="closeModal('edit-device-modal')" class="px-4 py-2 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-gray-300">Cancelar</button>
-        <button onclick="saveDeviceEdit()" class="px-5 py-2 text-xs font-bold rounded-xl bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/30">Salvar Alterações</button>
+      <div class="d-flex justify-content-end gap-2 pt-3 mt-3 border-top border-secondary-subtle">
+        <button type="button" onclick="closeModal('edit-device-modal')" class="btn btn-sm btn-outline-secondary rounded-pill px-3">Cancelar</button>
+        <button type="button" onclick="saveDeviceEdit()" class="btn btn-sm btn-primary fw-bold shadow-sm rounded-pill px-4">Salvar Alterações</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: ATRIBUIR PLAYLIST -->
-  <div id="playlist-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="glass rounded-2xl border border-gray-700 max-w-lg w-full p-6 space-y-5 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+  <!-- ========================================== -->
+  <!-- MODAL: ATRIBUIR PLAYLIST                   -->
+  <!-- ========================================== -->
+  <div id="playlist-modal" class="custom-modal-overlay hidden">
+    <div class="custom-modal-card p-4" style="max-width: 520px;">
+      <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom border-secondary-subtle">
         <div>
-          <h3 class="text-lg font-bold text-white">Configurar Playlist Remota</h3>
-          <p id="modal-device-subtitle" class="text-xs text-gray-400">Dispositivo: -</p>
+          <h3 class="h6 fw-bold text-white mb-0">Configurar Playlist Remota</h3>
+          <small id="modal-device-subtitle" class="text-secondary">Dispositivo: -</small>
         </div>
-        <button onclick="closeModal('playlist-modal')" class="text-gray-400 hover:text-white">&times;</button>
+        <button type="button" onclick="closeModal('playlist-modal')" class="btn-close btn-close-white" aria-label="Fechar"></button>
       </div>
 
       <!-- Abas de Tipo de Playlist -->
-      <div class="flex bg-surface-800 p-1 rounded-xl border border-gray-800 text-xs font-semibold">
-        <button type="button" onclick="setPlaylistType('xtream')" id="btn-type-xtream" class="flex-1 py-1.5 rounded-lg bg-brand-600 text-white">Xtream Codes</button>
-        <button type="button" onclick="setPlaylistType('m3u')" id="btn-type-m3u" class="flex-1 py-1.5 rounded-lg text-gray-400 hover:text-white">URL M3U</button>
-        <button type="button" onclick="setPlaylistType('none')" id="btn-type-none" class="flex-1 py-1.5 rounded-lg text-gray-400 hover:text-white">Nenhuma (Limpar)</button>
+      <div class="btn-group w-100 mb-3" role="group">
+        <button type="button" onclick="setPlaylistType('xtream')" id="btn-type-xtream" class="btn btn-sm btn-primary">Xtream Codes</button>
+        <button type="button" onclick="setPlaylistType('m3u')" id="btn-type-m3u" class="btn btn-sm btn-outline-secondary">URL M3U</button>
+        <button type="button" onclick="setPlaylistType('none')" id="btn-type-none" class="btn btn-sm btn-outline-secondary">Nenhuma (Limpar)</button>
       </div>
 
       <!-- Campos Xtream -->
-      <div id="fields-xtream" class="space-y-3 text-xs">
+      <div id="fields-xtream" class="d-flex flex-column gap-2 mb-3">
         <div>
-          <label class="block font-medium text-gray-300 mb-1">Servidor (Host / URL) <span class="text-gray-400 font-normal text-[11px]">(Padrão das configurações)</span></label>
-          <input type="text" id="xtream-host" placeholder="Deixe em branco para usar a URL padrão" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+          <label for="xtream-host" class="form-label small fw-semibold text-light mb-1">
+            Servidor (Host / URL) <span class="text-secondary fw-normal" style="font-size: 0.72rem;">(Padrão das configurações)</span>
+          </label>
+          <input type="text" id="xtream-host" placeholder="Deixe em branco para usar a URL padrão" class="form-control form-control-sm font-monospace">
         </div>
         <div>
-          <label class="block font-medium text-gray-300 mb-1">Usuário</label>
-          <input type="text" id="xtream-user" placeholder="usuario123" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+          <label for="xtream-user" class="form-label small fw-semibold text-light mb-1">Usuário</label>
+          <input type="text" id="xtream-user" placeholder="usuario123" class="form-control form-control-sm font-monospace">
         </div>
         <div>
-          <label class="block font-medium text-gray-300 mb-1">Senha</label>
-          <input type="text" id="xtream-pass" placeholder="senha123" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+          <label for="xtream-pass" class="form-label small fw-semibold text-light mb-1">Senha</label>
+          <input type="text" id="xtream-pass" placeholder="senha123" class="form-control form-control-sm font-monospace">
         </div>
-        <p class="text-[11px] text-gray-400">💡 Ao salvar, o portal consultará automaticamente a data de expiração da conta.</p>
+        <small class="text-secondary" style="font-size: 0.72rem;">💡 Ao salvar, o portal consultará automaticamente a data de expiração da conta.</small>
       </div>
 
       <!-- Campos M3U -->
-      <div id="fields-m3u" class="space-y-3 text-xs hidden">
+      <div id="fields-m3u" class="d-flex flex-column gap-2 mb-3 hidden">
         <div>
-          <label class="block font-medium text-gray-300 mb-1">URL da Lista M3U / M3U8</label>
-          <input type="url" id="m3u-url" placeholder="http://servidor.xyz/get.php?username=..." class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+          <label for="m3u-url" class="form-label small fw-semibold text-light mb-1">URL da Lista M3U / M3U8</label>
+          <input type="url" id="m3u-url" placeholder="http://servidor.xyz/get.php?username=..." class="form-control form-control-sm font-monospace">
         </div>
       </div>
 
-      <!-- Dados do Cliente Vinculado (Nome, WhatsApp e Anotações) -->
-      <div class="border-t border-gray-800 pt-3 space-y-3 text-xs">
-        <h4 class="text-xs font-bold text-gray-300 flex items-center gap-1.5">
-          <span>👤</span> Dados do Cliente Vinculado
-        </h4>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div>
-            <label class="block font-medium text-gray-400 mb-1">Nome do Cliente</label>
-            <input type="text" id="playlist-client-name" placeholder="ex: Carlos Silva" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+      <!-- Dados do Cliente Vinculado -->
+      <div class="pt-3 border-top border-secondary-subtle d-flex flex-column gap-2">
+        <span class="small fw-bold text-white d-flex align-items-center gap-1.5">
+          <i class="bi bi-person-badge text-primary"></i> Dados do Cliente Vinculado
+        </span>
+        
+        <div class="row g-2">
+          <div class="col-12 col-sm-6">
+            <label for="playlist-client-name" class="form-label small text-secondary mb-1">Nome do Cliente</label>
+            <input type="text" id="playlist-client-name" placeholder="ex: Carlos Silva" class="form-control form-control-sm">
           </div>
-          <div>
-            <label class="block font-medium text-gray-400 mb-1">WhatsApp (com DDD)</label>
-            <input type="tel" id="playlist-client-phone" placeholder="ex: 5581988985300" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+          <div class="col-12 col-sm-6">
+            <label for="playlist-client-phone" class="form-label small text-secondary mb-1">WhatsApp (com DDD)</label>
+            <input type="tel" id="playlist-client-phone" placeholder="ex: 5581988985300" class="form-control form-control-sm font-monospace">
           </div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div>
-            <label class="block font-medium text-gray-400 mb-1">Responsável pelo Dispositivo</label>
-            <select id="playlist-owner-id" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+
+        <div class="row g-2">
+          <div class="col-12 col-sm-6">
+            <label for="playlist-owner-id" class="form-label small text-secondary mb-1">Responsável</label>
+            <select id="playlist-owner-id" class="form-select form-select-sm">
               <option value="">Livre (Sem responsável)</option>
             </select>
           </div>
-          <div>
-            <label class="block font-medium text-gray-400 mb-1">Vencimento Manual (Opcional)</label>
-            <input type="text" id="playlist-exp-manual" placeholder="DD/MM/AAAA (ou auto via Xtream)" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+          <div class="col-12 col-sm-6">
+            <label for="playlist-exp-manual" class="form-label small text-secondary mb-1">Vencimento Manual (Opcional)</label>
+            <input type="text" id="playlist-exp-manual" placeholder="DD/MM/AAAA" class="form-control form-control-sm font-monospace">
           </div>
         </div>
+
         <div>
-          <label class="block font-medium text-gray-400 mb-1">Observações / Anotações do Cliente</label>
-          <input type="text" id="playlist-client-notes" placeholder="ex: Login do Painel: user123 / Plano Mensal" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+          <label for="playlist-client-notes" class="form-label small text-secondary mb-1">Observações / Anotações</label>
+          <input type="text" id="playlist-client-notes" placeholder="ex: Plano Mensal / Sala" class="form-control form-control-sm">
         </div>
       </div>
 
-      <div class="flex justify-end gap-3 pt-2">
-        <button onclick="closeModal('playlist-modal')" class="px-4 py-2 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-gray-300">Cancelar</button>
-        <button onclick="savePlaylist()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-500/30">Salvar & Enviar</button>
+      <div class="d-flex justify-content-end gap-2 pt-3 mt-3 border-top border-secondary-subtle">
+        <button type="button" onclick="closeModal('playlist-modal')" class="btn btn-sm btn-outline-secondary rounded-pill px-3">Cancelar</button>
+        <button type="button" onclick="savePlaylist()" class="btn btn-sm btn-primary fw-bold shadow-sm rounded-pill px-4">Salvar & Enviar</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: ENVIAR MENSAGEM PUSH -->
-  <div id="message-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="glass rounded-2xl border border-gray-700 max-w-md w-full p-6 space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+  <!-- ========================================== -->
+  <!-- MODAL: ENVIAR MENSAGEM PUSH                -->
+  <!-- ========================================== -->
+  <div id="message-modal" class="custom-modal-overlay hidden">
+    <div class="custom-modal-card p-4" style="max-width: 440px;">
+      <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom border-secondary-subtle">
         <div>
-          <h3 class="text-lg font-bold text-white">Enviar Mensagem na Tela</h3>
-          <p id="modal-message-subtitle" class="text-xs text-gray-400">Destinatário: -</p>
+          <h3 class="h6 fw-bold text-white mb-0">Enviar Mensagem na Tela</h3>
+          <small id="modal-message-subtitle" class="text-secondary">Destinatário: -</small>
         </div>
-        <button onclick="closeModal('message-modal')" class="text-gray-400 hover:text-white">&times;</button>
+        <button type="button" onclick="closeModal('message-modal')" class="btn-close btn-close-white" aria-label="Fechar"></button>
       </div>
 
-      <div class="space-y-3 text-xs">
+      <div class="d-flex flex-column gap-3">
         <div>
-          <label class="block font-medium text-gray-300 mb-1">Tipo de Notificação</label>
-          <select id="msg-type" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none">
-            <option value="info">Informativo (Azul)</option>
-            <option value="warning">Aviso / Lembrete (Amarelo)</option>
-            <option value="alert">Urgente / Alerta (Vermelho)</option>
+          <label for="msg-type" class="form-label small fw-semibold text-light mb-1">Tipo de Notificação</label>
+          <select id="msg-type" class="form-select form-select-sm">
+            <option value="info">ℹ️ Informativo (Azul)</option>
+            <option value="warning">⚠️ Aviso / Lembrete (Amarelo)</option>
+            <option value="alert">🚨 Urgente / Alerta (Vermelho)</option>
           </select>
         </div>
+
         <div>
-          <label class="block font-medium text-gray-300 mb-1">Conteúdo da Mensagem</label>
-          <textarea id="msg-text" rows="4" placeholder="Ex: Sua mensalidade vence amanhã..." class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500"></textarea>
+          <label for="msg-text" class="form-label small fw-semibold text-light mb-1">Conteúdo da Mensagem</label>
+          <textarea id="msg-text" rows="4" placeholder="Ex: Sua mensalidade vence amanhã..." class="form-control form-control-sm"></textarea>
         </div>
       </div>
 
-      <div class="flex justify-end gap-3 pt-2">
-        <button onclick="closeModal('message-modal')" class="px-4 py-2 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-gray-300">Cancelar</button>
-        <button onclick="sendMessage()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black font-bold">Enviar para a TV</button>
+      <div class="d-flex justify-content-end gap-2 pt-3 mt-3 border-top border-secondary-subtle">
+        <button type="button" onclick="closeModal('message-modal')" class="btn btn-sm btn-outline-secondary rounded-pill px-3">Cancelar</button>
+        <button type="button" onclick="sendMessage()" class="btn btn-sm btn-warning fw-bold rounded-pill px-4">Enviar para a TV</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: VINCULAR POR CÓDIGO -->
-  <div id="link-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="glass rounded-2xl border border-cyan-500/30 max-w-lg w-full p-6 space-y-5 shadow-2xl relative">
-      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
-        <div>
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <span class="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-sm font-bold">🔗</span>
-            Vincular Aparelho por Código
-          </h3>
-          <p class="text-xs text-gray-400">Digite o código de ativação exibido na tela do aparelho</p>
+  <!-- ========================================== -->
+  <!-- MODAL: VINCULAR POR CÓDIGO                 -->
+  <!-- ========================================== -->
+  <div id="link-modal" class="custom-modal-overlay hidden">
+    <div class="custom-modal-card p-4" style="max-width: 520px; border-color: rgba(14, 165, 233, 0.35);">
+      <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom border-secondary-subtle">
+        <div class="d-flex align-items-center gap-2">
+          <div class="icon-box bg-info-subtle text-info border border-info-subtle" style="width: 36px; height: 36px; font-size: 1rem;">
+            <i class="bi bi-link-45deg"></i>
+          </div>
+          <div>
+            <h3 class="h6 fw-bold text-white mb-0">Vincular Aparelho por Código</h3>
+            <small class="text-secondary">Digite o código de ativação exibido na tela do aparelho</small>
+          </div>
         </div>
-        <button onclick="closeModal('link-modal')" class="text-gray-400 hover:text-white">&times;</button>
+        <button type="button" onclick="closeModal('link-modal')" class="btn-close btn-close-white" aria-label="Fechar"></button>
       </div>
 
-      <div class="space-y-4 text-xs">
+      <div class="d-flex flex-column gap-3">
         <div>
-          <label class="block font-semibold text-white mb-1">Código de Ativação do Aparelho (ex: 7A1-9FB ou MAC)</label>
-          <input type="text" id="link-code-input" placeholder="7A1-9FB" maxlength="20"
-            class="w-full bg-surface-700 border-2 border-cyan-500/50 rounded-xl px-4 py-2.5 text-lg font-mono font-bold tracking-widest text-cyan-300 uppercase text-center focus:outline-none focus:border-cyan-400">
+          <label for="link-code-input" class="form-label small fw-bold text-white mb-1">Código de Ativação do Aparelho (ex: 7A1-9FB ou MAC)</label>
+          <input type="text" id="link-code-input" placeholder="7A1-9FB" maxlength="20" class="form-control font-monospace fw-bold text-center text-uppercase fs-5 border-info" style="letter-spacing: 0.15em;">
         </div>
 
-        <div class="p-3.5 bg-surface-800 rounded-xl border border-gray-700/80 space-y-3">
-          <p class="text-xs font-bold text-gray-200">Credenciais Xtream Codes da Lista</p>
+        <div class="p-3 bg-body-tertiary rounded-3 border border-secondary-subtle d-flex flex-column gap-2">
+          <span class="small fw-bold text-white mb-1">Credenciais Xtream Codes da Lista</span>
           <div>
-            <label class="block text-gray-400 mb-1">Servidor (Host / URL) <span class="text-gray-400 font-normal text-[11px]">(Padrão das configurações)</span></label>
-            <input type="text" id="link-xtream-host" placeholder="Deixe em branco para usar a URL padrão" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+            <label for="link-xtream-host" class="form-label small text-secondary mb-1">Servidor (Host / URL)</label>
+            <input type="text" id="link-xtream-host" placeholder="Deixe em branco para usar a URL padrão" class="form-control form-control-sm font-monospace">
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-gray-400 mb-1">Usuário</label>
-              <input type="text" id="link-xtream-user" placeholder="usuario123" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+          <div class="row g-2">
+            <div class="col-6">
+              <label for="link-xtream-user" class="form-label small text-secondary mb-1">Usuário</label>
+              <input type="text" id="link-xtream-user" placeholder="usuario123" class="form-control form-control-sm font-monospace">
             </div>
-            <div>
-              <label class="block text-gray-400 mb-1">Senha</label>
-              <input type="text" id="link-xtream-pass" placeholder="senha123" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
-            </div>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-gray-400 mb-1">Nome do Cliente (Opcional)</label>
-              <input type="text" id="link-client-name" placeholder="ex: Carlos Silva" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
-            </div>
-            <div>
-              <label class="block text-gray-400 mb-1">WhatsApp (com DDD)</label>
-              <input type="tel" id="link-client-phone" placeholder="ex: 5581988985300" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+            <div class="col-6">
+              <label for="link-xtream-pass" class="form-label small text-secondary mb-1">Senha</label>
+              <input type="text" id="link-xtream-pass" placeholder="senha123" class="form-control form-control-sm font-monospace">
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-gray-400 mb-1">Responsável pelo Aparelho</label>
-              <select id="link-owner-id" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+          <div class="row g-2">
+            <div class="col-6">
+              <label for="link-client-name" class="form-label small text-secondary mb-1">Nome do Cliente</label>
+              <input type="text" id="link-client-name" placeholder="ex: Carlos Silva" class="form-control form-control-sm">
+            </div>
+            <div class="col-6">
+              <label for="link-client-phone" class="form-label small text-secondary mb-1">WhatsApp</label>
+              <input type="tel" id="link-client-phone" placeholder="ex: 5581988985300" class="form-control form-control-sm font-monospace">
+            </div>
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label for="link-owner-id" class="form-label small text-secondary mb-1">Responsável</label>
+              <select id="link-owner-id" class="form-select form-select-sm">
                 <option value="">Livre (Sem responsável)</option>
               </select>
             </div>
-            <div>
-              <label class="block text-gray-400 mb-1">Vencimento Manual (Opcional)</label>
-              <input type="text" id="link-exp-manual" placeholder="DD/MM/AAAA" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+            <div class="col-6">
+              <label for="link-exp-manual" class="form-label small text-secondary mb-1">Vencimento Manual</label>
+              <input type="text" id="link-exp-manual" placeholder="DD/MM/AAAA" class="form-control form-control-sm font-monospace">
             </div>
           </div>
           <div>
-            <label class="block text-gray-400 mb-1">Observações / Login / Anotações</label>
-            <input type="text" id="link-client-notes" placeholder="ex: Login do Painel / Plano / Dispositivo" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+            <label for="link-client-notes" class="form-label small text-secondary mb-1">Observações / Anotações</label>
+            <input type="text" id="link-client-notes" placeholder="ex: Plano / Dispositivo" class="form-control form-control-sm">
           </div>
         </div>
       </div>
 
-      <div class="flex justify-end gap-3 pt-2">
-        <button onclick="closeModal('link-modal')" class="px-4 py-2 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-gray-300">Cancelar</button>
-        <button onclick="submitLinkByCode()" id="btn-submit-link" class="px-5 py-2 text-xs font-bold rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-500/30">Vincular & Enviar para o Aparelho</button>
+      <div class="d-flex justify-content-end gap-2 pt-3 mt-3 border-top border-secondary-subtle">
+        <button type="button" onclick="closeModal('link-modal')" class="btn btn-sm btn-outline-secondary rounded-pill px-3">Cancelar</button>
+        <button type="button" onclick="submitLinkByCode()" id="btn-submit-link" class="btn btn-sm btn-info text-white fw-bold shadow-sm rounded-pill px-4">
+          Vincular & Enviar para o Aparelho
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: QR CODE & DOWNLOAD DO APK -->
-  <div id="qr-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="glass rounded-3xl border border-emerald-500/30 max-w-md w-full p-6 sm:p-7 space-y-5 shadow-2xl relative">
-      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-base">📱</div>
+  <!-- ========================================== -->
+  <!-- MODAL: QR CODE & DOWNLOAD DO APK           -->
+  <!-- ========================================== -->
+  <div id="qr-modal" class="custom-modal-overlay hidden">
+    <div class="custom-modal-card p-4 text-center" style="max-width: 440px; border-color: rgba(16, 185, 129, 0.35);">
+      <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom border-secondary-subtle text-start">
+        <div class="d-flex align-items-center gap-2">
+          <div class="icon-box bg-success-subtle text-success border border-success-subtle" style="width: 36px; height: 36px; font-size: 1rem;">
+            <i class="bi bi-qr-code"></i>
+          </div>
           <div>
-            <h3 class="text-base font-bold text-white">QR Code para Instalação</h3>
-            <p class="text-xs text-gray-400">Escaneie para baixar o APK na TV ou Celular</p>
+            <h3 class="h6 fw-bold text-white mb-0">QR Code para Instalação</h3>
+            <small class="text-secondary">Escaneie para baixar o APK na TV ou Celular</small>
           </div>
         </div>
-        <button onclick="closeModal('qr-modal')" class="text-gray-400 hover:text-white text-lg">&times;</button>
+        <button type="button" onclick="closeModal('qr-modal')" class="btn-close btn-close-white" aria-label="Fechar"></button>
       </div>
 
-      <div class="text-center space-y-4">
-        <!-- Renderização do QR Code -->
-        <div class="p-4 bg-white rounded-2xl w-56 h-56 mx-auto flex items-center justify-center shadow-2xl" id="portal-qrcode-container"></div>
+      <!-- Renderização do QR Code -->
+      <div class="p-3 bg-white rounded-3 shadow-sm d-inline-block mx-auto mb-3" id="portal-qrcode-container" style="min-width: 220px; min-height: 220px;"></div>
 
-        <!-- Opção: App Downloader para TV -->
-        <div id="modal-downloader-box" class="hidden p-3.5 rounded-2xl bg-cyan-950/40 border border-cyan-500/40 text-center space-y-1">
-          <div class="flex items-center justify-center gap-1.5 text-cyan-300 font-bold text-xs">
-            <span>📺</span> Opção para TV via App Downloader
-          </div>
-          <p class="text-[11px] text-gray-400">Abra o <strong>Downloader</strong> na TV e digite o código:</p>
-          <div class="flex items-center justify-center gap-2 pt-1">
-            <span id="modal-downloader-code" class="px-4 py-1 rounded-xl bg-surface-900 border border-cyan-500/50 font-mono text-2xl font-black text-cyan-400 tracking-widest select-all"></span>
-            <button onclick="copyModalDownloaderCode()" class="px-3 py-1.5 rounded-xl bg-cyan-600/40 hover:bg-cyan-600 text-cyan-300 hover:text-white text-xs font-semibold transition">
-              Copiar
-            </button>
-          </div>
+      <!-- Downloader Box para TV -->
+      <div id="modal-downloader-box" class="p-3 rounded-3 bg-body-tertiary border border-info-subtle mb-3 hidden">
+        <span class="small fw-bold text-info d-flex align-items-center justify-content-center gap-1.5 mb-1">
+          <i class="bi bi-tv"></i> Opção para TV via App Downloader
+        </span>
+        <p class="text-secondary small mb-2" style="font-size: 0.75rem;">Abra o <strong>Downloader</strong> na TV e digite o código:</p>
+        <div class="d-flex align-items-center justify-content-center gap-2">
+          <span id="modal-downloader-code" class="px-3 py-1 rounded-2 bg-dark border border-info font-monospace fs-4 fw-black text-info tracking-wider select-all"></span>
+          <button onclick="copyModalDownloaderCode()" class="btn btn-sm btn-outline-info rounded-pill px-2.5 py-1" style="font-size: 0.75rem;">Copiar</button>
         </div>
+      </div>
 
-        <div>
-          <label class="block text-xs font-semibold text-gray-300 mb-1 text-left">Link Fixo Permanente de Download</label>
-          <div class="flex items-center gap-2">
-            <input type="text" id="modal-qr-download-link" readonly class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-emerald-300 font-mono text-xs select-all">
-            <button onclick="copyModalQrLink()" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow-md whitespace-nowrap">
-              Copiar
-            </button>
-          </div>
+      <div class="mb-3 text-start">
+        <label for="modal-qr-download-link" class="form-label small fw-semibold text-light mb-1">Link Fixo Permanente de Download</label>
+        <div class="input-group input-group-sm">
+          <input type="text" id="modal-qr-download-link" readonly class="form-control font-monospace text-success select-all">
+          <button onclick="copyModalQrLink()" class="btn btn-success fw-bold">Copiar</button>
         </div>
+      </div>
 
-        <div class="grid grid-cols-2 gap-2 pt-2">
-          <button onclick="downloadQrCodeImage()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5 transition">
-            <span>💾</span> Salvar Imagem (PNG)
+      <div class="row g-2">
+        <div class="col-6">
+          <button onclick="downloadQrCodeImage()" class="btn btn-sm btn-success w-100 fw-bold d-flex align-items-center justify-content-center gap-1.5 rounded-pill py-2">
+            <i class="bi bi-download"></i>
+            <span>Salvar PNG</span>
           </button>
-          <a id="btn-modal-direct-apk" href="/app.apk" download class="w-full py-2.5 rounded-xl bg-surface-700 hover:bg-surface-600 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition">
-            <span>📥</span> Baixar APK (.apk)
+        </div>
+        <div class="col-6">
+          <a id="btn-modal-direct-apk" href="/app.apk" download class="btn btn-sm btn-outline-light w-100 fw-semibold d-flex align-items-center justify-content-center gap-1.5 rounded-pill py-2">
+            <i class="bi bi-file-earmark-arrow-down"></i>
+            <span>Baixar APK</span>
           </a>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: CRIAR / EDITAR USUÁRIO OU OPERADOR -->
-  <div id="user-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="glass rounded-2xl border border-indigo-500/30 max-w-md w-full p-6 space-y-4 shadow-2xl relative">
-      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+  <!-- ========================================== -->
+  <!-- MODAL: CRIAR / EDITAR USUÁRIO / OPERADOR   -->
+  <!-- ========================================== -->
+  <div id="user-modal" class="custom-modal-overlay hidden">
+    <div class="custom-modal-card p-4" style="max-width: 440px;">
+      <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom border-secondary-subtle">
         <div>
-          <h3 id="user-modal-title" class="text-lg font-bold text-white">Novo Operador / Usuário</h3>
-          <p class="text-xs text-gray-400">Defina os dados de login e nível de acesso</p>
+          <h3 id="user-modal-title" class="h6 fw-bold text-white mb-0">Novo Operador / Usuário</h3>
+          <small class="text-secondary">Defina os dados de login e nível de acesso</small>
         </div>
-        <button onclick="closeModal('user-modal')" class="text-gray-400 hover:text-white">&times;</button>
+        <button type="button" onclick="closeModal('user-modal')" class="btn-close btn-close-white" aria-label="Fechar"></button>
       </div>
 
-      <form id="user-form" onsubmit="saveUser(event)" class="space-y-3 text-xs">
+      <form id="user-form" onsubmit="saveUser(event)" class="d-flex flex-column gap-3">
         <input type="hidden" id="user-id-input">
+        
         <div>
-          <label class="block font-medium text-gray-300 mb-1">Nome Completo</label>
-          <input type="text" id="user-name-input" required placeholder="ex: Rodrigo Suporte" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+          <label for="user-name-input" class="form-label small fw-semibold text-light mb-1">Nome Completo</label>
+          <input type="text" id="user-name-input" required placeholder="ex: Rodrigo Suporte" class="form-control form-control-sm">
         </div>
+
         <div>
-          <label class="block font-medium text-gray-300 mb-1">Nome de Usuário (Login)</label>
-          <input type="text" id="user-username-input" required placeholder="ex: rodrigo" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-indigo-500">
+          <label for="user-username-input" class="form-label small fw-semibold text-light mb-1">Nome de Usuário (Login)</label>
+          <input type="text" id="user-username-input" required placeholder="ex: rodrigo" class="form-control form-control-sm font-monospace">
         </div>
+
         <div>
-          <label class="block font-medium text-gray-300 mb-1">Senha <span id="user-pass-hint" class="text-gray-400 font-normal"></span></label>
-          <input type="password" id="user-password-input" placeholder="••••••••" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+          <label for="user-password-input" class="form-label small fw-semibold text-light mb-1">
+            Senha <span id="user-pass-hint" class="text-secondary fw-normal" style="font-size: 0.72rem;"></span>
+          </label>
+          <input type="password" id="user-password-input" placeholder="••••••••" class="form-control form-control-sm font-monospace">
         </div>
+
         <div>
-          <label class="block font-medium text-gray-300 mb-1">Função / Nível de Acesso</label>
-          <select id="user-role-input" class="w-full bg-surface-700 border border-gray-700 rounded-xl px-3 py-2 text-white focus:outline-none">
-            <option value="operator">Operador (Acesso restrito a dispositivos atribuídos e novos sem dono)</option>
-            <option value="admin">Administrador (Acesso total a configurações, OTA e todos clientes)</option>
+          <label for="user-role-input" class="form-label small fw-semibold text-light mb-1">Função / Nível de Acesso</label>
+          <select id="user-role-input" class="form-select form-select-sm">
+            <option value="operator">Operador (Acesso restrito a dispositivos atribuídos)</option>
+            <option value="admin">Administrador (Acesso total)</option>
           </select>
         </div>
 
-        <div class="flex justify-end gap-3 pt-3">
-          <button type="button" onclick="closeModal('user-modal')" class="px-4 py-2 text-xs font-semibold rounded-xl bg-surface-700 hover:bg-surface-600 text-gray-300">Cancelar</button>
-          <button type="submit" id="user-modal-btn" class="px-5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30">Salvar Usuário</button>
+        <div class="d-flex justify-content-end gap-2 pt-3 mt-2 border-top border-secondary-subtle">
+          <button type="button" onclick="closeModal('user-modal')" class="btn btn-sm btn-outline-secondary rounded-pill px-3">Cancelar</button>
+          <button type="submit" id="user-modal-btn" class="btn btn-sm btn-primary fw-bold shadow-sm rounded-pill px-4">Salvar Usuário</button>
         </div>
       </form>
     </div>
   </div>
 
-  <script src="/app.js?v=20261116c"></script>
+  <!-- Bootstrap 5.3.3 JS Bundle Oficial (com Popper incluso) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+  <!-- Lógica Principal do Portal -->
+  <script src="/app.js?v=20261118_bs5"></script>
 </body>
 </html>
