@@ -13,7 +13,8 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 data class Person(val id: Int, val name: String, val role: String?, val photo: String?)
-data class Credits(val cast: List<Person>, val directors: List<Person>, val similar: List<Ref>)
+data class CollectionInfo(val id: Int, val name: String, val poster: String?, val parts: List<Ref>)
+data class Credits(val cast: List<Person>, val directors: List<Person>, val similar: List<Ref>, val collection: CollectionInfo? = null)
 /** [from] = title from which the person was opened (always included on their page, round 14). */
 data class PersonRef(val id: Int, val name: String, val photo: String?, val from: String? = null)
 data class PersonInfo(
@@ -66,10 +67,17 @@ object CreditsRepo {
     private fun toJson(c: Credits): JSONObject {
         fun pj(p: Person) = JSONObject().put("i", p.id).put("n", p.name).put("r", p.role).put("p", p.photo)
         fun rj(r: Ref) = JSONObject().put("i", r.tmdbId).put("tv", r.isTv).put("t", r.title).put("a", r.alt).put("y", r.year).put("p", r.poster)
-        return JSONObject().put("ts", System.currentTimeMillis())
+        val j = JSONObject().put("ts", System.currentTimeMillis())
             .put("cast", JSONArray().also { a -> c.cast.forEach { a.put(pj(it)) } })
             .put("dir", JSONArray().also { a -> c.directors.forEach { a.put(pj(it)) } })
             .put("sim", JSONArray().also { a -> c.similar.forEach { a.put(rj(it)) } })
+            .put("col_checked", true)
+        if (c.collection != null) {
+            val cj = JSONObject().put("id", c.collection.id).put("name", c.collection.name).put("p", c.collection.poster)
+                .put("parts", JSONArray().also { a -> c.collection.parts.forEach { a.put(rj(it)) } })
+            j.put("col", cj)
+        }
+        return j
     }
 
     private fun fromJson(j: JSONObject): Credits {
@@ -79,7 +87,15 @@ object CreditsRepo {
         val sim = j.optJSONArray("sim")?.let { a ->
             (0 until a.length()).map { a.getJSONObject(it) }.map { Ref(it.getInt("i"), it.getBoolean("tv"), it.getString("t"), it.s("a"), it.s("y"), it.s("p")) }
         } ?: emptyList()
-        return Credits(dedupe(pl("cast")), dedupe(pl("dir")), sim.distinctBy { it.tmdbId })
+        val col = j.optJSONObject("col")?.let { cj ->
+            val parts = cj.optJSONArray("parts")?.let { a ->
+                (0 until a.length()).map { a.getJSONObject(it) }.map {
+                    Ref(it.getInt("i"), it.getBoolean("tv"), it.getString("t"), it.s("a"), it.s("y"), it.s("p"))
+                }
+            } ?: emptyList()
+            CollectionInfo(cj.getInt("id"), cj.getString("name"), cj.s("p"), parts)
+        }
+        return Credits(dedupe(pl("cast")), dedupe(pl("dir")), sim.distinctBy { it.tmdbId }, col)
     }
 
     suspend fun credits(ctx: Context, m: Meta): Credits? {
@@ -92,7 +108,9 @@ object CreditsRepo {
             try {
                 if (f.exists()) {
                     val j = JSONObject(f.readText())
-                    if (System.currentTimeMillis() - j.optLong("ts") < TTL) return@withContext fromJson(j).also { mem[k] = it }
+                    if (System.currentTimeMillis() - j.optLong("ts") < TTL && (m.isTv || j.optBoolean("col_checked", false) || j.has("col"))) {
+                        return@withContext fromJson(j).also { mem[k] = it }
+                    }
                 }
             } catch (e: Exception) {
             }
@@ -131,7 +149,32 @@ object CreditsRepo {
                         if (r.tmdbId != m.tmdbId && sim.none { it.tmdbId == r.tmdbId }) sim.add(r)
                     }
                 }
-                val c = Credits(dedupe(cast), dedupe(dirs).take(4), sim)
+                var colInfo: CollectionInfo? = null
+                if (!m.isTv) {
+                    val colObj = o.optJSONObject("belongs_to_collection")
+                    if (colObj != null) {
+                        val colId = colObj.optInt("id", 0)
+                        if (colId > 0) {
+                            val colBody = httpGet("https://api.themoviedb.org/3/collection/$colId?api_key=${Config.TMDB_KEY}&language=${Lang.tmdb()}")
+                            if (colBody != null) {
+                                try {
+                                    val co = JSONObject(colBody)
+                                    val parts = ArrayList<Ref>()
+                                    co.optJSONArray("parts")?.let { pa ->
+                                        for (i in 0 until pa.length()) {
+                                            refOf(pa.getJSONObject(i), false)?.let { parts.add(it) }
+                                        }
+                                    }
+                                    val sortedParts = parts.sortedBy { it.year ?: "9999" }
+                                    val colName = co.optString("name").ifBlank { colObj.optString("name", "Coleção") }
+                                    colInfo = CollectionInfo(colId, colName, colObj.s("poster_path")?.let { IMG + "w342" + it }, sortedParts)
+                                } catch (e: Exception) {
+                                }
+                            }
+                        }
+                    }
+                }
+                val c = Credits(dedupe(cast), dedupe(dirs).take(4), sim, colInfo)
                 mem[k] = c
                 try { f.writeText(toJson(c).toString()) } catch (e: Exception) { }
                 c

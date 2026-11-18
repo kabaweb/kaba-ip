@@ -160,6 +160,22 @@ private fun DetailScreenFull(
         val c = credits ?: return@produceState
         value = withContext(Dispatchers.Default) { LibMatch.matches(all, c.similar, 30).filter { s -> s.id != item.id } }
     }
+    val colState = rememberLazyListState()
+    val collectionItems by produceState(emptyList<Item>(), credits, all) {
+        val col = credits?.collection ?: return@produceState
+        value = withContext(Dispatchers.Default) {
+            val matched = LibMatch.matches(all, col.parts, 50)
+            val idOrder = col.parts.map { it.tmdbId }
+            matched.sortedBy { m ->
+                val cachedMeta = MetaRepo.cached(m)
+                if (cachedMeta != null && cachedMeta.tmdbId in idOrder) idOrder.indexOf(cachedMeta.tmdbId)
+                else {
+                    val hit = col.parts.indexOfFirst { r -> LibMatch.norm(r.title) == LibMatch.norm(m.title) || (r.alt != null && LibMatch.norm(r.alt) == LibMatch.norm(m.title)) }
+                    if (hit >= 0) hit else 999
+                }
+            }
+        }
+    }
 
     val seasons = remember(item) { item.episodes.map { it.season }.distinct().sorted() }
     // Resume point: the page opens at this season and the section with this episode
@@ -264,15 +280,20 @@ private fun DetailScreenFull(
     val castState = rememberLazyListState()
     val simState = rememberLazyListState()
     LaunchedEffect(autoFocus) { if (autoFocus && memKey == null && retSE == null) runCatching { playFocus.requestFocus() } }
-    LaunchedEffect(memKey, similar, credits) {
+    LaunchedEffect(memKey, similar, credits, collectionItems) {
         if (memKey == null || restored) return@LaunchedEffect
+        val isCol = memKey.startsWith("col:")
         val isSim = memKey.startsWith("s:")
-        val id = memKey.drop(2)
-        val idx = if (isSim) similar.indexOfFirst { it.id == id } else credits?.cast?.indexOfFirst { it.id.toString() == id } ?: -1
+        val id = if (isCol) memKey.drop(4) else memKey.drop(2)
+        val idx = when {
+            isCol -> collectionItems.indexOfFirst { it.id == id }
+            isSim -> similar.indexOfFirst { it.id == id }
+            else -> credits?.cast?.indexOfFirst { it.id.toString() == id } ?: -1
+        }
         if (idx >= 0) {
             listState.scrollToItem((listState.layoutInfo.totalItemsCount - 1).coerceAtLeast(0))
             repeat(3) { withFrameNanos { } }
-            (if (isSim) simState else castState).scrollToItem(idx)
+            (if (isCol) colState else if (isSim) simState else castState).scrollToItem(idx)
             repeat(3) { withFrameNanos { } }
             runCatching { restoreReq.requestFocus() }
             restored = true
@@ -769,6 +790,20 @@ private fun DetailScreenFull(
                 }
             }
             credits?.let { c ->
+                if (c.collection != null && collectionItems.isNotEmpty() && collectionItems.any { it.id != item.id }) {
+                    item(key = "collection") {
+                        SimilarRow(
+                            title = c.collection.name,
+                            list = collectionItems,
+                            state = colState,
+                            restoreId = if (memKey?.startsWith("col:") == true) memKey.drop(4) else null,
+                            restoreReq = restoreReq
+                        ) { i ->
+                            DetailFocus.last[item.id] = "col:" + i.id
+                            onOpenItem(i)
+                        }
+                    }
+                }
                 if (c.cast.isNotEmpty()) item(key = "cast") { CastRow(c.cast, castState, if (memKey?.startsWith("c:") == true) memKey.drop(2).toIntOrNull() else null, restoreReq) { p -> DetailFocus.last[item.id] = "c:" + p.id; onPerson(PersonRef(p.id, p.name, p.photo, item.id)) } }
             }
             if (credits == null && (meta?.tmdbId ?: 0) > 0 && CreditsRepo.lastError != null) item(key = "cerr") {

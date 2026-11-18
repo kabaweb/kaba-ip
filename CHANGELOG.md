@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.5.6 (versionCode 23)
+- Coleções de Filmes na Tela de Detalhes: detecção automática de sagas/franquias pelo TMDB (ex: Harry Potter, Star Wars, Velozes e Furiosos, John Wick). Exibe uma fileira com todos os filmes da coleção disponíveis na playlist do usuário em ordem cronológica de lançamento.
+
 ## 1.5.5 (versionCode 22)
 - Persistência Local Total: credenciais e URLs de playlist agora possuem backup direto em SharedPreferences sem depender exclusivamente de Android Keystore, impedindo a perda de login ou retorno à tela de configuração após atualizações do app.
 - Sincronização Inteligente do Portal: o app mantém as credenciais salvas localmente e só substitui a lista se o portal enviar uma data de atualização mais recente (`updatedAt > lastUpdate`) ou se o aparelho estiver limpo/sem lista.
