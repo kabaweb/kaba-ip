@@ -39,6 +39,7 @@ kotlin {
         val desktopMain by getting {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.10.1")
+                implementation("uk.co.caprica:vlcj:4.10.1")
             }
         }
     }

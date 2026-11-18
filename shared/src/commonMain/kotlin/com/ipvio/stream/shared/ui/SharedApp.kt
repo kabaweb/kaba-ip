@@ -30,18 +30,33 @@ import com.ipvio.stream.shared.meta.SharedMeta
 import com.ipvio.stream.shared.meta.SharedMetaRepo
 import com.ipvio.stream.shared.model.Item
 import com.ipvio.stream.shared.model.Kind
+import com.ipvio.stream.shared.player.SharedVideoPlayer
 import com.ipvio.stream.shared.portal.SharedPortalManager
 
 @Composable
 fun SharedApp() {
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf(0) }
+    var activePlayingItem by remember { mutableStateOf<Item?>(null) }
 
     LaunchedEffect(Unit) {
         SharedPortalManager.startPolling(scope)
     }
 
     val hasPlaylist = SharedPortalManager.playlistItems.isNotEmpty()
+
+    // Se estiver reproduzindo vídeo, exibe o player em tela inteira
+    if (activePlayingItem != null) {
+        val playItem = activePlayingItem!!
+        SharedVideoPlayer(
+            url = playItem.url,
+            title = playItem.title,
+            isLive = playItem.kind == Kind.LIVE,
+            modifier = Modifier.fillMaxSize(),
+            onBack = { activePlayingItem = null }
+        )
+        return
+    }
 
     Row(modifier = Modifier.fillMaxSize().background(KorpLook.Bg)) {
         SharedSidebar(
@@ -70,12 +85,12 @@ fun SharedApp() {
                 }
             } else {
                 when (selectedTab) {
-                    0 -> AndroidHomeScreen(Kind.MOVIE) // Início mostra destaques e filmes
-                    1 -> AndroidHomeScreen(Kind.MOVIE) // Aba Filmes idêntica ao Android TV
-                    2 -> AndroidHomeScreen(Kind.SERIES) // Aba Séries idêntica ao Android TV
-                    3 -> SharedLiveScreen() // Aba TV Ao Vivo (2 colunas)
+                    0 -> AndroidHomeScreen(Kind.MOVIE, onPlay = { activePlayingItem = it })
+                    1 -> AndroidHomeScreen(Kind.MOVIE, onPlay = { activePlayingItem = it })
+                    2 -> AndroidHomeScreen(Kind.SERIES, onPlay = { activePlayingItem = it })
+                    3 -> SharedLiveScreen(onPlay = { activePlayingItem = it })
                     5 -> SharedSettingsView()
-                    else -> AndroidHomeScreen(Kind.MOVIE)
+                    else -> AndroidHomeScreen(Kind.MOVIE, onPlay = { activePlayingItem = it })
                 }
             }
         }
@@ -87,11 +102,10 @@ fun SharedApp() {
  * Banner Billboard imersivo com backdrop dinâmico + Sinopse + Ano/Nota + Carrosséis agrupados por Categorias
  */
 @Composable
-fun AndroidHomeScreen(targetKind: Kind) {
+fun AndroidHomeScreen(targetKind: Kind, onPlay: (Item) -> Unit) {
     val all = SharedPortalManager.playlistItems
     val items = remember(all.size, targetKind) { all.filter { it.kind == targetKind } }
 
-    // Agrupamento por Categorias reais da playlist (ex: Ação, Comédia, Lançamentos, etc.)
     val groupsMap = remember(items) {
         items.groupBy { it.group }
     }
@@ -99,7 +113,6 @@ fun AndroidHomeScreen(targetKind: Kind) {
         groupsMap.keys.toList()
     }
 
-    // Filme focado que comanda o banner de destaque superior
     var focusedItem by remember(items) { mutableStateOf(items.firstOrNull()) }
 
     LazyColumn(
@@ -107,14 +120,12 @@ fun AndroidHomeScreen(targetKind: Kind) {
         contentPadding = PaddingValues(bottom = 36.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // 1. O BANNER BILLBOARD OFICIAL NO TOPO
         item(key = "billboard") {
             focusedItem?.let {
-                AndroidBillboardLayer(it)
+                AndroidBillboardLayer(it, onPlay = { onPlay(it) })
             }
         }
 
-        // 2. FILEIRAS HORIZONTAIS DE FILMES/SÉRIES AGRUPADAS POR CATEGORIAS REAIS
         items(groupNames.take(20), key = { it }) { groupName ->
             val rowItems = groupsMap[groupName].orEmpty()
             if (rowItems.isNotEmpty()) {
@@ -122,16 +133,17 @@ fun AndroidHomeScreen(targetKind: Kind) {
                     categoryTitle = groupName,
                     items = rowItems,
                     focusedItem = focusedItem,
-                    onSelect = { focusedItem = it }
+                    onSelect = { focusedItem = it },
+                    onPlay = onPlay
                 )
             }
         }
     }
 }
 
-/** Billboard Layer do Android TV com sinopse, nota, banner em alta resolução e gradientes */
+/** Billboard Layer do Android TV com sinopse, nota, banner em alta resolução e botão de assistir */
 @Composable
-fun AndroidBillboardLayer(item: Item) {
+fun AndroidBillboardLayer(item: Item, onPlay: () -> Unit) {
     var meta by remember(item.id) { mutableStateOf<SharedMeta?>(null) }
 
     LaunchedEffect(item.id) {
@@ -141,9 +153,8 @@ fun AndroidBillboardLayer(item: Item) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(390.dp)
+            .height(410.dp)
     ) {
-        // Imagem de Backdrop com transição suave (Crossfade)
         val bgUrl = meta?.backdrop ?: item.logo
         Crossfade(targetState = bgUrl, animationSpec = tween(400), label = "bbBackdrop") { url ->
             if (!url.isNullOrBlank()) {
@@ -157,7 +168,6 @@ fun AndroidBillboardLayer(item: Item) {
             }
         }
 
-        // Gradiente escuro vertical (fade de cima para baixo)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -170,8 +180,6 @@ fun AndroidBillboardLayer(item: Item) {
                     )
                 )
         )
-
-        // Gradiente escuro horizontal (fade da esquerda para a direita para legibilidade do texto)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -185,7 +193,6 @@ fun AndroidBillboardLayer(item: Item) {
                 )
         )
 
-        // Informações detalhadas do filme
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -193,7 +200,6 @@ fun AndroidBillboardLayer(item: Item) {
                 .width(660.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Kicker (Gênero / Qualidade)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
                     modifier = Modifier
@@ -215,7 +221,6 @@ fun AndroidBillboardLayer(item: Item) {
                 )
             }
 
-            // Título do Filme em destaque gigante
             Text(
                 text = meta?.title ?: item.title,
                 color = Color.White,
@@ -225,7 +230,6 @@ fun AndroidBillboardLayer(item: Item) {
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Linha de Metadados: Ano | Categoria | Avaliação TMDB / Estrela
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 val year = meta?.year ?: item.year?.toString()
                 if (!year.isNullOrBlank()) {
@@ -243,7 +247,6 @@ fun AndroidBillboardLayer(item: Item) {
                 }
             }
 
-            // Sinopse oficial do TMDB
             Text(
                 text = meta?.overview ?: "Carregando sinopse e informações...",
                 color = KorpLook.TextMid,
@@ -252,6 +255,20 @@ fun AndroidBillboardLayer(item: Item) {
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
+
+            // Botão Assistir Agora
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(KorpLook.Accent1)
+                    .clickable { onPlay() }
+                    .padding(horizontal = 22.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("▶", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Assistir Agora", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
@@ -262,7 +279,8 @@ fun CategoryCarrouselRow(
     categoryTitle: String,
     items: List<Item>,
     focusedItem: Item?,
-    onSelect: (Item) -> Unit
+    onSelect: (Item) -> Unit,
+    onPlay: (Item) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
@@ -284,7 +302,13 @@ fun CategoryCarrouselRow(
             items(items.take(40), key = { it.id }) { item ->
                 SharedPosterCard(
                     item = item,
-                    onClick = { onSelect(item) },
+                    onClick = {
+                        if (focusedItem?.id == item.id) {
+                            onPlay(item)
+                        } else {
+                            onSelect(item)
+                        }
+                    },
                     cardWidth = 150.dp
                 )
             }
@@ -294,7 +318,7 @@ fun CategoryCarrouselRow(
 
 /** Tela de TV Ao Vivo: 2 colunas estilo Android */
 @Composable
-fun SharedLiveScreen() {
+fun SharedLiveScreen(onPlay: (Item) -> Unit) {
     val allLive = remember(SharedPortalManager.playlistItems.size) {
         SharedPortalManager.playlistItems.filter { it.kind == Kind.LIVE }
     }
@@ -308,7 +332,6 @@ fun SharedLiveScreen() {
     }
 
     Row(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        // Coluna 1: Categorias de Canais
         Column(
             modifier = Modifier
                 .width(250.dp)
@@ -343,7 +366,6 @@ fun SharedLiveScreen() {
             }
         }
 
-        // Coluna 2: Grade de Canais com Logos
         Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -359,7 +381,7 @@ fun SharedLiveScreen() {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(filteredLive, key = { it.id }) { ch ->
-                    LiveChannelRow(ch)
+                    LiveChannelRow(ch, onClick = { onPlay(ch) })
                 }
             }
         }
@@ -367,14 +389,14 @@ fun SharedLiveScreen() {
 }
 
 @Composable
-fun LiveChannelRow(channel: Item) {
+fun LiveChannelRow(channel: Item, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(58.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(KorpLook.Surf)
-            .clickable { /* Abrir player */ }
+            .clickable { onClick() }
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
