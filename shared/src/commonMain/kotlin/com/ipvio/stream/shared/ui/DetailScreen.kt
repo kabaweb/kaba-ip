@@ -33,20 +33,22 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ipvio.stream.shared.meta.SharedMeta
 import com.ipvio.stream.shared.meta.SharedMetaRepo
+import com.ipvio.stream.shared.meta.SharedPerson
 import com.ipvio.stream.shared.model.Episode
 import com.ipvio.stream.shared.model.Item
 import com.ipvio.stream.shared.model.Kind
 import com.ipvio.stream.shared.platform.BackHandler
 
 /**
- * Tela de Detalhes oficial inspirada no DetailScreen do Android TV:
- * Backdrop imersivo em tela cheia, Pôster, Nota TMDB, Sinopse,
- * Navegação com foco (Teclado/Controle Remoto), e suporte a Temporadas/Episódios para séries.
+ * Tela de Detalhes oficial com Coleções (Franquia), Elenco com Fotos,
+ * Recomendações e Temporadas/Episódios.
  */
 @Composable
 fun DetailScreen(
     item: Item,
+    allPlaylistItems: List<Item>,
     onPlay: (url: String, title: String) -> Unit,
+    onOpenItem: (Item) -> Unit,
     onBack: () -> Unit
 ) {
     BackHandler(onBack = onBack)
@@ -60,7 +62,6 @@ fun DetailScreen(
         isLoadingMeta = false
     }
 
-    // Gerenciamento de foco do botão inicial
     val playButtonFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         try {
@@ -68,7 +69,6 @@ fun DetailScreen(
         } catch (_: Throwable) {}
     }
 
-    // Temporadas e episódios se for série
     val isSeries = item.kind == Kind.SERIES
     val seasons = remember(item.episodes) {
         item.episodes.map { it.season }.distinct().sorted()
@@ -81,12 +81,32 @@ fun DetailScreen(
         else item.episodes.filter { it.season == selectedSeason }
     }
 
+    // Match da Coleção (Franquia) contra a Playlist
+    val collectionItems = remember(meta?.credits?.collection, allPlaylistItems.size) {
+        val col = meta?.credits?.collection ?: return@remember emptyList<Item>()
+        val partTitles = col.parts.map { it.title.lowercase().trim() }
+        allPlaylistItems.filter { p ->
+            val pNorm = p.title.lowercase().trim()
+            partTitles.any { pt -> pNorm.contains(pt) || pt.contains(pNorm) } && p.id != item.id
+        }
+    }
+
+    // Match dos Títulos Similares contra a Playlist
+    val similarItems = remember(meta?.credits?.similar, allPlaylistItems.size) {
+        val sims = meta?.credits?.similar ?: return@remember emptyList<Item>()
+        val simTitles = sims.map { it.title.lowercase().trim() }
+        allPlaylistItems.filter { p ->
+            val pNorm = p.title.lowercase().trim()
+            simTitles.any { st -> pNorm.contains(st) || st.contains(pNorm) } && p.id != item.id
+        }.take(20)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(KorpLook.Bg)
     ) {
-        // 1. Fundo Backdrop de Alta Resolução com Gradientes Cinematográficos
+        // Fundo Backdrop Dinâmico
         val bgUrl = meta?.backdrop ?: item.logo
         Crossfade(targetState = bgUrl, animationSpec = tween(500), label = "detailBackdrop") { url ->
             if (!url.isNullOrBlank()) {
@@ -100,14 +120,14 @@ fun DetailScreen(
             }
         }
 
-        // Camadas de degradê escuro para legibilidade idênticas ao Android TV
+        // Gradientes Cinematográficos
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
                         0f to KorpLook.Bg.copy(alpha = 0.5f),
-                        0.4f to KorpLook.Bg.copy(alpha = 0.75f),
+                        0.4f to KorpLook.Bg.copy(alpha = 0.8f),
                         0.85f to KorpLook.Bg,
                         1f to KorpLook.Bg
                     )
@@ -119,20 +139,19 @@ fun DetailScreen(
                 .background(
                     Brush.horizontalGradient(
                         0f to KorpLook.Bg.copy(alpha = 0.98f),
-                        0.35f to KorpLook.Bg.copy(alpha = 0.9f),
+                        0.35f to KorpLook.Bg.copy(alpha = 0.92f),
                         0.7f to KorpLook.Bg.copy(alpha = 0.5f),
                         1f to Color.Transparent
                     )
                 )
         )
 
-        // 2. Conteúdo com Scroll Vertical
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 48.dp, vertical = 32.dp),
+            contentPadding = PaddingValues(horizontal = 48.dp, vertical = 28.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp)
         ) {
-            // Barra Superior: Botão Voltar
+            // Cabeçalho com botão Voltar
             item {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -158,14 +177,14 @@ fun DetailScreen(
                 }
             }
 
-            // Bloco de Informações Principais: Pôster + Metadados + Sinopse + Botão Assistir
+            // Bloco Principal
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(36.dp),
                     verticalAlignment = Alignment.Top
                 ) {
-                    // Pôster Vertical
+                    // Pôster
                     Box(
                         modifier = Modifier
                             .width(220.dp)
@@ -185,12 +204,11 @@ fun DetailScreen(
                         }
                     }
 
-                    // Detalhes Textuais
+                    // Textos e Ações
                     Column(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // Título
                         Text(
                             text = meta?.title ?: item.title,
                             color = Color.White,
@@ -199,7 +217,6 @@ fun DetailScreen(
                             lineHeight = 44.sp
                         )
 
-                        // Tags: Ano, Nota TMDB, Qualidade, Categoria
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -244,6 +261,22 @@ fun DetailScreen(
                             Text(item.group, color = KorpLook.TextMid, fontSize = 13.sp)
                         }
 
+                        // Gêneros
+                        if (!meta?.genres.isNullOrEmpty()) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                meta!!.genres.take(4).forEach { g ->
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(Color.White.copy(alpha = 0.08f))
+                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                    ) {
+                                        Text(g, color = Color(0xFFCBD5E1), fontSize = 11.sp)
+                                    }
+                                }
+                            }
+                        }
+
                         // Sinopse
                         Text(
                             text = meta?.overview ?: "Carregando sinopse e detalhes...",
@@ -254,7 +287,7 @@ fun DetailScreen(
 
                         Spacer(Modifier.height(8.dp))
 
-                        // Botões de Ação com Foco
+                        // Botão Assistir
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -278,7 +311,40 @@ fun DetailScreen(
                 }
             }
 
-            // Se for Série: Abas de Temporadas e Lista de Episódios
+            // 1. Seção de Coleção (Franquia de Filmes)
+            if (collectionItems.isNotEmpty()) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .width(4.dp)
+                                    .height(18.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(KorpLook.Accent1)
+                            )
+                            Text(
+                                meta?.credits?.collection?.name ?: "Filmes da Franquia",
+                                color = Color.White,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            items(collectionItems) { colItem ->
+                                SharedPosterCard(
+                                    item = colItem,
+                                    onClick = { onOpenItem(colItem) },
+                                    cardWidth = 140.dp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Seção de Séries (Temporadas e Episódios)
             if (isSeries && seasons.isNotEmpty()) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -289,7 +355,6 @@ fun DetailScreen(
                             fontWeight = FontWeight.Bold
                         )
 
-                        // Carrossel de Temporadas
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             items(seasons) { s ->
                                 val active = s == selectedSeason
@@ -330,6 +395,105 @@ fun DetailScreen(
                     }
                 }
             }
+
+            // 3. Seção de Elenco Principal (Atores e Personagens)
+            val cast = meta?.credits?.cast
+            if (!cast.isNullOrEmpty()) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Text(
+                            "Elenco Principal",
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            items(cast) { person ->
+                                CastPersonCard(person = person)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4. Seção de Títulos Semelhantes (Recomendações da Playlist)
+            if (similarItems.isNotEmpty()) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Text(
+                            "Títulos Semelhantes",
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            items(similarItems) { simItem ->
+                                SharedPosterCard(
+                                    item = simItem,
+                                    onClick = { onOpenItem(simItem) },
+                                    cardWidth = 140.dp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CastPersonCard(person: SharedPerson) {
+    Column(
+        modifier = Modifier.width(100.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(76.dp)
+                .clip(CircleShape)
+                .background(KorpLook.Surf2)
+                .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
+        ) {
+            if (!person.photo.isNullOrBlank()) {
+                AsyncImage(
+                    model = person.photo,
+                    contentDescription = person.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        person.name.take(1).uppercase(),
+                        color = KorpLook.Accent1,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        Text(
+            person.name,
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        if (!person.role.isNullOrBlank()) {
+            Text(
+                person.role,
+                color = KorpLook.TextLow,
+                fontSize = 10.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

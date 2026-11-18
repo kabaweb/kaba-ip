@@ -9,28 +9,54 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.window.WindowPlacement
 import com.ipvio.stream.shared.platform.BackDispatcher
+import com.ipvio.stream.shared.platform.FullscreenController
 import com.ipvio.stream.shared.ui.SharedApp
 
 fun main() = application {
     // Interceptor global de teclado do AWT: garante que a tecla ESCAPE sempre volte,
-    // mesmo que o foco esteja preso dentro do componente Swing ou do player de vídeo.
+    // e F ou F11 alternem tela cheia, mesmo com o foco dentro do player.
     java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher { event ->
-        if (event.id == java.awt.event.KeyEvent.KEY_RELEASED && event.keyCode == java.awt.event.KeyEvent.VK_ESCAPE) {
-            BackDispatcher.onBackPressed()
-            true
+        if (event.id == java.awt.event.KeyEvent.KEY_RELEASED) {
+            when (event.keyCode) {
+                java.awt.event.KeyEvent.VK_ESCAPE -> {
+                    BackDispatcher.onBackPressed()
+                    true
+                }
+                java.awt.event.KeyEvent.VK_F11 -> {
+                    FullscreenController.toggle()
+                    true
+                }
+                else -> false
+            }
         } else false
     }
 
     val windowState = rememberWindowState(size = DpSize(1280.dp, 800.dp))
 
+    FullscreenController.onToggle = {
+        val current = windowState.placement
+        val next = if (current == WindowPlacement.Fullscreen) WindowPlacement.Floating else WindowPlacement.Fullscreen
+        windowState.placement = next
+        FullscreenController.isFullscreen = next == WindowPlacement.Fullscreen
+    }
+
     Window(
         onCloseRequest = ::exitApplication,
         state = windowState,
         title = "Korp TV",
+        undecorated = windowState.placement == WindowPlacement.Fullscreen,
         onKeyEvent = { keyEvent ->
-            if (keyEvent.type == KeyEventType.KeyUp && keyEvent.key == Key.Escape) {
-                BackDispatcher.onBackPressed()
+            if (keyEvent.type == KeyEventType.KeyUp) {
+                when (keyEvent.key) {
+                    Key.Escape -> BackDispatcher.onBackPressed()
+                    Key.F11, Key.F -> {
+                        FullscreenController.toggle()
+                        true
+                    }
+                    else -> false
+                }
             } else {
                 false
             }

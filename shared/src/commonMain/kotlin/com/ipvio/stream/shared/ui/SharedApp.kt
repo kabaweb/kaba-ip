@@ -73,12 +73,16 @@ fun SharedApp() {
     if (activeDetailItem != null) {
         DetailScreen(
             item = activeDetailItem!!,
+            allPlaylistItems = SharedPortalManager.playlistItems,
             onPlay = { url, title ->
                 activePlayTarget = PlayTarget(
                     url = url,
                     title = title,
                     isLive = activeDetailItem?.kind == Kind.LIVE
                 )
+            },
+            onOpenItem = { newItem ->
+                activeDetailItem = newItem
             },
             onBack = { activeDetailItem = null }
         )
@@ -446,11 +450,19 @@ fun SharedLiveScreen(onPlay: (Item) -> Unit) {
 @Composable
 fun LiveChannelRow(channel: Item, onClick: () -> Unit) {
     var isFocused by remember { mutableStateOf(false) }
+    var epgList by remember(channel.id) { mutableStateOf<List<com.ipvio.stream.shared.epg.SharedEpgEntry>>(emptyList()) }
+
+    LaunchedEffect(isFocused, channel.id) {
+        if (isFocused && epgList.isEmpty()) {
+            epgList = com.ipvio.stream.shared.epg.SharedEpgRepo.getEpg(channel)
+        }
+    }
+    val currentProg = remember(epgList) { com.ipvio.stream.shared.epg.SharedEpgRepo.current(epgList) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(58.dp)
+            .height(64.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(if (isFocused) Color.White.copy(alpha = 0.18f) else KorpLook.Surf)
             .border(
@@ -467,7 +479,7 @@ fun LiveChannelRow(channel: Item, onClick: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .size(42.dp)
+                .size(46.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(Color(0xFF0F172A)),
             contentAlignment = Alignment.Center
@@ -484,16 +496,20 @@ fun LiveChannelRow(channel: Item, onClick: () -> Unit) {
             }
         }
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(channel.title, color = KorpLook.TextHi, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-            Text(channel.group, color = KorpLook.TextLow, fontSize = 11.sp, maxLines = 1)
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(channel.title, color = KorpLook.TextHi, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            if (currentProg != null) {
+                Text("• ${currentProg.title}", color = KorpLook.Accent1, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            } else {
+                Text(channel.group, color = KorpLook.TextLow, fontSize = 11.sp, maxLines = 1)
+            }
         }
 
         if (!channel.quality.isNullOrBlank()) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(4.dp))
-                    .background(Color(0x334ADE80))
+                    .background(KorpLook.Accent1.copy(alpha = 0.2f))
                     .padding(horizontal = 6.dp, vertical = 2.dp)
             ) {
                 Text(channel.quality, color = KorpLook.Accent1, fontSize = 10.sp, fontWeight = FontWeight.Bold)
