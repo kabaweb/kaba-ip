@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.3 (versionCode 20)
+- VOD Playback Fix: correção do erro "Este título não existe mais no provedor" em filmes e séries através da inclusão do User-Agent VLC no ExoPlayer (`DefaultHttpDataSource`).
+- Fallback de Extensão VOD: detecção automática e alternância transparente entre `.mp4` e `.mkv` em erros 404/410 de servidores IPTV.
+- Checagem Automática de Playlist: modo padrão alterado para "A cada início" (Modo 0), sincronizando novidades e renovações em background com abertura instantânea via cache local.
+- Prevenção da Tela Inicial de Configuração: bloqueio definitivo da exibição da tela de pareamento/adicionar lista para dispositivos já configurados e armazenamento redundante contra falhas do Keystore em TV boxes.
+
 ## 1.5.2 (versionCode 19)
 - Live TV Touch: correção da seleção de categorias e canais via toque direto na tela em tablets e TVs touch, mantendo navegação por D-pad instantânea.
 - Portal Multi-Usuário (Admin & Operador): controle de acesso baseado em perfis, onde operadores visualizam apenas dispositivos sem dono ou atribuídos a eles.
