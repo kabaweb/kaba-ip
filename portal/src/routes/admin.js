@@ -744,15 +744,18 @@ router.post('/devices/:id/check-validity', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Dispositivo não encontrado' });
     }
     const dev = devRes.rows[0];
-    if (!dev.playlist_type || dev.playlist_type === 'none') {
-      return res.status(400).json({ success: false, error: 'Dispositivo não tem playlist atribuída' });
+    let effectiveType = dev.playlist_type;
+    if (!effectiveType || effectiveType === 'none') {
+      if (dev.xtream_user || dev.xtream_pass) effectiveType = 'xtream';
+      else if (dev.playlist_url) effectiveType = 'm3u';
+      else return res.status(400).json({ success: false, error: 'Dispositivo não tem playlist atribuída' });
     }
 
     const settings = await getSettings();
-    const effectiveHost = dev.xtream_host || (dev.playlist_type === 'xtream' ? (settings.default_iptv_url || '') : '');
+    const effectiveHost = dev.xtream_host || (effectiveType === 'xtream' ? (settings.default_iptv_url || '') : '');
 
     const checkRes = await checkPlaylistValidity({
-      type: dev.playlist_type,
+      type: effectiveType,
       url: dev.playlist_url,
       host: effectiveHost,
       user: dev.xtream_user,
@@ -761,8 +764,8 @@ router.post('/devices/:id/check-validity', async (req, res) => {
 
     if (checkRes.success) {
       await db.query(
-        'UPDATE devices SET xtream_host = COALESCE(NULLIF(xtream_host, ""), ?), playlist_exp_date = ?, playlist_status = ?, playlist_max_cons = ? WHERE id = ?',
-        [effectiveHost, checkRes.expDateFormatted, checkRes.status, checkRes.maxConnections || 1, req.params.id]
+        "UPDATE devices SET playlist_type = ?, xtream_host = COALESCE(NULLIF(xtream_host, ''), ?), playlist_exp_date = ?, playlist_status = ?, playlist_max_cons = ? WHERE id = ?",
+        [effectiveType, effectiveHost, checkRes.expDateFormatted, checkRes.status, checkRes.maxConnections || 1, req.params.id]
       );
       return res.json({
         success: true,
