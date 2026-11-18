@@ -55,6 +55,8 @@ object SharedMetaRepo {
         }
     }
 
+    fun cached(item: Item): SharedMeta? = cache[item.id]
+
     suspend fun getMeta(item: Item): SharedMeta? {
         val cached = cache[item.id]
         if (cached != null) return cached

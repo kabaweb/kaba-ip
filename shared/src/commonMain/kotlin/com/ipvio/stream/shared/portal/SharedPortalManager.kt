@@ -21,6 +21,9 @@ object SharedPortalManager {
     private const val PREFS = "ipvio_portal"
     private const val KEY_PORTAL_URL = "portal_url"
     private const val KEY_SAVED_PLAYLIST = "saved_playlist_url"
+    private const val KEY_XTREAM_HOST = "xtream_host"
+    private const val KEY_XTREAM_USER = "xtream_user"
+    private const val KEY_XTREAM_PASS = "xtream_pass"
     const val DEFAULT_PORTAL_URL = "http://192.168.1.99:3002"
 
     var isBlocked by mutableStateOf(false)
@@ -38,6 +41,13 @@ object SharedPortalManager {
     var xtreamHost by mutableStateOf<String?>(null)
     var xtreamUser by mutableStateOf<String?>(null)
     var xtreamPass by mutableStateOf<String?>(null)
+
+    init {
+        val sp = getPreferences(PREFS)
+        xtreamHost = sp.getString(KEY_XTREAM_HOST, null)
+        xtreamUser = sp.getString(KEY_XTREAM_USER, null)
+        xtreamPass = sp.getString(KEY_XTREAM_PASS, null)
+    }
 
     val playlistItems = mutableStateListOf<Item>()
 
@@ -112,14 +122,19 @@ object SharedPortalManager {
 
     private var pollJob: Job? = null
 
+    private fun saveXtreamCredentials(h: String?, u: String?, p: String?) {
+        val sp = getPreferences(PREFS)
+        if (!h.isNullOrBlank()) { xtreamHost = h; sp.putString(KEY_XTREAM_HOST, h) }
+        if (!u.isNullOrBlank()) { xtreamUser = u; sp.putString(KEY_XTREAM_USER, u) }
+        if (!p.isNullOrBlank()) { xtreamPass = p; sp.putString(KEY_XTREAM_PASS, p) }
+    }
+
     private fun detectCredentialsFromItems(items: List<Item>) {
         if (!xtreamHost.isNullOrBlank() && !xtreamUser.isNullOrBlank()) return
         val liveItem = items.firstOrNull { it.kind == com.ipvio.stream.shared.model.Kind.LIVE && it.url.contains("://") } ?: return
         val match = Regex("""^(https?://[^/]+)(?:/.*)?/([^/]+)/([^/]+)/(\d+)(?:\.\w+)?(?:\?.*)?$""").find(liveItem.url)
         if (match != null) {
-            xtreamHost = match.groupValues[1]
-            xtreamUser = match.groupValues[2]
-            xtreamPass = match.groupValues[3]
+            saveXtreamCredentials(match.groupValues[1], match.groupValues[2], match.groupValues[3])
         }
     }
 
@@ -215,9 +230,7 @@ object SharedPortalManager {
                 val pass = Regex(""""pass"\s*:\s*"([^"]*)"""").find(plObj)?.groupValues?.get(1)
                 val url = Regex(""""url"\s*:\s*"([^"]*)"""").find(plObj)?.groupValues?.get(1)
 
-                if (!host.isNullOrBlank()) xtreamHost = host
-                if (!user.isNullOrBlank()) xtreamUser = user
-                if (!pass.isNullOrBlank()) xtreamPass = pass
+                saveXtreamCredentials(host, user, pass)
 
                 var targetUrl: String? = null
                 if ((type == "xtream" || (!user.isNullOrBlank() && !pass.isNullOrBlank())) && !host.isNullOrBlank()) {
@@ -226,10 +239,24 @@ object SharedPortalManager {
                     targetUrl = url
                 }
 
-                if (!targetUrl.isNullOrBlank() && (targetUrl != getSavedPlaylistUrl() || playlistItems.isEmpty())) {
-                    setSavedPlaylistUrl(targetUrl)
-                    loadPlaylist(targetUrl)
+                if (!targetUrl.isNullOrBlank()) {
+                    val currentSaved = getSavedPlaylistUrl()
+                    if (targetUrl != currentSaved) {
+                        setSavedPlaylistUrl(targetUrl)
+                        loadPlaylist(targetUrl)
+                    } else if (playlistItems.isEmpty()) {
+                        loadPlaylist(targetUrl)
+                    }
                 }
+            }
+        }
+    }
+
+    fun refreshPlaylist(scope: CoroutineScope) {
+        val saved = getSavedPlaylistUrl()
+        if (!saved.isNullOrBlank()) {
+            scope.launch(Dispatchers.IO) {
+                loadPlaylist(saved)
             }
         }
     }

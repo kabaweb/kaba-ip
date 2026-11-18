@@ -119,25 +119,35 @@ fun SharedApp() {
                 when (selectedTab) {
                     0 -> AndroidHomeScreen(
                         targetKind = null, // Início: mistura filmes e séries
-                        onOpenDetail = { activeDetailItem = it }
+                        onOpenDetail = { activeDetailItem = it },
+                        onGoSearch = { selectedTab = 4 }
                     )
                     1 -> AndroidHomeScreen(
                         targetKind = Kind.MOVIE,
-                        onOpenDetail = { activeDetailItem = it }
+                        onOpenDetail = { activeDetailItem = it },
+                        onGoSearch = { selectedTab = 4 }
                     )
                     2 -> AndroidHomeScreen(
                         targetKind = Kind.SERIES,
-                        onOpenDetail = { activeDetailItem = it }
+                        onOpenDetail = { activeDetailItem = it },
+                        onGoSearch = { selectedTab = 4 }
                     )
                     3 -> SharedLiveScreen(
                         onPlay = { channel ->
                             activePlayTarget = PlayTarget(channel.url, channel.title, isLive = true)
                         }
                     )
+                    4 -> SharedSearchScreen(
+                        onOpenDetail = { activeDetailItem = it },
+                        onPlayChannel = { channel ->
+                            activePlayTarget = PlayTarget(channel.url, channel.title, isLive = true)
+                        }
+                    )
                     5 -> SharedSettingsView()
                     else -> AndroidHomeScreen(
-                        targetKind = Kind.MOVIE,
-                        onOpenDetail = { activeDetailItem = it }
+                        targetKind = null,
+                        onOpenDetail = { activeDetailItem = it },
+                        onGoSearch = { selectedTab = 4 }
                     )
                 }
             }
@@ -152,7 +162,8 @@ fun SharedApp() {
 @Composable
 fun AndroidHomeScreen(
     targetKind: Kind?,
-    onOpenDetail: (Item) -> Unit
+    onOpenDetail: (Item) -> Unit,
+    onGoSearch: () -> Unit = {}
 ) {
     val all = SharedPortalManager.playlistItems
     val items = remember(all.size, targetKind) {
@@ -179,7 +190,11 @@ fun AndroidHomeScreen(
     ) {
         item(key = "billboard") {
             focusedItem?.let {
-                AndroidBillboardLayer(it, onOpenDetail = { onOpenDetail(it) })
+                AndroidBillboardLayer(
+                    item = it,
+                    onOpenDetail = { onOpenDetail(it) },
+                    onGoSearch = onGoSearch
+                )
             }
         }
 
@@ -197,9 +212,13 @@ fun AndroidHomeScreen(
     }
 }
 
-/** Billboard Layer do Android TV com sinopse, nota, banner em alta resolução e botão de assistir */
+/** Billboard Layer do Android TV com sinopse, nota, banner em alta resolução e botões */
 @Composable
-fun AndroidBillboardLayer(item: Item, onOpenDetail: () -> Unit) {
+fun AndroidBillboardLayer(
+    item: Item,
+    onOpenDetail: () -> Unit,
+    onGoSearch: () -> Unit = {}
+) {
     var meta by remember(item.id) { mutableStateOf<SharedMeta?>(null) }
 
     LaunchedEffect(item.id) {
@@ -312,18 +331,39 @@ fun AndroidBillboardLayer(item: Item, onOpenDetail: () -> Unit) {
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Botão Ver Detalhes
+            // Botões de Ação
             Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(KorpLook.Accent1)
-                    .clickable { onOpenDetail() }
-                    .padding(horizontal = 22.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text("▶", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text("Ver Detalhes", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                // Botão Ver Detalhes
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(KorpLook.Accent1)
+                        .clickable { onOpenDetail() }
+                        .padding(horizontal = 22.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("▶", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("Ver Detalhes", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Botão Buscar Filmes e Séries
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.White.copy(alpha = 0.12f))
+                        .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                        .clickable { onGoSearch() }
+                        .padding(horizontal = 18.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("🔍", fontSize = 14.sp)
+                    Text("Buscar Títulos", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
@@ -700,6 +740,59 @@ fun SharedSettingsView() {
                 Text("URL Atual: ${SharedPortalManager.getPortalUrl()}", color = KorpLook.TextMid, fontSize = 13.sp)
                 Text("Código de Ativação deste PC: ${SharedDeviceIdentity.getPairingCode()}", color = Color(0xFF67E8F9), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 Text("MAC Virtual deste PC: ${SharedDeviceIdentity.getVirtualMac()}", color = KorpLook.TextLow, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+            }
+        }
+
+        // Card de Cache da Playlist & Atualização Sob Demanda
+        val scope = rememberCoroutineScope()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(KorpLook.Surf)
+                .padding(20.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Cache Local da Playlist", color = KorpLook.TextHi, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "A lista fica armazenada no seu PC para abrir instantaneamente sem precisar baixar de novo.",
+                            color = KorpLook.TextLow,
+                            fontSize = 12.sp
+                        )
+                        Text(
+                            "${SharedPortalManager.playlistItems.size} itens disponíveis em cache local.",
+                            color = Color(0xFF10B981),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(KorpLook.Accent1)
+                            .clickable {
+                                SharedPortalManager.refreshPlaylist(scope)
+                            }
+                            .padding(horizontal = 18.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("🔄", fontSize = 14.sp)
+                        Text(
+                            if (SharedPortalManager.isLoadingPlaylist) "Atualizando..." else "Atualizar Lista",
+                            color = Color.Black,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
     }

@@ -55,6 +55,13 @@ fun SharedMenuIcon(id: Int, color: Color, modifier: Modifier = Modifier) {
                 drawLine(color, Offset(s * 0.35f, s * 0.85f), Offset(s * 0.65f, s * 0.85f), stroke)
                 drawLine(color, Offset(s * 0.5f, s * 0.75f), Offset(s * 0.5f, s * 0.85f), stroke)
             }
+            4 -> { // Pesquisar (Lupa)
+                val r = s * 0.26f
+                val cx = s * 0.42f
+                val cy = s * 0.42f
+                drawCircle(color, r, Offset(cx, cy), style = Stroke(stroke))
+                drawLine(color, Offset(cx + r * 0.707f, cy + r * 0.707f), Offset(s * 0.82f, s * 0.82f), stroke, cap = StrokeCap.Round)
+            }
             5 -> { // Configurações
                 drawCircle(color, s * 0.35f, Offset(s * 0.5f, s * 0.5f), style = Stroke(stroke))
                 drawCircle(color, s * 0.15f, Offset(s * 0.5f, s * 0.5f), style = Stroke(stroke))
@@ -70,6 +77,7 @@ data class MenuItemDef(val id: Int, val label: String)
 
 val DEFAULT_APP_TABS = listOf(
     MenuItemDef(0, "Início"),
+    MenuItemDef(4, "Pesquisar"),
     MenuItemDef(3, "Canais Ao Vivo"),
     MenuItemDef(1, "Filmes"),
     MenuItemDef(2, "Séries"),

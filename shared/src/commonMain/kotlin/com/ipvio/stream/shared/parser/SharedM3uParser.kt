@@ -48,7 +48,7 @@ object SharedM3uParser {
 
     private class SeriesAccumulator(
         val seriesTitle: String,
-        val logo: String?,
+        var logo: String?,
         val group: String,
         val year: Int?
     ) {
@@ -139,6 +139,9 @@ object SharedM3uParser {
                                     group = group,
                                     year = year
                                 )
+                            }
+                            if (acc.logo.isNullOrBlank() && !logo.isNullOrBlank()) {
+                                acc.logo = logo
                             }
 
                             val epTitle = if (epExtra.isNotBlank()) "Episódio $epNum - $epExtra" else "Episódio $epNum"

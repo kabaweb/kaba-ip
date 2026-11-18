@@ -39,6 +39,14 @@ fun SharedPosterCard(
     val isLive = item.kind == Kind.LIVE
     val shape = RoundedCornerShape(12.dp)
 
+    // Busca metadados/pôster oficial no TMDB para Filmes e Séries
+    var meta by remember(item.id) { mutableStateOf(com.ipvio.stream.shared.meta.SharedMetaRepo.cached(item)) }
+    LaunchedEffect(item.id) {
+        if (meta == null && !isLive) {
+            meta = com.ipvio.stream.shared.meta.SharedMetaRepo.getMeta(item)
+        }
+    }
+
     Column(
         modifier = modifier
             .width(cardWidth)
@@ -70,7 +78,7 @@ fun SharedPosterCard(
             contentAlignment = Alignment.Center
         ) {
             // Imagem (Logo para TV ou Pôster para Filmes/Séries)
-            val imgUrl = item.logo
+            val imgUrl = if (isLive) item.logo else (item.logo ?: meta?.poster)
             if (!imgUrl.isNullOrBlank()) {
                 AsyncImage(
                     model = imgUrl,

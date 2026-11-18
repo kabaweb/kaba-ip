@@ -84,21 +84,77 @@ fun DetailScreen(
     // Match da Coleção (Franquia) contra a Playlist
     val collectionItems = remember(meta?.credits?.collection, allPlaylistItems.size) {
         val col = meta?.credits?.collection ?: return@remember emptyList<Item>()
-        val partTitles = col.parts.map { it.title.lowercase().trim() }
-        allPlaylistItems.filter { p ->
-            val pNorm = p.title.lowercase().trim()
-            partTitles.any { pt -> pNorm.contains(pt) || pt.contains(pNorm) } && p.id != item.id
+        if (item.kind == Kind.LIVE) return@remember emptyList<Item>()
+
+        // Filtra apenas itens do mesmo tipo (nunca canais ao vivo)
+        val candidates = allPlaylistItems.filter { it.kind == item.kind && it.id != item.id }
+        val matched = ArrayList<Item>()
+        val seen = HashSet<String>()
+
+        fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
+
+        for (part in col.parts) {
+            val pNorm = norm(part.title)
+            if (pNorm.isBlank()) continue
+            val pYear = part.year?.toIntOrNull()
+
+            val found = candidates.firstOrNull { c ->
+                if (c.id in seen) return@firstOrNull false
+                val cNorm = norm(c.title)
+                val exactOrClose = cNorm == pNorm ||
+                        (cNorm.startsWith(pNorm) && cNorm.length <= pNorm.length + 3) ||
+                        (pNorm.startsWith(cNorm) && pNorm.length <= cNorm.length + 3)
+
+                if (!exactOrClose) return@firstOrNull false
+
+                if (pYear != null && c.year != null) {
+                    Math.abs(c.year - pYear) <= 1
+                } else true
+            }
+
+            if (found != null && seen.add(found.id)) {
+                matched.add(found)
+            }
         }
+        matched
     }
 
     // Match dos Títulos Similares contra a Playlist
     val similarItems = remember(meta?.credits?.similar, allPlaylistItems.size) {
         val sims = meta?.credits?.similar ?: return@remember emptyList<Item>()
-        val simTitles = sims.map { it.title.lowercase().trim() }
-        allPlaylistItems.filter { p ->
-            val pNorm = p.title.lowercase().trim()
-            simTitles.any { st -> pNorm.contains(st) || st.contains(pNorm) } && p.id != item.id
-        }.take(20)
+        if (item.kind == Kind.LIVE) return@remember emptyList<Item>()
+
+        val candidates = allPlaylistItems.filter { it.kind == item.kind && it.id != item.id }
+        val matched = ArrayList<Item>()
+        val seen = HashSet<String>()
+
+        fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
+
+        for (sim in sims) {
+            val sNorm = norm(sim.title)
+            if (sNorm.isBlank()) continue
+            val sYear = sim.year?.toIntOrNull()
+
+            val found = candidates.firstOrNull { c ->
+                if (c.id in seen) return@firstOrNull false
+                val cNorm = norm(c.title)
+                val isHit = cNorm == sNorm ||
+                        (cNorm.startsWith(sNorm) && cNorm.length <= sNorm.length + 3) ||
+                        (sNorm.startsWith(cNorm) && sNorm.length <= cNorm.length + 3)
+
+                if (!isHit) return@firstOrNull false
+
+                if (sYear != null && c.year != null) {
+                    Math.abs(c.year - sYear) <= 1
+                } else true
+            }
+
+            if (found != null && seen.add(found.id)) {
+                matched.add(found)
+            }
+            if (matched.size >= 20) break
+        }
+        matched
     }
 
     Box(
