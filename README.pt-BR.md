@@ -13,9 +13,8 @@ Esta versão estendida traz uma suíte completa de gerenciamento e funcionalidad
 - **Gravações Locais**: Grave transmissões de TV ao vivo com buffer contínuo e exclua os arquivos diretamente pela interface.
 - **Portal Web de Gerenciamento Remoto**: Vincule listas à distância por código na tela (Pairing Code), distribua atualizações OTA e monitore aparelhos em tempo real.
 - **Banco de Dados Padrão SQLite**: Inicialização simplificada e com zero dependências externas para o servidor do portal.
-- **Player WebTV Integrado**: Assista também pelo navegador em PCs e Smart TVs via D-Pad/teclado.
-- **Versão Desktop Windows (KMP)**: Documentação completa e código-base unificado em Compose Multiplatform registrado em `docs/KMP_WINDOWS_MIGRATION.md` (branch `feat/kmp-migration`).
 - **100% Traduzido em Português do Brasil (pt-BR)**.
+- **Arquivamento e Preservação**: Projetos WebTV (na branch `archive/web-tv`) e Desktop Windows/KMP (na branch `feat/kmp-migration`) preservados para restauração sob demanda.
 
 ---
 

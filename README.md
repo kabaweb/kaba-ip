@@ -140,10 +140,9 @@ app/src/main/java/com/ipvio/stream/   all Kotlin Android sources (one package)
   *Logic.kt                           pure, Android-free logic (covered by unit tests)
   Dict*.kt                            translations (one row per text)
 portal/                               Node.js (Express + SQLite) device management portal & OTA
-webtv/                                Web-based IPTV player (React + Tailwind + Video.js/Hls.js)
-shared/                               Kotlin Multiplatform core (available on feat/kmp-migration branch)
-desktopApp/                           Compose Multiplatform Windows desktop client (available on feat/kmp-migration)
 docs/                                 Documentation, releases, and platform roadmaps
+(archived) web-tv/                    Web-based IPTV player (archived on branch archive/web-tv)
+(archived) desktopApp/, shared/       Compose Multiplatform Windows desktop client (archived on branch feat/kmp-migration)
 ```
 
 ## AI Development and Attribution
