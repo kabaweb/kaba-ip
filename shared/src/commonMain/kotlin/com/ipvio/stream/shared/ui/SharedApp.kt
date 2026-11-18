@@ -1,5 +1,6 @@
 package com.ipvio.stream.shared.ui
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,10 +20,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ipvio.stream.shared.device.SharedDeviceIdentity
+import com.ipvio.stream.shared.meta.SharedMeta
+import com.ipvio.stream.shared.meta.SharedMetaRepo
 import com.ipvio.stream.shared.model.Item
 import com.ipvio.stream.shared.model.Kind
 import com.ipvio.stream.shared.portal.SharedPortalManager
@@ -85,69 +89,93 @@ fun SharedHomeScreen() {
     val series = remember(all.size) { all.filter { it.kind == Kind.SERIES } }
     val live = remember(all.size) { all.filter { it.kind == Kind.LIVE } }
 
-    val billboardItem = remember(all.size) { movies.firstOrNull { !it.logo.isNullOrBlank() } ?: all.firstOrNull() }
+    var focusedItem by remember { mutableStateOf(movies.firstOrNull() ?: all.firstOrNull()) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(28.dp)
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // 1. Billboard Banner de Destaque
-        if (billboardItem != null) {
-            item {
-                BillboardHeader(billboardItem)
-            }
+        // 1. Billboard Banner interativo que reage ao filme focado
+        item {
+            focusedItem?.let { BillboardHeader(it) }
         }
 
-        // 2. Fileira: Canais em Destaque
-        if (live.isNotEmpty()) {
-            item {
-                SectionRow(title = "Canais Ao Vivo em Destaque", items = live.take(25), isLive = true)
-            }
-        }
-
-        // 3. Fileira: Filmes Populares
+        // 2. Fileira: Filmes
         if (movies.isNotEmpty()) {
             item {
-                SectionRow(title = "Filmes Adicionados Recentemente", items = movies.take(25), isLive = false)
+                SectionRow(
+                    title = "Filmes Adicionados Recentemente",
+                    items = movies.take(25),
+                    isLive = false,
+                    onHoverItem = { focusedItem = it }
+                )
             }
         }
 
-        // 4. Fileira: Séries
+        // 3. Fileira: Séries
         if (series.isNotEmpty()) {
             item {
-                SectionRow(title = "Séries em Destaque", items = series.take(25), isLive = false)
+                SectionRow(
+                    title = "Séries em Destaque",
+                    items = series.take(25),
+                    isLive = false,
+                    onHoverItem = { focusedItem = it }
+                )
+            }
+        }
+
+        // 4. Fileira: Canais Ao Vivo
+        if (live.isNotEmpty()) {
+            item {
+                SectionRow(
+                    title = "Canais Ao Vivo em Destaque",
+                    items = live.take(25),
+                    isLive = true,
+                    onHoverItem = { focusedItem = it }
+                )
             }
         }
     }
 }
 
+/** Billboard Hero Banner oficial do Android com sinopse, nota e gêneros */
 @Composable
 fun BillboardHeader(item: Item) {
+    var meta by remember(item.id) { mutableStateOf<SharedMeta?>(null) }
+
+    LaunchedEffect(item.id) {
+        meta = SharedMetaRepo.getMeta(item)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(340.dp)
+            .height(380.dp)
     ) {
-        // Imagem de fundo com gradiente de fusão
-        if (!item.logo.isNullOrBlank()) {
-            AsyncImage(
-                model = item.logo,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
+        // Fundo com backdrop do filme
+        Crossfade(targetState = meta?.backdrop ?: item.logo, label = "bbBackdrop") { bgUrl ->
+            if (!bgUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = bgUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.TopEnd
+                )
+            }
         }
+
+        // Gradientes idênticos ao Android para legibilidade
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            KorpLook.Bg.copy(alpha = 0.6f),
-                            KorpLook.Bg
-                        )
+                        0f to KorpLook.Bg.copy(alpha = 0.3f),
+                        0.4f to Color.Transparent,
+                        0.75f to KorpLook.Bg.copy(alpha = 0.85f),
+                        1f to KorpLook.Bg
                     )
                 )
         )
@@ -156,49 +184,92 @@ fun BillboardHeader(item: Item) {
                 .fillMaxSize()
                 .background(
                     Brush.horizontalGradient(
-                        colors = listOf(
-                            KorpLook.Bg.copy(alpha = 0.95f),
-                            KorpLook.Bg.copy(alpha = 0.5f),
-                            Color.Transparent
-                        )
+                        0f to KorpLook.Bg,
+                        0.35f to KorpLook.Bg.copy(alpha = 0.94f),
+                        0.65f to KorpLook.Bg.copy(alpha = 0.4f),
+                        1f to Color.Transparent
                     )
                 )
         )
 
-        // Conteúdo do Banner
+        // Informações completas do filme
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 36.dp, bottom = 24.dp)
-                .width(550.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(start = 36.dp, bottom = 20.dp)
+                .width(620.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(KorpLook.Accent1)
-                    .padding(horizontal = 8.dp, vertical = 3.dp)
-            ) {
-                Text("EM DESTAQUE", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            // Badge Kicker
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .height(18.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(KorpLook.Accent1)
+                )
+                Text(
+                    text = when (item.kind) {
+                        Kind.LIVE -> "CANAL AO VIVO"
+                        Kind.MOVIE -> "FILME"
+                        Kind.SERIES -> "SÉRIE"
+                    } + (if (!item.quality.isNullOrBlank()) "  ·  ${item.quality}" else ""),
+                    color = KorpLook.Accent1,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.5.sp
+                )
             }
+
+            // Título
             Text(
-                item.title,
+                text = meta?.title ?: item.title,
                 color = Color.White,
-                fontSize = 32.sp,
+                fontSize = 34.sp,
                 fontWeight = FontWeight.Black,
-                maxLines = 2
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
+
+            // Linha de Metadados: Ano | Categoria | Nota
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                val year = meta?.year ?: item.year?.toString()
+                if (!year.isNullOrBlank()) {
+                    Text(year, color = Color(0xFFE2E8F0), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Box(Modifier.width(1.dp).height(12.dp).background(Color(0x66FFFFFF)))
+                }
+                Text(item.group, color = Color(0xFFCBD5E1), fontSize = 14.sp)
+
+                meta?.rating?.let { r ->
+                    Box(Modifier.width(1.dp).height(12.dp).background(Color(0x66FFFFFF)))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("★", color = Color(0xFFFBBF24), fontSize = 14.sp)
+                        Text(String.format("%.1f", r), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // Sinopse
             Text(
-                "Categoria: ${item.group} ${if (item.year != null) "• " + item.year else ""}",
+                text = meta?.overview ?: "Carregando informações...",
                 color = KorpLook.TextMid,
-                fontSize = 13.sp
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
 }
 
 @Composable
-fun SectionRow(title: String, items: List<Item>, isLive: Boolean) {
+fun SectionRow(
+    title: String,
+    items: List<Item>,
+    isLive: Boolean,
+    onHoverItem: (Item) -> Unit
+) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -212,7 +283,7 @@ fun SectionRow(title: String, items: List<Item>, isLive: Boolean) {
             items(items, key = { it.id }) { item ->
                 SharedPosterCard(
                     item = item,
-                    onClick = { /* Próximo passo: tocar vídeo */ },
+                    onClick = { onHoverItem(item) },
                     cardWidth = if (isLive) 190.dp else 145.dp
                 )
             }
@@ -220,7 +291,7 @@ fun SectionRow(title: String, items: List<Item>, isLive: Boolean) {
     }
 }
 
-/** Tela de TV Ao Vivo: 2 colunas estilo Android (Categorias na esquerda, canais com logo na direita) */
+/** Tela de TV Ao Vivo: 2 colunas estilo Android */
 @Composable
 fun SharedLiveScreen() {
     val allLive = remember(SharedPortalManager.playlistItems.size) {
@@ -307,7 +378,6 @@ fun LiveChannelRow(channel: Item) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Logo do canal
         Box(
             modifier = Modifier
                 .size(42.dp)
@@ -345,7 +415,7 @@ fun LiveChannelRow(channel: Item) {
     }
 }
 
-/** Tela de Filmes ou Séries: Grade de Pôsteres verticais */
+/** Tela de Filmes ou Séries: com Banner no topo exibindo informações do filme focado */
 @Composable
 fun SharedVodScreen(title: String, kind: Kind) {
     val items = remember(kind, SharedPortalManager.playlistItems.size) {
@@ -360,46 +430,67 @@ fun SharedVodScreen(title: String, kind: Kind) {
         if (selectedGroup == "Todos") items else items.filter { it.group == selectedGroup }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(title, color = KorpLook.TextHi, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                Text("${filtered.size} títulos disponíveis", color = KorpLook.TextLow, fontSize = 13.sp)
-            }
+    var focusedVod by remember(kind, filtered) { mutableStateOf(filtered.firstOrNull()) }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        // Banner do filme/série com detalhes no topo
+        item {
+            focusedVod?.let { BillboardHeader(it) }
         }
 
         // Pílulas de filtro de categorias
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(groups.take(30)) { g ->
-                val active = selectedGroup == g
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(if (active) KorpLook.Accent1 else KorpLook.Surf)
-                        .clickable { selectedGroup = g }
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
+        item {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        g,
-                        color = if (active) Color.Black else KorpLook.TextMid,
-                        fontSize = 12.sp,
-                        fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
-                    )
+                    Text(title, color = KorpLook.TextHi, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text("${filtered.size} títulos disponíveis", color = KorpLook.TextLow, fontSize = 13.sp)
+                }
+
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(groups.take(40)) { g ->
+                        val active = selectedGroup == g
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(if (active) KorpLook.Accent1 else KorpLook.Surf)
+                                .clickable { selectedGroup = g }
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                g,
+                                color = if (active) Color.Black else KorpLook.TextMid,
+                                fontSize = 12.sp,
+                                fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        // Carrossel em grade dos filmes/séries
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(vertical = 8.dp)
-        ) {
-            items(filtered.take(60), key = { it.id }) { item ->
-                SharedPosterCard(item = item, onClick = { /* Abrir detalhes */ }, cardWidth = 160.dp)
+        // Carrossel de pôsteres com efeito de seleção
+        item {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    items(filtered.take(60), key = { it.id }) { item ->
+                        SharedPosterCard(
+                            item = item,
+                            onClick = { focusedVod = item },
+                            cardWidth = 155.dp
+                        )
+                    }
+                }
             }
         }
     }

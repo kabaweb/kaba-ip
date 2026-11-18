@@ -31,6 +31,9 @@ object SharedPortalManager {
     var statusMessage by mutableStateOf("Desconectado")
         private set
 
+    var tmdbKey by mutableStateOf("")
+        private set
+
     val playlistItems = mutableStateListOf<Item>()
 
     fun getPortalUrl(): String {
@@ -140,6 +143,11 @@ object SharedPortalManager {
     }
 
     private suspend fun parsePortalResponse(rawJson: String) {
+        val metaKey = Regex(""""tmdbKey"\s*:\s*"([^"]*)"""").find(rawJson)?.groupValues?.get(1)
+        if (!metaKey.isNullOrBlank()) {
+            tmdbKey = metaKey
+        }
+
         // Parse sem biblioteca pesada
         val plIdx = rawJson.indexOf("\"playlist\":")
         if (plIdx >= 0) {
