@@ -79,6 +79,7 @@ class MainActivity : ComponentActivity() {
                 .build()
         )
         ScreenAwake.attach(this)
+        android.util.Log.i("KMP", com.ipvio.stream.shared.KmpInfo.info())
         PortalManager.start(this)
         intent?.getStringExtra(Reminders.EXTRA_CH)?.let { AppNav.openChannel = it }
         setContent { App(pick) }
