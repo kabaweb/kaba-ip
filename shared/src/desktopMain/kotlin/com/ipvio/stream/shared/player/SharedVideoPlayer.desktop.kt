@@ -27,8 +27,12 @@ import kotlinx.coroutines.withContext
 import uk.co.caprica.vlcj.factory.discovery.NativeDiscovery
 import uk.co.caprica.vlcj.player.base.MediaPlayer
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter
-import uk.co.caprica.vlcj.player.component.CallbackMediaPlayerComponent
+import uk.co.caprica.vlcj.player.component.EmbeddedMediaPlayerComponent
+import java.awt.BorderLayout
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.io.File
+import javax.swing.JPanel
 
 @Composable
 actual fun SharedVideoPlayer(
@@ -38,10 +42,10 @@ actual fun SharedVideoPlayer(
     modifier: Modifier,
     onBack: () -> Unit
 ) {
-    // Tecla ESC ou botão Voltar fecha o player e para a reprodução
+    // Tecla ESC global ou botão Voltar fecha o player e para a reprodução
     BackHandler(onBack = onBack)
 
-    // Descoberta do LibVLC nativo do Windows
+    // Configura caminho explícito das bibliotecas LibVLC de 64 bits para o JNA
     remember {
         val vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
         if (File(vlcPath).exists()) {
@@ -56,17 +60,16 @@ actual fun SharedVideoPlayer(
     var isPlaying by remember { mutableStateOf(true) }
     var currentTimeMs by remember { mutableLongStateOf(0L) }
     var totalDurationMs by remember { mutableLongStateOf(0L) }
-    var showControls by remember { mutableStateOf(true) }
+    var showBottomControls by remember { mutableStateOf(true) }
     var isBuffering by remember { mutableStateOf(true) }
 
-    // CallbackMediaPlayerComponent: Renderiza diretamente em memória (Direct Rendering).
-    // Não abre janelas externas nem depende de HWND AWT displayable, 100% embutido e estável.
+    // Componente nativo acelerado por hardware via LibVLC
     val mediaPlayerComponent = remember {
-        CallbackMediaPlayerComponent()
+        EmbeddedMediaPlayerComponent()
     }
     val mediaPlayer = remember { mediaPlayerComponent.mediaPlayer() }
 
-    // Registra listener de eventos
+    // Registra listener de eventos do VLC
     DisposableEffect(mediaPlayer) {
         val listener = object : MediaPlayerEventAdapter() {
             override fun playing(mp: MediaPlayer?) {
@@ -109,10 +112,15 @@ actual fun SharedVideoPlayer(
         }
     }
 
-    // Inicia a reprodução
+    // Inicia a reprodução SOMENTE quando o componente de vídeo estiver 100% montado e displayable
     LaunchedEffect(url) {
         isBuffering = true
-        delay(150)
+        var attempts = 0
+        while (!mediaPlayerComponent.videoSurfaceComponent().isDisplayable && attempts < 50) {
+            delay(50)
+            attempts++
+        }
+        delay(100)
         try {
             mediaPlayer.media().play(
                 url,
@@ -128,238 +136,227 @@ actual fun SharedVideoPlayer(
         }
     }
 
-    // Ocultar controles após 5s
-    LaunchedEffect(showControls, isPlaying) {
-        if (showControls && isPlaying) {
-            delay(5000)
-            showControls = false
+    // Auto-ocultar barra inferior após 6 segundos
+    LaunchedEffect(showBottomControls, isPlaying) {
+        if (showBottomControls && isPlaying) {
+            delay(6000)
+            showBottomControls = false
         }
     }
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                showControls = !showControls
-            }
     ) {
-        // Player Embutido na Janela sem janelas externas
-        SwingPanel(
-            modifier = Modifier.fillMaxSize(),
-            factory = { mediaPlayerComponent }
-        )
-
-        // Loading
-        if (isBuffering) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+        // 1. Barra Superior Fixa: SEMPRE VISÍVEL para garantir que o usuário nunca fique preso
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .background(Color(0xFF070B14))
+                .padding(horizontal = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                CircularProgressIndicator(
-                    color = Color(0xFF00E5FF),
-                    strokeWidth = 4.dp
+                // Botão Voltar destacado
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF1E293B))
+                        .clickable { onBack() }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text("←", color = Color(0xFF00E5FF), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("Voltar (ESC)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
                 )
+            }
+
+            if (isLive) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0x33EF4444))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFEF4444))
+                    )
+                    Text(
+                        "AO VIVO",
+                        color = Color(0xFFEF4444),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
-        // Overlay de Controles
-        AnimatedVisibility(
-            visible = showControls,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.fillMaxSize()
+        // 2. Área Central do Vídeo
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .background(Color.Black)
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                // Header com botão voltar e título
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(110.dp)
-                        .align(Alignment.TopCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                0f to Color.Black.copy(alpha = 0.85f),
-                                1f to Color.Transparent
-                            )
-                        )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 20.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.15f))
-                                .clickable { onBack() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("←", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        }
-
-                        Column {
-                            Text(
-                                text = title,
-                                color = Color.White,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1
-                            )
-                            if (isLive) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(8.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFFEF4444))
-                                    )
-                                    Text(
-                                        "AO VIVO",
-                                        color = Color(0xFFEF4444),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
+            // Superfície Nativa do VLC (Acelerada por GPU)
+            SwingPanel(
+                modifier = Modifier.fillMaxSize(),
+                factory = {
+                    JPanel().apply {
+                        layout = BorderLayout()
+                        add(mediaPlayerComponent, BorderLayout.CENTER)
+                        mediaPlayerComponent.videoSurfaceComponent().addMouseListener(object : MouseAdapter() {
+                            override fun mouseClicked(e: MouseEvent) {
+                                showBottomControls = !showBottomControls
                             }
-                        }
+                        })
                     }
                 }
+            )
 
-                // Rodapé com barra de tempo e botões de controle
+            // Indicador de Carregamento
+            if (isBuffering) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                0f to Color.Transparent,
-                                1f to Color.Black.copy(alpha = 0.9f)
-                            )
-                        )
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 28.dp, vertical = 18.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        if (!isLive && totalDurationMs > 0) {
-                            val progress = (currentTimeMs.toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f)
-                            Slider(
-                                value = progress,
-                                onValueChange = { newProg ->
-                                    val newTime = (newProg * totalDurationMs).toLong()
-                                    mediaPlayer.controls().setTime(newTime)
-                                    currentTimeMs = newTime
-                                },
-                                colors = SliderDefaults.colors(
-                                    thumbColor = Color(0xFF00E5FF),
-                                    activeTrackColor = Color(0xFF00E5FF),
-                                    inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                                )
-                            )
+                        CircularProgressIndicator(
+                            color = Color(0xFF00E5FF),
+                            strokeWidth = 4.dp
+                        )
+                        Text("Conectando ao canal...", color = Color.White, fontSize = 14.sp)
+                    }
+                }
+            }
+        }
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+        // 3. Barra Inferior de Controles (Play/Pause, Slider, Pular 10s)
+        AnimatedVisibility(
+            visible = showBottomControls,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(90.dp)
+                    .background(Color(0xFF0B101D))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.SpaceAround
+                ) {
+                    if (!isLive && totalDurationMs > 0) {
+                        val progress = (currentTimeMs.toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f)
+                        Slider(
+                            value = progress,
+                            onValueChange = { newProg ->
+                                val newTime = (newProg * totalDurationMs).toLong()
+                                mediaPlayer.controls().setTime(newTime)
+                                currentTimeMs = newTime
+                            },
+                            colors = SliderDefaults.colors(
+                                thumbColor = Color(0xFF00E5FF),
+                                activeTrackColor = Color(0xFF00E5FF),
+                                inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                            )
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (!isLive) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color.White.copy(alpha = 0.12f))
+                                    .clickable {
+                                        val t = (currentTimeMs - 10000).coerceAtLeast(0)
+                                        mediaPlayer.controls().setTime(t)
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text(formatTime(currentTimeMs), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
-                                Text(formatTime(totalDurationMs), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                                Text("⏮ 10s", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
+
+                            Spacer(Modifier.width(16.dp))
                         }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
+                        // Botão Play/Pause
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF00E5FF))
+                                .clickable {
+                                    if (isPlaying) {
+                                        mediaPlayer.controls().pause()
+                                        isPlaying = false
+                                    } else {
+                                        mediaPlayer.controls().play()
+                                        isPlaying = true
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
                         ) {
-                            if (!isLive) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.15f))
-                                        .clickable {
-                                            val t = (currentTimeMs - 10000).coerceAtLeast(0)
-                                            mediaPlayer.controls().setTime(t)
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("⏮ 10s", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
+                            Text(
+                                text = if (isPlaying) "⏸" else "▶",
+                                color = Color.Black,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
 
-                                Spacer(Modifier.width(20.dp))
-                            }
+                        if (!isLive) {
+                            Spacer(Modifier.width(16.dp))
 
                             Box(
                                 modifier = Modifier
-                                    .size(54.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF00E5FF))
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color.White.copy(alpha = 0.12f))
                                     .clickable {
-                                        if (isPlaying) {
-                                            mediaPlayer.controls().pause()
-                                            isPlaying = false
-                                        } else {
-                                            mediaPlayer.controls().play()
-                                            isPlaying = true
-                                        }
-                                    },
+                                        val t = (currentTimeMs + 10000).coerceAtMost(totalDurationMs)
+                                        mediaPlayer.controls().setTime(t)
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = if (isPlaying) "⏸" else "▶",
-                                    color = Color.Black,
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            if (!isLive) {
-                                Spacer(Modifier.width(20.dp))
-
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.15f))
-                                        .clickable {
-                                            val t = (currentTimeMs + 10000).coerceAtMost(totalDurationMs)
-                                            mediaPlayer.controls().setTime(t)
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("10s ⏭", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
+                                Text("10s ⏭", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                 }
             }
         }
-    }
-}
-
-private fun formatTime(ms: Long): String {
-    val totalSec = ms / 1000
-    val hours = totalSec / 3600
-    val minutes = (totalSec % 3600) / 60
-    val seconds = totalSec % 60
-    return if (hours > 0) {
-        String.format("%d:%02d:%02d", hours, minutes, seconds)
-    } else {
-        String.format("%02d:%02d", minutes, seconds)
     }
 }

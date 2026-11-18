@@ -13,6 +13,15 @@ import com.ipvio.stream.shared.platform.BackDispatcher
 import com.ipvio.stream.shared.ui.SharedApp
 
 fun main() = application {
+    // Interceptor global de teclado do AWT: garante que a tecla ESCAPE sempre volte,
+    // mesmo que o foco esteja preso dentro do componente Swing ou do player de vídeo.
+    java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher { event ->
+        if (event.id == java.awt.event.KeyEvent.KEY_RELEASED && event.keyCode == java.awt.event.KeyEvent.VK_ESCAPE) {
+            BackDispatcher.onBackPressed()
+            true
+        } else false
+    }
+
     val windowState = rememberWindowState(size = DpSize(1280.dp, 800.dp))
 
     Window(
