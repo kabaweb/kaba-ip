@@ -20,15 +20,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ipvio.stream.shared.platform.BackHandler
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import uk.co.caprica.vlcj.factory.discovery.NativeDiscovery
 import uk.co.caprica.vlcj.player.base.MediaPlayer
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter
 import uk.co.caprica.vlcj.player.component.CallbackMediaPlayerComponent
-import uk.co.caprica.vlcj.player.component.EmbeddedMediaPlayerComponent
-import java.awt.BorderLayout
-import java.awt.Canvas
-import javax.swing.JPanel
+import java.io.File
 
 @Composable
 actual fun SharedVideoPlayer(
@@ -38,8 +38,18 @@ actual fun SharedVideoPlayer(
     modifier: Modifier,
     onBack: () -> Unit
 ) {
-    // Inicialização da descoberta de LibVLC no sistema
+    // Tecla ESC ou botão Voltar fecha o player e para a reprodução
+    BackHandler(onBack = onBack)
+
+    // Descoberta do LibVLC nativo do Windows
     remember {
+        val vlcPath = "C:\\Program Files\\VideoLAN\\VLC"
+        if (File(vlcPath).exists()) {
+            val cur = System.getProperty("jna.library.path")
+            if (cur == null || !cur.contains(vlcPath)) {
+                System.setProperty("jna.library.path", if (cur.isNullOrBlank()) vlcPath else "$vlcPath;$cur")
+            }
+        }
         NativeDiscovery().discover()
     }
 
@@ -49,14 +59,15 @@ actual fun SharedVideoPlayer(
     var showControls by remember { mutableStateOf(true) }
     var isBuffering by remember { mutableStateOf(true) }
 
+    // CallbackMediaPlayerComponent: Renderiza diretamente em memória (Direct Rendering).
+    // Não abre janelas externas nem depende de HWND AWT displayable, 100% embutido e estável.
     val mediaPlayerComponent = remember {
-        EmbeddedMediaPlayerComponent()
+        CallbackMediaPlayerComponent()
     }
+    val mediaPlayer = remember { mediaPlayerComponent.mediaPlayer() }
 
-    val mediaPlayer = mediaPlayerComponent.mediaPlayer()
-
-    // Configuração dos eventos do VLC
-    DisposableEffect(url) {
+    // Registra listener de eventos
+    DisposableEffect(mediaPlayer) {
         val listener = object : MediaPlayerEventAdapter() {
             override fun playing(mp: MediaPlayer?) {
                 isPlaying = true
@@ -79,22 +90,45 @@ actual fun SharedVideoPlayer(
                 isBuffering = newCache < 100f
             }
 
+            override fun error(mp: MediaPlayer?) {
+                isBuffering = false
+            }
+
             override fun finished(mp: MediaPlayer?) {
                 isPlaying = false
             }
         }
 
         mediaPlayer.events().addMediaPlayerEventListener(listener)
-        mediaPlayer.media().play(url)
 
         onDispose {
-            mediaPlayer.events().removeMediaPlayerEventListener(listener)
-            mediaPlayer.controls().stop()
-            mediaPlayerComponent.release()
+            try {
+                mediaPlayer.events().removeMediaPlayerEventListener(listener)
+                mediaPlayer.controls().stop()
+            } catch (_: Throwable) {}
         }
     }
 
-    // Auto-ocultar controles após 5 segundos
+    // Inicia a reprodução
+    LaunchedEffect(url) {
+        isBuffering = true
+        delay(150)
+        try {
+            mediaPlayer.media().play(
+                url,
+                ":network-caching=3000",
+                ":live-caching=3000",
+                ":clock-jitter=0",
+                ":clock-synchro=0",
+                ":no-video-title-show"
+            )
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            isBuffering = false
+        }
+    }
+
+    // Ocultar controles após 5s
     LaunchedEffect(showControls, isPlaying) {
         if (showControls && isPlaying) {
             delay(5000)
@@ -113,18 +147,13 @@ actual fun SharedVideoPlayer(
                 showControls = !showControls
             }
     ) {
-        // Camada Swing do VLC Player
+        // Player Embutido na Janela sem janelas externas
         SwingPanel(
             modifier = Modifier.fillMaxSize(),
-            factory = {
-                JPanel().apply {
-                    layout = BorderLayout()
-                    add(mediaPlayerComponent, BorderLayout.CENTER)
-                }
-            }
+            factory = { mediaPlayerComponent }
         )
 
-        // Indicador de Carregamento / Buffering
+        // Loading
         if (isBuffering) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -137,7 +166,7 @@ actual fun SharedVideoPlayer(
             }
         }
 
-        // Overlay de Controles (Fade In/Out estilo Android TV)
+        // Overlay de Controles
         AnimatedVisibility(
             visible = showControls,
             enter = fadeIn(),
@@ -145,7 +174,7 @@ actual fun SharedVideoPlayer(
             modifier = Modifier.fillMaxSize()
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                // Gradiente Superior para o Título
+                // Header com botão voltar e título
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -165,16 +194,15 @@ actual fun SharedVideoPlayer(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Botão Voltar
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(42.dp)
                                 .clip(CircleShape)
                                 .background(Color.White.copy(alpha = 0.15f))
                                 .clickable { onBack() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("←", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Text("←", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         }
 
                         Column {
@@ -182,7 +210,8 @@ actual fun SharedVideoPlayer(
                                 text = title,
                                 color = Color.White,
                                 fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
                             )
                             if (isLive) {
                                 Row(
@@ -207,7 +236,7 @@ actual fun SharedVideoPlayer(
                     }
                 }
 
-                // Gradiente Inferior para Barra de Progresso e Botões
+                // Rodapé com barra de tempo e botões de controle
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -226,7 +255,6 @@ actual fun SharedVideoPlayer(
                             .padding(horizontal = 28.dp, vertical = 18.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Linha de Progresso (apenas para filmes e séries)
                         if (!isLive && totalDurationMs > 0) {
                             val progress = (currentTimeMs.toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f)
                             Slider(
@@ -252,7 +280,6 @@ actual fun SharedVideoPlayer(
                             }
                         }
 
-                        // Botões de Play/Pause / Rewind / Fast Forward
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center,
@@ -276,7 +303,6 @@ actual fun SharedVideoPlayer(
                                 Spacer(Modifier.width(20.dp))
                             }
 
-                            // Botão Play / Pause
                             Box(
                                 modifier = Modifier
                                     .size(54.dp)
