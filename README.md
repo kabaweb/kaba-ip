@@ -136,12 +136,14 @@ Unit tests for the pure logic: `./gradlew test`
 ## Project layout
 
 ```
-app/src/main/java/com/ipvio/stream/   all Kotlin sources (one package)
+app/src/main/java/com/ipvio/stream/   all Kotlin Android sources (one package)
   *Logic.kt                           pure, Android-free logic (covered by unit tests)
-  Dict*.kt                            translations (one row per text: de¦en¦tr¦bs¦hr¦sr¦es¦fr¦it)
-app/src/test/java/com/ipvio/stream/   JUnit tests
-app/src/main/res/font/                Outfit and Inter (SIL Open Font License)
-licenses/                             font licences
+  Dict*.kt                            translations (one row per text)
+portal/                               Node.js (Express + SQLite) device management portal & OTA
+webtv/                                Web-based IPTV player (React + Tailwind + Video.js/Hls.js)
+shared/                               Kotlin Multiplatform core (available on feat/kmp-migration branch)
+desktopApp/                           Compose Multiplatform Windows desktop client (available on feat/kmp-migration)
+docs/                                 Documentation, releases, and platform roadmaps
 ```
 
 ## AI Development and Attribution
