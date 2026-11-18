@@ -35,6 +35,10 @@ object SharedPortalManager {
     var tmdbKey by mutableStateOf("")
         private set
 
+    var xtreamHost by mutableStateOf<String?>(null)
+    var xtreamUser by mutableStateOf<String?>(null)
+    var xtreamPass by mutableStateOf<String?>(null)
+
     val playlistItems = mutableStateListOf<Item>()
 
     private val cacheDir by lazy {
@@ -108,6 +112,17 @@ object SharedPortalManager {
 
     private var pollJob: Job? = null
 
+    private fun detectCredentialsFromItems(items: List<Item>) {
+        if (!xtreamHost.isNullOrBlank() && !xtreamUser.isNullOrBlank()) return
+        val liveItem = items.firstOrNull { it.kind == com.ipvio.stream.shared.model.Kind.LIVE && it.url.contains("://") } ?: return
+        val match = Regex("""^(https?://[^/]+)(?:/.*)?/([^/]+)/([^/]+)/(\d+)(?:\.\w+)?(?:\?.*)?$""").find(liveItem.url)
+        if (match != null) {
+            xtreamHost = match.groupValues[1]
+            xtreamUser = match.groupValues[2]
+            xtreamPass = match.groupValues[3]
+        }
+    }
+
     /**
      * Carrega a playlist do disco local instantaneamente sem esperar rede
      */
@@ -117,6 +132,7 @@ object SharedPortalManager {
             try {
                 val list = SharedM3uParser.parseStream(cacheFile.inputStream())
                 if (list.isNotEmpty()) {
+                    detectCredentialsFromItems(list)
                     withContext(Dispatchers.Main) {
                         playlistItems.clear()
                         playlistItems.addAll(list)
@@ -199,6 +215,10 @@ object SharedPortalManager {
                 val pass = Regex(""""pass"\s*:\s*"([^"]*)"""").find(plObj)?.groupValues?.get(1)
                 val url = Regex(""""url"\s*:\s*"([^"]*)"""").find(plObj)?.groupValues?.get(1)
 
+                if (!host.isNullOrBlank()) xtreamHost = host
+                if (!user.isNullOrBlank()) xtreamUser = user
+                if (!pass.isNullOrBlank()) xtreamPass = pass
+
                 var targetUrl: String? = null
                 if ((type == "xtream" || (!user.isNullOrBlank() && !pass.isNullOrBlank())) && !host.isNullOrBlank()) {
                     targetUrl = xtreamM3uUrl(host, user ?: "", pass ?: "")
@@ -233,6 +253,7 @@ object SharedPortalManager {
                     // Processa do arquivo salvo
                     val list = SharedM3uParser.parseStream(tmpFile.inputStream())
                     if (list.isNotEmpty()) {
+                        detectCredentialsFromItems(list)
                         // Substitui cache local definitivo
                         if (cacheFile.exists()) cacheFile.delete()
                         tmpFile.renameTo(cacheFile)

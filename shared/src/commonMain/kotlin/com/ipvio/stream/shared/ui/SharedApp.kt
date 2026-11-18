@@ -545,8 +545,8 @@ fun LiveChannelRow(channel: Item, onClick: () -> Unit) {
     var isFocused by remember { mutableStateOf(false) }
     var epgList by remember(channel.id) { mutableStateOf<List<com.ipvio.stream.shared.epg.SharedEpgEntry>>(emptyList()) }
 
-    LaunchedEffect(isFocused, channel.id) {
-        if (isFocused && epgList.isEmpty()) {
+    LaunchedEffect(channel.id) {
+        if (epgList.isEmpty()) {
             epgList = com.ipvio.stream.shared.epg.SharedEpgRepo.getEpg(channel)
         }
     }

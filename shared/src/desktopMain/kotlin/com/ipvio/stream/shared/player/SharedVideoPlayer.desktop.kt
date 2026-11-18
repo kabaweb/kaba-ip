@@ -79,8 +79,10 @@ actual fun SharedVideoPlayer(
     var currentPlayingUrl by remember(url) { mutableStateOf(url) }
     var currentPlayingTitle by remember(title) { mutableStateOf(title) }
 
-    val currentChannelItem = remember(currentPlayingUrl) {
+    val currentChannelItem = remember(currentPlayingUrl, currentPlayingTitle) {
         SharedPortalManager.playlistItems.firstOrNull { it.url == currentPlayingUrl }
+            ?: SharedPortalManager.playlistItems.firstOrNull { it.title == currentPlayingTitle && it.kind == Kind.LIVE }
+            ?: Item(id = currentPlayingUrl.hashCode().toString(), kind = Kind.LIVE, title = currentPlayingTitle, url = currentPlayingUrl)
     }
 
     var isPlaying by remember { mutableStateOf(true) }
@@ -96,10 +98,10 @@ actual fun SharedVideoPlayer(
     val currentEpg = remember(epgList) { SharedEpgRepo.current(epgList) }
     val nextEpg = remember(epgList) { SharedEpgRepo.next(epgList) }
 
-    LaunchedEffect(currentPlayingUrl) {
+    LaunchedEffect(currentPlayingUrl, currentChannelItem) {
         showEpgBanner = true
-        val ch = currentChannelItem
-        if (ch != null && isLive) {
+        if (isLive) {
+            val ch = currentChannelItem ?: Item(id = currentPlayingUrl.hashCode().toString(), kind = Kind.LIVE, title = currentPlayingTitle, url = currentPlayingUrl)
             epgList = SharedEpgRepo.getEpg(ch)
         } else {
             epgList = emptyList()
@@ -252,6 +254,7 @@ actual fun SharedVideoPlayer(
                     surface.addMouseMotionListener(object : MouseMotionAdapter() {
                         override fun mouseMoved(e: MouseEvent?) {
                             showControls = true
+                            if (isLive) showEpgBanner = true
                         }
                     })
                     surface.addMouseListener(object : MouseAdapter() {

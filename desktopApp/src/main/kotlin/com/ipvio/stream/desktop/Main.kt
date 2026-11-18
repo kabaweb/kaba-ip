@@ -70,7 +70,7 @@ fun main() = application {
         onCloseRequest = ::exitApplication,
         state = windowState,
         title = "Korp TV",
-        undecorated = windowState.placement == WindowPlacement.Fullscreen,
+        undecorated = false,
         onKeyEvent = { keyEvent ->
             if (keyEvent.type == KeyEventType.KeyUp) {
                 when (keyEvent.key) {
