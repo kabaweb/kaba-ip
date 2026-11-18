@@ -1,5 +1,6 @@
 package com.ipvio.stream
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -241,6 +242,14 @@ private fun AppContent() {
 
     // W-004: "What's new" once after an update to a new version
     LaunchedEffect(Unit) { runCatching { WhatsNew.check(ctx) } }
+    // Limpa links mortos memorizados em versões anteriores sem User-Agent para liberar VODs bloqueados
+    LaunchedEffect(Unit) {
+        val sp = ctx.getSharedPreferences("ipvio_general", Context.MODE_PRIVATE)
+        if (!sp.getBoolean("cleared_dead_v20", false)) {
+            DeadLinks.clear(ctx)
+            sp.edit().putBoolean("cleared_dead_v20", true).apply()
+        }
+    }
     // New app version on GitHub? Check silently once a day; a find appears in the bell at the top right.
     LaunchedEffect(Unit) {
         delay(3_000)   // only after the start, the playlist takes priority

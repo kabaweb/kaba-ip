@@ -158,6 +158,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
     val player = remember {
         val http = DefaultHttpDataSource.Factory()
             .setUserAgent("VLC/3.0.21 LibVLC/3.0.21")
+            .setDefaultRequestProperties(mapOf("Accept" to "*/*"))
             .setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(10_000)
             .setReadTimeoutMs(15_000)

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.4 (versionCode 21)
+- Reset Automático de Dead Links: limpeza automática da tabela de títulos marcados como inacessíveis/com falha retidos de tentativas anteriores sem User-Agent.
+- HTTP Request Headers: adição do cabeçalho `Accept: */*` no `DefaultHttpDataSource` do player para conformidade estrita com CDNs de IPTV.
+- Auto-Clear de Falhas ao Renovar: remoção de marcas de links mortos sempre que uma playlist é sincronizada do servidor.
+
 ## 1.5.3 (versionCode 20)
 - VOD Playback Fix: correção do erro "Este título não existe mais no provedor" em filmes e séries através da inclusão do User-Agent VLC no ExoPlayer (`DefaultHttpDataSource`).
 - Fallback de Extensão VOD: detecção automática e alternância transparente entre `.mp4` e `.mkv` em erros 404/410 de servidores IPTV.

@@ -60,6 +60,7 @@ internal fun SecondStream(item: Item, split: Boolean, audioOn: Boolean, modifier
         runCatching {
             val http = DefaultHttpDataSource.Factory()
                 .setUserAgent("VLC/3.0.21 LibVLC/3.0.21")
+                .setDefaultRequestProperties(mapOf("Accept" to "*/*"))
                 .setAllowCrossProtocolRedirects(true)
                 .setConnectTimeoutMs(10_000)
                 .setReadTimeoutMs(15_000)
