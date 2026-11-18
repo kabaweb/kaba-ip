@@ -204,9 +204,10 @@ private fun AppContent() {
         // W-010b: live sync of favorites and history (silent; only when Google Drive is connected)
         LiveSync.start(ctx); 0
     }
-    // Interrupted in the middle of adding last time (crash, power loss): the add screen automatically continues loading
-    val resumeAdd = remember { PlaylistStore.pending(ctx)?.autoResume == true }
-    var adding by remember { mutableStateOf(PlaylistStore.savedUrl(ctx) == null || resumeAdd) }
+    // Tela inicial de adicionar playlist só aparece se não houver NENHUMA playlist configurada
+    val hasConfigured = PlaylistStore.savedUrl(ctx) != null
+    val resumeAdd = remember { !hasConfigured && PlaylistStore.pending(ctx)?.autoResume == true }
+    var adding by remember { mutableStateOf(!hasConfigured && (PlaylistStore.savedUrl(ctx) == null || resumeAdd)) }
     // Top detail page (Item or PersonRef) plus back stack, so Back retraces Movie → Person → Movie
     var top by remember { mutableStateOf<Any?>(null) }
     val trail = remember { mutableStateListOf<Any>() }

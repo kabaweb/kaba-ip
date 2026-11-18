@@ -604,8 +604,8 @@ fun HomeScreen(
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             if (allHidden) PillButton("Alle Sprachen zeigen", light = true) { LangFilter.setAndApply(ctx, emptySet()) }
-                            if (err != null) PillButton("Erneut versuchen", light = true) { reload() }
-                            PillButton("Playlist hinzufügen", light = err == null && !allHidden) { onAdd() }
+                            if (err != null || PlaylistStore.savedUrl(ctx) != null) PillButton("Erneut versuchen", light = true) { reload() }
+                            if (PlaylistStore.savedUrl(ctx) == null) PillButton("Playlist hinzufügen", light = err == null && !allHidden) { onAdd() }
                         }
                     }
                 }

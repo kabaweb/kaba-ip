@@ -16,8 +16,8 @@ import java.io.File
 /** General app settings: start, quit, refresh. Own file so they are handled separately on reset. */
 object General {
     private const val PREFS = "ipvio_general"
-    /** Refresh mode when the user never picked one: 2 = daily (see [refreshMode]). */
-    const val DEFAULT_REFRESH_MODE = 2
+    /** Refresh mode when the user never picked one: 0 = at every start (see [refreshMode]). */
+    const val DEFAULT_REFRESH_MODE = 0
     var autoStart by mutableStateOf(false)
     var startTab by mutableIntStateOf(0)
     var resumeLive by mutableStateOf(false)
@@ -127,13 +127,10 @@ object General {
         vodCats = p.getBoolean("vod_cats", false)
         bundleLive = p.getBoolean("bundle_live", true)
         channelRowSize = p.getInt("channel_row_size", 1).coerceIn(0, 2)
-        // Users who never chose a mode get "daily": the first start still loads the list once (lastRefresh = 0),
-        // later starts use the cache. Before 1.4 the default was "at every start", which re-downloaded the whole line each time.
-        // One-time switch for existing installs: "at every start" (0, the old default) becomes "daily" (maintainer decision,
-        // 12 Nov 2026). Runs once per profile; a later choice of "at every start" is kept.
-        if (!p.getBoolean("refresh_daily_v2", false)) {
-            val e = p.edit().putBoolean("refresh_daily_v2", true)
-            if (p.getInt("refresh_mode", DEFAULT_REFRESH_MODE) == 0) e.putInt("refresh_mode", DEFAULT_REFRESH_MODE)
+        // Default to "at every start" (0): loads cache instantly on start and checks for updates/renewals in background.
+        if (!p.getBoolean("refresh_start_auto_v1", false)) {
+            val e = p.edit().putBoolean("refresh_start_auto_v1", true)
+            if (p.getInt("refresh_mode", 2) == 2) e.putInt("refresh_mode", DEFAULT_REFRESH_MODE)
             e.apply()
         }
         refreshMode = p.getInt("refresh_mode", DEFAULT_REFRESH_MODE).coerceIn(0, 4)

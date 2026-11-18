@@ -261,9 +261,9 @@ object PlaylistStore {
         inited = true
         cleanupStale(c)
         val p = prefs(c)
-        // Prefers the encrypted version; the old plain-text version is adopted and replaced on first start.
+        // Prefers the encrypted version; fallback to plain-text version if keystore fails on cold boot.
         val enc = p.getString("lists_enc", null)
-        val json = (if (enc != null) Secrets.decrypt(enc) else null) ?: p.getString("lists", "[]")
+        val json = (if (enc != null) Secrets.decrypt(enc) else null)?.takeIf { it.isNotBlank() && it != "[]" } ?: p.getString("lists", "[]")
         try {
             val a = JSONArray(json)
             for (i in 0 until a.length()) {
@@ -294,10 +294,11 @@ object PlaylistStore {
     private fun persist(c: Context) {
         val a = JSONArray()
         for (l in lists) a.put(JSONObject().put("name", l.name).put("url", l.url))
+        val plain = a.toString()
         val e = prefs(c).edit().putInt("active", active).putString("multi", MultiLogic.encodeKeys(multi)).remove("url")
-        val token = Secrets.encrypt(a.toString())
-        if (token != null) e.putString("lists_enc", token).remove("lists")
-        else e.putString("lists", a.toString()).remove("lists_enc")
+        val token = Secrets.encrypt(plain)
+        if (token != null) e.putString("lists_enc", token)
+        e.putString("lists", plain)
         e.apply()
     }
 

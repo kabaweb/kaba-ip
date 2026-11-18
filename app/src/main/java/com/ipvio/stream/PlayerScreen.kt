@@ -91,8 +91,11 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.SubtitleView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 data class PlayReq(
     val title: String, val url: String, val itemId: String, val live: Boolean, val startMs: Long,
@@ -154,6 +157,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
     // and gives up after 10 s connect time or 15 s read time instead of waiting forever.
     val player = remember {
         val http = DefaultHttpDataSource.Factory()
+            .setUserAgent("VLC/3.0.21 LibVLC/3.0.21")
             .setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(10_000)
             .setReadTimeoutMs(15_000)
@@ -726,6 +730,26 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                 // Chosen audio track cannot be decoded on this device/output: do not give up, switch the track
                 // and keep playing (picture and position stay). Never discard the whole source just because the audio fails.
                 if (decoder && audioFallback()) return
+                // VOD container extension fallback (.mp4 <-> .mkv): IPTV servers often serve MKV when MP4 is declared, or vice-versa
+                if (!cur.live && cur.archive == null && (status == 404 || status == 410)) {
+                    val alt = when {
+                        cur.url.endsWith(".mp4", ignoreCase = true) -> cur.url.substringBeforeLast(".") + ".mkv"
+                        cur.url.endsWith(".mkv", ignoreCase = true) -> cur.url.substringBeforeLast(".") + ".mp4"
+                        else -> null
+                    }
+                    if (alt != null && triedUrls.add(alt)) {
+                        cur = cur.copy(url = alt)
+                        pError = false
+                        msg = null
+                        return
+                    }
+                    // Silent refresh trigger if stream ID changed at provider
+                    PlaylistStore.savedUrl(ctx)?.let { u ->
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                            runCatching { PlaylistStore.load(ctx, u, save = false, skipNetworkWhenCached = false) }
+                        }
+                    }
+                }
                 val liveNow = cur.live && cur.archive == null
                 if (retries < (if (liveNow) 50 else 3) && !isPermanentHttp(status) && !decoder) {
                     retries++
