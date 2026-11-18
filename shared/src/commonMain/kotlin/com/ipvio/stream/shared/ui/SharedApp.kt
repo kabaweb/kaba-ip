@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -16,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -33,11 +35,20 @@ import com.ipvio.stream.shared.model.Kind
 import com.ipvio.stream.shared.player.SharedVideoPlayer
 import com.ipvio.stream.shared.portal.SharedPortalManager
 
+data class PlayTarget(
+    val url: String,
+    val title: String,
+    val isLive: Boolean
+)
+
 @Composable
 fun SharedApp() {
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf(0) }
-    var activePlayingItem by remember { mutableStateOf<Item?>(null) }
+
+    // Estados de Navegação estilo Android: Pilha de Detalhes e Player
+    var activeDetailItem by remember { mutableStateOf<Item?>(null) }
+    var activePlayTarget by remember { mutableStateOf<PlayTarget?>(null) }
 
     LaunchedEffect(Unit) {
         SharedPortalManager.startPolling(scope)
@@ -45,19 +56,36 @@ fun SharedApp() {
 
     val hasPlaylist = SharedPortalManager.playlistItems.isNotEmpty()
 
-    // Se estiver reproduzindo vídeo, exibe o player em tela inteira
-    if (activePlayingItem != null) {
-        val playItem = activePlayingItem!!
+    // 1. Camada de Reprodução em Tela Cheia (Prioridade máxima)
+    if (activePlayTarget != null) {
+        val target = activePlayTarget!!
         SharedVideoPlayer(
-            url = playItem.url,
-            title = playItem.title,
-            isLive = playItem.kind == Kind.LIVE,
+            url = target.url,
+            title = target.title,
+            isLive = target.isLive,
             modifier = Modifier.fillMaxSize(),
-            onBack = { activePlayingItem = null }
+            onBack = { activePlayTarget = null }
         )
         return
     }
 
+    // 2. Camada da Tela de Detalhes (DetailScreen idêntica ao Android TV)
+    if (activeDetailItem != null) {
+        DetailScreen(
+            item = activeDetailItem!!,
+            onPlay = { url, title ->
+                activePlayTarget = PlayTarget(
+                    url = url,
+                    title = title,
+                    isLive = activeDetailItem?.kind == Kind.LIVE
+                )
+            },
+            onBack = { activeDetailItem = null }
+        )
+        return
+    }
+
+    // 3. Camada Principal da Interface (Sidebar + Abas com Billboard e Carrosséis)
     Row(modifier = Modifier.fillMaxSize().background(KorpLook.Bg)) {
         SharedSidebar(
             selectedTab = selectedTab,
@@ -85,12 +113,28 @@ fun SharedApp() {
                 }
             } else {
                 when (selectedTab) {
-                    0 -> AndroidHomeScreen(Kind.MOVIE, onPlay = { activePlayingItem = it })
-                    1 -> AndroidHomeScreen(Kind.MOVIE, onPlay = { activePlayingItem = it })
-                    2 -> AndroidHomeScreen(Kind.SERIES, onPlay = { activePlayingItem = it })
-                    3 -> SharedLiveScreen(onPlay = { activePlayingItem = it })
+                    0 -> AndroidHomeScreen(
+                        targetKind = null, // Início: mistura filmes e séries
+                        onOpenDetail = { activeDetailItem = it }
+                    )
+                    1 -> AndroidHomeScreen(
+                        targetKind = Kind.MOVIE,
+                        onOpenDetail = { activeDetailItem = it }
+                    )
+                    2 -> AndroidHomeScreen(
+                        targetKind = Kind.SERIES,
+                        onOpenDetail = { activeDetailItem = it }
+                    )
+                    3 -> SharedLiveScreen(
+                        onPlay = { channel ->
+                            activePlayTarget = PlayTarget(channel.url, channel.title, isLive = true)
+                        }
+                    )
                     5 -> SharedSettingsView()
-                    else -> AndroidHomeScreen(Kind.MOVIE, onPlay = { activePlayingItem = it })
+                    else -> AndroidHomeScreen(
+                        targetKind = Kind.MOVIE,
+                        onOpenDetail = { activeDetailItem = it }
+                    )
                 }
             }
         }
@@ -99,12 +143,21 @@ fun SharedApp() {
 
 /**
  * Interface Oficial HomeScreen e VOD Screen do Android TV:
- * Banner Billboard imersivo com backdrop dinâmico + Sinopse + Ano/Nota + Carrosséis agrupados por Categorias
+ * Banner Billboard imersivo com backdrop dinâmico que reage ao foco do teclado + Carrosséis agrupados por Categorias
  */
 @Composable
-fun AndroidHomeScreen(targetKind: Kind, onPlay: (Item) -> Unit) {
+fun AndroidHomeScreen(
+    targetKind: Kind?,
+    onOpenDetail: (Item) -> Unit
+) {
     val all = SharedPortalManager.playlistItems
-    val items = remember(all.size, targetKind) { all.filter { it.kind == targetKind } }
+    val items = remember(all.size, targetKind) {
+        if (targetKind == null) {
+            all.filter { it.kind != Kind.LIVE }
+        } else {
+            all.filter { it.kind == targetKind }
+        }
+    }
 
     val groupsMap = remember(items) {
         items.groupBy { it.group }
@@ -122,19 +175,18 @@ fun AndroidHomeScreen(targetKind: Kind, onPlay: (Item) -> Unit) {
     ) {
         item(key = "billboard") {
             focusedItem?.let {
-                AndroidBillboardLayer(it, onPlay = { onPlay(it) })
+                AndroidBillboardLayer(it, onOpenDetail = { onOpenDetail(it) })
             }
         }
 
-        items(groupNames.take(20), key = { it }) { groupName ->
+        items(groupNames.take(25), key = { it }) { groupName ->
             val rowItems = groupsMap[groupName].orEmpty()
             if (rowItems.isNotEmpty()) {
                 CategoryCarrouselRow(
                     categoryTitle = groupName,
                     items = rowItems,
-                    focusedItem = focusedItem,
-                    onSelect = { focusedItem = it },
-                    onPlay = onPlay
+                    onFocused = { focusedItem = it },
+                    onOpenDetail = onOpenDetail
                 )
             }
         }
@@ -143,7 +195,7 @@ fun AndroidHomeScreen(targetKind: Kind, onPlay: (Item) -> Unit) {
 
 /** Billboard Layer do Android TV com sinopse, nota, banner em alta resolução e botão de assistir */
 @Composable
-fun AndroidBillboardLayer(item: Item, onPlay: () -> Unit) {
+fun AndroidBillboardLayer(item: Item, onOpenDetail: () -> Unit) {
     var meta by remember(item.id) { mutableStateOf<SharedMeta?>(null) }
 
     LaunchedEffect(item.id) {
@@ -256,18 +308,18 @@ fun AndroidBillboardLayer(item: Item, onPlay: () -> Unit) {
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Botão Assistir Agora
+            // Botão Ver Detalhes
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .background(KorpLook.Accent1)
-                    .clickable { onPlay() }
+                    .clickable { onOpenDetail() }
                     .padding(horizontal = 22.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text("▶", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text("Assistir Agora", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("Ver Detalhes", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -278,9 +330,8 @@ fun AndroidBillboardLayer(item: Item, onPlay: () -> Unit) {
 fun CategoryCarrouselRow(
     categoryTitle: String,
     items: List<Item>,
-    focusedItem: Item?,
-    onSelect: (Item) -> Unit,
-    onPlay: (Item) -> Unit
+    onFocused: (Item) -> Unit,
+    onOpenDetail: (Item) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
@@ -302,13 +353,8 @@ fun CategoryCarrouselRow(
             items(items.take(40), key = { it.id }) { item ->
                 SharedPosterCard(
                     item = item,
-                    onClick = {
-                        if (focusedItem?.id == item.id) {
-                            onPlay(item)
-                        } else {
-                            onSelect(item)
-                        }
-                    },
+                    onClick = { onOpenDetail(item) },
+                    onFocused = { onFocused(item) },
                     cardWidth = 150.dp
                 )
             }
@@ -346,12 +392,21 @@ fun SharedLiveScreen(onPlay: (Item) -> Unit) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 items(groups) { g ->
                     val active = selectedGroup == g
+                    var isFocused by remember { mutableStateOf(false) }
+
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (active) KorpLook.Accent1 else Color.Transparent)
+                            .background(if (active) KorpLook.Accent1 else if (isFocused) Color.White.copy(alpha = 0.15f) else Color.Transparent)
+                            .border(
+                                width = if (isFocused) 1.5.dp else 0.dp,
+                                color = if (isFocused) Color.White else Color.Transparent,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .onFocusChanged { isFocused = it.isFocused }
                             .clickable { selectedGroup = g }
+                            .focusable()
                             .padding(horizontal = 12.dp, vertical = 10.dp)
                     ) {
                         Text(
@@ -390,13 +445,22 @@ fun SharedLiveScreen(onPlay: (Item) -> Unit) {
 
 @Composable
 fun LiveChannelRow(channel: Item, onClick: () -> Unit) {
+    var isFocused by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(58.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(KorpLook.Surf)
+            .background(if (isFocused) Color.White.copy(alpha = 0.18f) else KorpLook.Surf)
+            .border(
+                width = if (isFocused) 2.dp else 1.dp,
+                color = if (isFocused) KorpLook.Accent1 else Color.Transparent,
+                shape = RoundedCornerShape(10.dp)
+            )
+            .onFocusChanged { isFocused = it.isFocused }
             .clickable { onClick() }
+            .focusable()
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)

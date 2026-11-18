@@ -3,7 +3,9 @@ package com.ipvio.stream.shared.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -11,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -116,8 +119,13 @@ fun SharedSidebar(
 
         DEFAULT_APP_TABS.forEach { tab ->
             val active = selectedTab == tab.id
-            val bg = if (active) KorpLook.Surf2 else Color.Transparent
-            val fg = if (active) KorpLook.Accent1 else KorpLook.TextMid
+            var isFocused by remember { mutableStateOf(false) }
+            val bg = when {
+                active -> KorpLook.Surf2
+                isFocused -> Color.White.copy(alpha = 0.15f)
+                else -> Color.Transparent
+            }
+            val fg = if (active || isFocused) KorpLook.Accent1 else KorpLook.TextMid
 
             Row(
                 modifier = Modifier
@@ -125,7 +133,14 @@ fun SharedSidebar(
                     .height(44.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(bg)
+                    .border(
+                        width = if (isFocused) 1.5.dp else 0.dp,
+                        color = if (isFocused) KorpLook.Accent1 else Color.Transparent,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    .onFocusChanged { isFocused = it.isFocused }
                     .clickable { onSelectTab(tab.id) }
+                    .focusable()
                     .padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {

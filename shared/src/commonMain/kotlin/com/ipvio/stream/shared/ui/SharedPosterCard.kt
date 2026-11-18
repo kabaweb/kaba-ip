@@ -31,7 +31,8 @@ fun SharedPosterCard(
     item: Item,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    cardWidth: Dp = 150.dp
+    cardWidth: Dp = 150.dp,
+    onFocused: (() -> Unit)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (isFocused) 1.08f else 1f, label = "cardScale")
@@ -45,7 +46,12 @@ fun SharedPosterCard(
                 scaleX = scale
                 scaleY = scale
             }
-            .onFocusChanged { isFocused = it.isFocused }
+            .onFocusChanged { 
+                isFocused = it.isFocused
+                if (it.isFocused) {
+                    onFocused?.invoke()
+                }
+            }
             .clickable(onClick = onClick)
             .focusable()
             .padding(bottom = 8.dp)
