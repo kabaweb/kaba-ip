@@ -22,6 +22,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "IPVIO Stream"
+rootProject.name = "KorpTV"
 include(":app")
 include(":shared")
+include(":desktopApp")
