@@ -274,6 +274,13 @@ object PlaylistStore {
         }
         val old = p.getString("url", null)
         if (lists.isEmpty() && old != null) lists.add(PL(hostOf(old), old))
+        if (lists.isEmpty()) {
+            val lastUrl = p.getString("last_active_url", null)
+            val lastName = p.getString("last_active_name", null) ?: lastUrl?.let { hostOf(it) }
+            if (!lastUrl.isNullOrBlank()) {
+                lists.add(PL(lastName ?: "Playlist", lastUrl))
+            }
+        }
         active = p.getInt("active", 0).coerceIn(0, maxOf(lists.size - 1, 0))
         multi = MultiLogic.decodeKeys(p.getString("multi", null))
         initHealth(c)
@@ -296,6 +303,13 @@ object PlaylistStore {
         for (l in lists) a.put(JSONObject().put("name", l.name).put("url", l.url))
         val plain = a.toString()
         val e = prefs(c).edit().putInt("active", active).putString("multi", MultiLogic.encodeKeys(multi)).remove("url")
+        val current = lists.getOrNull(active)
+        if (current != null) {
+            e.putString("last_active_url", current.url)
+            e.putString("last_active_name", current.name)
+        } else if (lists.isEmpty()) {
+            e.remove("last_active_url").remove("last_active_name")
+        }
         val token = Secrets.encrypt(plain)
         if (token != null) e.putString("lists_enc", token)
         e.putString("lists", plain)
@@ -1368,6 +1382,7 @@ object PlaylistStore {
         lists.forEach { deleteFiles(c, it.url) }
         extras.clear(); multi = emptySet(); primaryItems = emptyList(); primaryUrl = null
         merged = MultiLogic.Merged(emptyList(), emptySet(), emptyMap()); sourceNames = emptyList()
+        prefs(c).edit().remove("last_active_url").remove("last_active_name").apply()
         lists.clear(); persist(c); setItems(emptyList()); langCounts = emptyMap(); langBytes = emptyMap()
     }
 }

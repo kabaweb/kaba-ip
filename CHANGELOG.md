@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.5 (versionCode 22)
+- Persistência Local Total: credenciais e URLs de playlist agora possuem backup direto em SharedPreferences sem depender exclusivamente de Android Keystore, impedindo a perda de login ou retorno à tela de configuração após atualizações do app.
+- Sincronização Inteligente do Portal: o app mantém as credenciais salvas localmente e só substitui a lista se o portal enviar uma data de atualização mais recente (`updatedAt > lastUpdate`) ou se o aparelho estiver limpo/sem lista.
+- Correção de Status no Portal: auto-detecção de `playlist_type = 'xtream'` quando usuário e senha estiverem preenchidos, eliminando a exibição de "Sem Lista" no painel.
+
 ## 1.5.4 (versionCode 21)
 - Reset Automático de Dead Links: limpeza automática da tabela de títulos marcados como inacessíveis/com falha retidos de tentativas anteriores sem User-Agent.
 - HTTP Request Headers: adição do cabeçalho `Accept: */*` no `DefaultHttpDataSource` do player para conformidade estrita com CDNs de IPTV.

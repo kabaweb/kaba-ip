@@ -562,14 +562,21 @@ router.post('/devices/link-by-code', async (req, res) => {
 
     const now = Date.now();
     const settings = await getSettings();
-    const effectiveHost = (host && host.trim()) || (type === 'xtream' ? (settings.default_iptv_url || '') : '');
+    let resolvedType = type || 'none';
+    if ((resolvedType === 'none' || !resolvedType) && (user || pass)) {
+      resolvedType = 'xtream';
+    } else if ((resolvedType === 'none' || !resolvedType) && url) {
+      resolvedType = 'm3u';
+    }
+
+    const effectiveHost = (host && host.trim()) || (resolvedType === 'xtream' ? (settings.default_iptv_url || '') : '');
 
     let expDate = manualExp || null;
     let plStatus = 'Active';
     let maxCons = 1;
 
-    if (type !== 'none') {
-      const checkRes = await checkPlaylistValidity({ type, url, host: effectiveHost, user, pass });
+    if (resolvedType !== 'none') {
+      const checkRes = await checkPlaylistValidity({ type: resolvedType, url, host: effectiveHost, user, pass });
       if (checkRes.success) {
         expDate = manualExp || checkRes.expDateFormatted;
         plStatus = checkRes.status;
@@ -604,7 +611,7 @@ router.post('/devices/link-by-code', async (req, res) => {
         owner_id = CASE WHEN ? = 1 THEN ? ELSE owner_id END
        WHERE id = ?`,
       [
-        name || null, name || null, type || 'none', url || '', effectiveHost || '', user || '', pass || '',
+        name || null, name || null, resolvedType, url || '', effectiveHost || '', user || '', pass || '',
         now, expDate, plStatus, maxCons, phone || null, notes || null,
         parsedOwner !== undefined ? 1 : 0, parsedOwner !== undefined ? parsedOwner : null,
         dev.id
@@ -634,16 +641,23 @@ router.post('/devices/:id/playlist', async (req, res) => {
     const { type, url, host, user, pass, name, clientName, clientPhone, phone, notes, ownerId, expDate: manualExp } = req.body;
     const now = Date.now();
 
+    let resolvedType = type || 'none';
+    if ((resolvedType === 'none' || !resolvedType) && (user || pass)) {
+      resolvedType = 'xtream';
+    } else if ((resolvedType === 'none' || !resolvedType) && url) {
+      resolvedType = 'm3u';
+    }
+
     const settings = await getSettings();
-    const effectiveHost = (host && host.trim()) || (type === 'xtream' ? (settings.default_iptv_url || '') : '');
+    const effectiveHost = (host && host.trim()) || (resolvedType === 'xtream' ? (settings.default_iptv_url || '') : '');
 
     let expDate = manualExp || null;
     let plStatus = 'Active';
     let maxCons = 1;
 
     // Consulta validade da lista no servidor do provedor
-    if (type !== 'none') {
-      const checkRes = await checkPlaylistValidity({ type, url, host: effectiveHost, user, pass });
+    if (resolvedType !== 'none') {
+      const checkRes = await checkPlaylistValidity({ type: resolvedType, url, host: effectiveHost, user, pass });
       if (checkRes.success) {
         expDate = manualExp || checkRes.expDateFormatted;
         plStatus = checkRes.status;
@@ -688,7 +702,7 @@ router.post('/devices/:id/playlist', async (req, res) => {
         finalName,
         finalPhone,
         notes !== undefined ? notes : null,
-        type || 'none',
+        resolvedType,
         url || '',
         effectiveHost || '',
         user || '',

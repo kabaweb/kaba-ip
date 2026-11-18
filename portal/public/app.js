@@ -207,10 +207,17 @@ async function loadDevices() {
   }
 }
 
+function getEffectivePlaylistType(d) {
+  if (d && d.playlist_type && d.playlist_type !== 'none') return d.playlist_type;
+  if (d && (d.xtream_user || d.xtream_pass)) return 'xtream';
+  if (d && d.playlist_url) return 'm3u';
+  return 'none';
+}
+
 function updateStats() {
   const total = devices.length;
   const online = devices.filter(d => d.isOnline).length;
-  const withPlaylist = devices.filter(d => d.playlist_type && d.playlist_type !== 'none').length;
+  const withPlaylist = devices.filter(d => getEffectivePlaylistType(d) !== 'none').length;
 
   document.getElementById('stat-total').innerText = total;
   document.getElementById('stat-online').innerText = online;
@@ -280,10 +287,11 @@ function renderDevices(list) {
       ownerBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-gray-800 text-gray-400 text-xs italic">Livre</span>`;
     }
 
+    const effectivePlType = getEffectivePlaylistType(d);
     let plBadge = '<span class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 text-xs font-semibold border border-amber-500/20">Sem Lista</span>';
-    if (d.playlist_type === 'xtream') {
+    if (effectivePlType === 'xtream') {
       plBadge = `<span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-xs font-mono font-bold" title="${d.xtream_host || ''}">Xtream</span>`;
-    } else if (d.playlist_type === 'm3u') {
+    } else if (effectivePlType === 'm3u') {
       plBadge = `<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 text-xs font-mono font-bold" title="${d.playlist_url || ''}">M3U</span>`;
     }
 
@@ -307,7 +315,7 @@ function renderDevices(list) {
 
     // Badge de Validade
     let expBadge = '<span class="text-gray-500 text-xs">-</span>';
-    if (d.playlist_type && d.playlist_type !== 'none') {
+    if (effectivePlType !== 'none') {
       const expStr = d.playlist_exp_date || 'Não consultada';
       if (expStr.includes('/')) {
         // Formato DD/MM/AAAA
@@ -574,7 +582,9 @@ function openPlaylistModal(id) {
   const dev = devices.find(d => d.id === id);
   document.getElementById('modal-device-subtitle').innerText = `Dispositivo: ${dev?.name || id} (${dev?.mac || ''})`;
 
-  currentPlaylistType = dev?.playlist_type || 'xtream';
+  currentPlaylistType = (dev?.playlist_type && dev.playlist_type !== 'none')
+    ? dev.playlist_type
+    : (dev?.xtream_user || dev?.xtream_pass ? 'xtream' : (dev?.playlist_url ? 'm3u' : 'xtream'));
   setPlaylistType(currentPlaylistType);
 
   const defaultHost = systemSettings.default_iptv_url || '';
@@ -624,12 +634,20 @@ async function savePlaylist() {
   const inputHost = document.getElementById('xtream-host').value.trim();
   const effectiveHost = inputHost || (currentPlaylistType === 'xtream' ? defaultHost : '');
 
+  const inputUser = document.getElementById('xtream-user').value.trim();
+  const inputPass = document.getElementById('xtream-pass').value.trim();
+  const inputM3u = document.getElementById('m3u-url').value.trim();
+
+  let resolvedType = currentPlaylistType;
+  if ((!resolvedType || resolvedType === 'none') && (inputUser || inputPass)) resolvedType = 'xtream';
+  else if ((!resolvedType || resolvedType === 'none') && inputM3u) resolvedType = 'm3u';
+
   const payload = {
-    type: currentPlaylistType,
-    url: document.getElementById('m3u-url').value.trim(),
+    type: resolvedType,
+    url: inputM3u,
     host: effectiveHost,
-    user: document.getElementById('xtream-user').value.trim(),
-    pass: document.getElementById('xtream-pass').value.trim(),
+    user: inputUser,
+    pass: inputPass,
     clientName: document.getElementById('playlist-client-name')?.value.trim() || '',
     name: document.getElementById('playlist-client-name')?.value.trim() || '',
     clientPhone: document.getElementById('playlist-client-phone')?.value.trim() || '',

@@ -52,7 +52,13 @@ async function getLatestOta(currentCode = 0, req = null) {
 async function buildDeviceResponse(device, currentCode = 0, req = null) {
   const ota = await getLatestOta(currentCode, req);
   const settings = await getSettings();
-  const effectiveHost = device.xtream_host || (device.playlist_type === 'xtream' ? (settings.default_iptv_url || '') : '');
+  let effectiveType = device.playlist_type || 'none';
+  if ((!effectiveType || effectiveType === 'none') && (device.xtream_user || device.xtream_pass)) {
+    effectiveType = 'xtream';
+  } else if ((!effectiveType || effectiveType === 'none') && device.playlist_url) {
+    effectiveType = 'm3u';
+  }
+  const effectiveHost = device.xtream_host || (effectiveType === 'xtream' ? (settings.default_iptv_url || '') : '');
 
   return {
     success: true,
@@ -60,7 +66,7 @@ async function buildDeviceResponse(device, currentCode = 0, req = null) {
     name: device.name || 'Dispositivo sem nome',
     expDate: device.playlist_exp_date || null,
     playlist: {
-      type: device.playlist_type || 'none',
+      type: effectiveType,
       url: device.playlist_url || '',
       host: effectiveHost,
       user: device.xtream_user || '',

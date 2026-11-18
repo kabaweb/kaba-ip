@@ -237,29 +237,47 @@ object PortalManager {
             val sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             val lastUpdate = sp.getLong(KEY_LAST_PLAYLIST_UPDATE, 0L)
 
-            if (updatedAt > 0 && updatedAt > lastUpdate) {
-                val type = plObj.optString("type")
-                var targetUrl: String? = null
+            val rawType = plObj.optString("type")
+            val host = plObj.optString("host")
+            val user = plObj.optString("user")
+            val pass = plObj.optString("pass")
+            val url = plObj.optString("url")
 
-                if (type == "xtream") {
-                    val host = plObj.optString("host")
-                    val user = plObj.optString("user")
-                    val pass = plObj.optString("pass")
-                    targetUrl = PlaylistStore.xtreamUrl(host, user, pass)
-                } else if (type == "m3u") {
-                    targetUrl = plObj.optString("url")
-                }
+            // Auto-detecta Xtream se vier usuário e senha preenchidos
+            val resolvedType = when {
+                rawType == "xtream" || (rawType == "none" && user.isNotBlank() && pass.isNotBlank()) -> "xtream"
+                rawType == "m3u" || (rawType == "none" && url.isNotBlank()) -> "m3u"
+                else -> rawType
+            }
 
+            var targetUrl: String? = null
+            if (resolvedType == "xtream" && user.isNotBlank() && pass.isNotBlank()) {
+                targetUrl = PlaylistStore.xtreamUrl(host, user, pass)
+            } else if (resolvedType == "m3u" && url.isNotBlank()) {
+                targetUrl = url
+            }
+
+            val hasLocalPlaylist = PlaylistStore.savedUrl(ctx) != null
+            val isNewUpdateFromPortal = updatedAt > 0L && updatedAt > lastUpdate
+            val needsInitialSync = !hasLocalPlaylist && !targetUrl.isNullOrBlank()
+
+            // Só sobrescreve se o portal tiver uma data mais nova OU se o dispositivo não tiver nenhuma playlist salva localmente
+            if (isNewUpdateFromPortal || needsInitialSync) {
                 if (!targetUrl.isNullOrBlank()) {
-                    val ok = withContext(Dispatchers.IO) {
-                        PlaylistStore.load(ctx, targetUrl, save = true, ask = false)
-                    }
-                    if (ok) {
-                        sp.edit().putLong(KEY_LAST_PLAYLIST_UPDATE, updatedAt).apply()
-                        mainHandler.post {
-                            Toast.makeText(ctx, Lang.tr("Playlist sincronizada remotamente pelo portal!"), Toast.LENGTH_LONG).show()
-                            onPlaylistLoaded?.invoke()
+                    val currentSaved = PlaylistStore.savedUrl(ctx)
+                    if (currentSaved != targetUrl || !hasLocalPlaylist) {
+                        val ok = withContext(Dispatchers.IO) {
+                            PlaylistStore.load(ctx, targetUrl, save = true, ask = false)
                         }
+                        if (ok) {
+                            sp.edit().putLong(KEY_LAST_PLAYLIST_UPDATE, if (updatedAt > 0) updatedAt else System.currentTimeMillis()).apply()
+                            mainHandler.post {
+                                Toast.makeText(ctx, Lang.tr("Playlist sincronizada remotamente pelo portal!"), Toast.LENGTH_LONG).show()
+                                onPlaylistLoaded?.invoke()
+                            }
+                        }
+                    } else if (isNewUpdateFromPortal) {
+                        sp.edit().putLong(KEY_LAST_PLAYLIST_UPDATE, updatedAt).apply()
                     }
                 }
             }
