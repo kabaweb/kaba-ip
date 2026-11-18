@@ -8,15 +8,34 @@ import java.io.InputStream
 import java.io.InputStreamReader
 
 /**
- * Classificador e Agrupador idêntico ao Android M3uParser original:
- * 1. Séries: Agrupa episódios (S01 E01) sob o mesmo Item pai com lista de episódios
- * 2. Filmes: Arquivos /movie/ ou .mp4/.mkv
- * 3. Ao Vivo: Transmissões contínuas .ts/.m3u8 (mesmo que na categoria 'FILMES E SERIES')
+ * Parser M3U oficial idêntico ao Android:
+ * - Agrupamento e higienização profunda de Séries (S01E01, 1x01, T01E01, Ep 01)
+ * - Filmes VOD (/movie/ ou extensões de vídeo .mp4/.mkv)
+ * - Canais Ao Vivo (/live/ ou .ts/.m3u8)
  */
 object SharedM3uParser {
-    private val SE_RE = Regex("""^(.*?)[\\s._-]*[Ss](\\d{1,2})[\\s._-]*[Ee](\\d{1,4})(.*)$""", RegexOption.IGNORE_CASE)
+    // Padrões de Temporada e Episódio
+    private val SE_1 = Regex("""^(.*?)[\s._-]*[Ss](\d{1,2})[\s._-]*[Ee](\d{1,4})(.*)$""", RegexOption.IGNORE_CASE)
+    private val SE_2 = Regex("""^(.*?)[\s._-]*(\d{1,2})[xX](\d{1,4})(.*)$""", RegexOption.IGNORE_CASE)
+    private val SE_3 = Regex("""^(.*?)[\s._-]*[Tt](?:emp(?:orada)?)?\s*(\d{1,2})[\s._-]*[Ee](?:p(?:is[oó]dio)?)?\s*(\d{1,4})(.*)$""", RegexOption.IGNORE_CASE)
+    private val SE_4 = Regex("""^(.*?)[\s._-]*[Ee](?:p(?:is[oó]dio)?)?\s*(\d{1,4})(.*)$""", RegexOption.IGNORE_CASE)
+
     private val YEAR_RE = Regex("""[\(\[]((?:19|20)\d{2})[\)\]]""")
     private val VIDEO_FILE_RE = Regex("""\.(mp4|mkv|avi)(\?.*)?$""", RegexOption.IGNORE_CASE)
+
+    // Higienização de títulos (remove tags como [BR], (DUBLADO), 4K, FHD, etc.)
+    private val PREFIX_TAGS = Regex("""^\s*\[[^\]]*\]\s*|^\s*\([^\)]*\)\s*|^\s*[A-Za-z]{2,3}\s*[|:]\s*""")
+    private val BRACKETS = Regex("""[\(\[][^\)\]]*[\)\]]""")
+    private val CLEAN_TAGS = Regex("""(?i)\b(4k|uhd|fhd|hd|sd|hevc|h265|1080p|720p|dublado|legendado|dual|multi|br|latino|en|pt|nacional|legendas)\b""")
+    private val EXTRA_SPACES = Regex("""\s{2,}""")
+
+    fun cleanTitle(raw: String): String {
+        var t = raw.replace(PREFIX_TAGS, "")
+        t = t.replace(BRACKETS, "")
+        t = t.replace(CLEAN_TAGS, "")
+        t = t.replace(EXTRA_SPACES, " ").trim().trim('-', '|', ':', '.', ' ')
+        return if (t.isBlank()) raw.trim() else t
+    }
 
     private fun attr(line: String, key: String): String? {
         val tag = "$key=\""
@@ -38,7 +57,8 @@ object SharedM3uParser {
 
     fun parseStream(input: InputStream): List<Item> {
         val reader = BufferedReader(InputStreamReader(input, Charsets.UTF_8))
-        val moviesAndLive = ArrayList<Item>()
+        val liveChannels = ArrayList<Item>()
+        val movies = ArrayList<Item>()
         val seriesMap = LinkedHashMap<String, SeriesAccumulator>()
 
         var info: String? = null
@@ -57,48 +77,85 @@ object SharedM3uParser {
                     val n = name
                     if (inf != null && n != null) {
                         val isSeriesUrl = line.contains("/series/")
-                        val seMatch = SE_RE.find(n)
-                        val isMovieUrl = line.contains("/movie/") || VIDEO_FILE_RE.containsMatchIn(line)
+                        val isMovieUrl = line.contains("/movie/") || (!line.contains("/live/") && !line.endsWith(".ts") && VIDEO_FILE_RE.containsMatchIn(line))
+
+                        val m1 = SE_1.find(n)
+                        val m2 = if (m1 == null) SE_2.find(n) else null
+                        val m3 = if (m1 == null && m2 == null) SE_3.find(n) else null
+                        val m4 = if (m1 == null && m2 == null && m3 == null && isSeriesUrl) SE_4.find(n) else null
+
+                        val isSeries = isSeriesUrl || m1 != null || m2 != null || m3 != null
 
                         val logo = attr(inf, "tvg-logo")?.ifBlank { null }
                         val tvgId = attr(inf, "tvg-id")?.ifBlank { null }
                         val year = YEAR_RE.find(n)?.groupValues?.get(1)?.toIntOrNull()
 
-                        if (isSeriesUrl || seMatch != null) {
-                            // Agrupamento de Séries (Padrão Android)
-                            val cleanSeriesName = if (seMatch != null) {
-                                seMatch.groupValues[1].trim().removeSuffix("-").trim()
-                            } else {
-                                n.substringBeforeLast("-").trim()
-                            }
-                            val seasonNum = seMatch?.groupValues?.get(2)?.toIntOrNull() ?: 1
-                            val epNum = seMatch?.groupValues?.get(3)?.toIntOrNull() ?: 1
-                            val epExtraTitle = seMatch?.groupValues?.get(4)?.trim()?.removePrefix("-")?.trim().orEmpty()
+                        if (isSeries) {
+                            val rawSeriesName: String
+                            val seasonNum: Int
+                            val epNum: Int
+                            val epExtra: String
 
-                            val seriesKey = cleanSeriesName.lowercase()
+                            when {
+                                m1 != null -> {
+                                    rawSeriesName = m1.groupValues[1]
+                                    seasonNum = m1.groupValues[2].toIntOrNull() ?: 1
+                                    epNum = m1.groupValues[3].toIntOrNull() ?: 1
+                                    epExtra = m1.groupValues[4].trim().trim('-', ' ', ':')
+                                }
+                                m2 != null -> {
+                                    rawSeriesName = m2.groupValues[1]
+                                    seasonNum = m2.groupValues[2].toIntOrNull() ?: 1
+                                    epNum = m2.groupValues[3].toIntOrNull() ?: 1
+                                    epExtra = m2.groupValues[4].trim().trim('-', ' ', ':')
+                                }
+                                m3 != null -> {
+                                    rawSeriesName = m3.groupValues[1]
+                                    seasonNum = m3.groupValues[2].toIntOrNull() ?: 1
+                                    epNum = m3.groupValues[3].toIntOrNull() ?: 1
+                                    epExtra = m3.groupValues[4].trim().trim('-', ' ', ':')
+                                }
+                                m4 != null -> {
+                                    rawSeriesName = m4.groupValues[1]
+                                    seasonNum = 1
+                                    epNum = m4.groupValues[2].toIntOrNull() ?: 1
+                                    epExtra = m4.groupValues[3].trim().trim('-', ' ', ':')
+                                }
+                                else -> {
+                                    rawSeriesName = n.substringBeforeLast("-").trim()
+                                    seasonNum = 1
+                                    epNum = 1
+                                    epExtra = ""
+                                }
+                            }
+
+                            val cleanName = cleanTitle(rawSeriesName).ifBlank { rawSeriesName.trim() }
+                            val seriesKey = cleanName.lowercase()
+
                             val acc = seriesMap.getOrPut(seriesKey) {
                                 SeriesAccumulator(
-                                    seriesTitle = cleanSeriesName,
+                                    seriesTitle = cleanName,
                                     logo = logo,
                                     group = group,
                                     year = year
                                 )
                             }
 
+                            val epTitle = if (epExtra.isNotBlank()) "Episódio $epNum - $epExtra" else "Episódio $epNum"
                             acc.episodes.add(
                                 Episode(
                                     season = seasonNum,
                                     num = epNum,
-                                    title = if (epExtraTitle.isNotBlank()) epExtraTitle else "Episódio $epNum",
+                                    title = epTitle,
                                     url = line
                                 )
                             )
                         } else if (isMovieUrl) {
-                            moviesAndLive.add(
+                            movies.add(
                                 Item(
                                     id = line.hashCode().toString(),
                                     kind = Kind.MOVIE,
-                                    title = n,
+                                    title = cleanTitle(n).ifBlank { n },
                                     year = year,
                                     url = line,
                                     logo = logo,
@@ -107,7 +164,7 @@ object SharedM3uParser {
                                 )
                             )
                         } else {
-                            moviesAndLive.add(
+                            liveChannels.add(
                                 Item(
                                     id = line.hashCode().toString(),
                                     kind = Kind.LIVE,
@@ -127,20 +184,21 @@ object SharedM3uParser {
             }
         }
 
-        // Converte as séries acumuladas em Itens
-        val finalSeries = seriesMap.values.map { acc ->
+        // Ordena episódios de cada série rigorosamente por temporada e número
+        val finalizedSeries = seriesMap.values.map { acc ->
+            acc.episodes.sortWith(compareBy({ it.season }, { it.num }))
             Item(
-                id = acc.seriesTitle.hashCode().toString(),
+                id = "s_${acc.seriesTitle.hashCode()}",
                 kind = Kind.SERIES,
                 title = acc.seriesTitle,
                 year = acc.year,
-                url = acc.episodes.firstOrNull()?.url ?: "",
+                url = acc.episodes.firstOrNull()?.url.orEmpty(),
                 logo = acc.logo,
                 group = acc.group,
-                episodes = acc.episodes.sortedWith(compareBy({ it.season }, { it.num }))
+                episodes = acc.episodes
             )
         }
 
-        return moviesAndLive + finalSeries
+        return liveChannels + movies + finalizedSeries
     }
 }

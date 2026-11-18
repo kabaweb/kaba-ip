@@ -183,7 +183,7 @@ fun AndroidHomeScreen(
             }
         }
 
-        items(groupNames.take(25), key = { it }) { groupName ->
+        items(groupNames, key = { it }) { groupName ->
             val rowItems = groupsMap[groupName].orEmpty()
             if (rowItems.isNotEmpty()) {
                 CategoryCarrouselRow(
@@ -366,39 +366,78 @@ fun CategoryCarrouselRow(
     }
 }
 
-/** Tela de TV Ao Vivo: 2 colunas estilo Android */
+/** Tela de TV Ao Vivo: 2 colunas estilo Android com ordenação oficial e busca */
 @Composable
 fun SharedLiveScreen(onPlay: (Item) -> Unit) {
     val allLive = remember(SharedPortalManager.playlistItems.size) {
         SharedPortalManager.playlistItems.filter { it.kind == Kind.LIVE }
     }
-    val groups = remember(allLive) {
-        listOf("Todos") + allLive.map { it.group }.distinct()
-    }
-    var selectedGroup by remember { mutableStateOf("Todos") }
 
-    val filteredLive = remember(selectedGroup, allLive) {
-        if (selectedGroup == "Todos") allLive else allLive.filter { it.group == selectedGroup }
+    val rawGroups = remember(allLive) {
+        allLive.map { it.group }.distinct()
+    }
+
+    val sortedGroups = remember(rawGroups, com.ipvio.stream.shared.order.SharedCatOrder.mode, com.ipvio.stream.shared.order.SharedCatOrder.favoriteCategories.size) {
+        listOf("Todos") + com.ipvio.stream.shared.order.SharedCatOrder.sortCategories(rawGroups)
+    }
+
+    var selectedGroup by remember { mutableStateOf("Todos") }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredLive = remember(selectedGroup, allLive, searchQuery) {
+        val inGroup = if (selectedGroup == "Todos") allLive else allLive.filter { it.group == selectedGroup }
+        if (searchQuery.isBlank()) inGroup else inGroup.filter { it.title.contains(searchQuery, ignoreCase = true) }
     }
 
     Row(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        // Coluna de Categorias
         Column(
             modifier = Modifier
-                .width(250.dp)
+                .width(280.dp)
                 .fillMaxHeight()
                 .clip(RoundedCornerShape(12.dp))
                 .background(KorpLook.Surf)
                 .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("Categorias", color = KorpLook.TextHi, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Categorias", color = KorpLook.TextHi, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+
+                // Botão Alternar Ordenação (Provedor vs A-Z)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.White.copy(alpha = 0.1f))
+                        .clickable {
+                            val next = if (com.ipvio.stream.shared.order.SharedCatOrder.mode == com.ipvio.stream.shared.order.SharedCatOrder.MODE_PROVIDER) {
+                                com.ipvio.stream.shared.order.SharedCatOrder.MODE_AZ
+                            } else {
+                                com.ipvio.stream.shared.order.SharedCatOrder.MODE_PROVIDER
+                            }
+                            com.ipvio.stream.shared.order.SharedCatOrder.setOrderMode(next)
+                        }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        if (com.ipvio.stream.shared.order.SharedCatOrder.mode == com.ipvio.stream.shared.order.SharedCatOrder.MODE_PROVIDER) "Provedor" else "A–Z",
+                        color = KorpLook.Accent1,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
             LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                items(groups) { g ->
+                items(sortedGroups) { g ->
                     val active = selectedGroup == g
                     var isFocused by remember { mutableStateOf(false) }
+                    val isFav = if (g == "Todos") false else com.ipvio.stream.shared.order.SharedCatOrder.isFavorite(g)
 
-                    Box(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
@@ -411,28 +450,82 @@ fun SharedLiveScreen(onPlay: (Item) -> Unit) {
                             .onFocusChanged { isFocused = it.isFocused }
                             .clickable { selectedGroup = g }
                             .focusable()
-                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            g,
+                            text = g,
                             color = if (active) Color.Black else KorpLook.TextMid,
                             fontSize = 13.sp,
                             fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-                            maxLines = 1
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
+
+                        if (g != "Todos") {
+                            Text(
+                                text = if (isFav) "★" else "☆",
+                                color = if (isFav) Color(0xFFFBBF24) else Color.White.copy(alpha = 0.3f),
+                                fontSize = 14.sp,
+                                modifier = Modifier
+                                    .padding(start = 6.dp)
+                                    .clickable {
+                                        com.ipvio.stream.shared.order.SharedCatOrder.toggleFavorite(g)
+                                    }
+                            )
+                        }
                     }
                 }
             }
         }
 
-        Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // Coluna de Canais com Busca e Contagem
+        Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(selectedGroup, color = KorpLook.TextHi, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text("${filteredLive.size} canais", color = KorpLook.TextLow, fontSize = 13.sp)
+                Column {
+                    Text(selectedGroup, color = KorpLook.TextHi, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text("${filteredLive.size} canais disponíveis", color = KorpLook.TextLow, fontSize = 12.sp)
+                }
+
+                // Campo de Busca Rápida de Canais
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(KorpLook.Surf)
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("🔍", fontSize = 13.sp)
+                    androidx.compose.foundation.text.BasicTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp),
+                        decorationBox = { innerTextField ->
+                            if (searchQuery.isEmpty()) {
+                                Text("Buscar canal...", color = Color(0xFFA1A1AA), fontSize = 13.sp)
+                            }
+                            innerTextField()
+                        },
+                        modifier = Modifier.width(180.dp)
+                    )
+                    if (searchQuery.isNotEmpty()) {
+                        Text(
+                            "✕",
+                            color = Color(0xFFA1A1AA),
+                            fontSize = 12.sp,
+                            modifier = Modifier.clickable { searchQuery = "" }
+                        )
+                    }
+                }
             }
 
             LazyColumn(

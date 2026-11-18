@@ -10,6 +10,7 @@ import com.ipvio.stream.shared.parser.SharedM3uParser
 import com.ipvio.stream.shared.prefs.getPreferences
 import kotlinx.coroutines.*
 import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
@@ -35,6 +36,13 @@ object SharedPortalManager {
         private set
 
     val playlistItems = mutableStateListOf<Item>()
+
+    private val cacheDir by lazy {
+        File(System.getProperty("user.home"), ".korptv").apply { mkdirs() }
+    }
+    private val cacheFile by lazy {
+        File(cacheDir, "playlist_cache.m3u")
+    }
 
     fun getPortalUrl(): String {
         val sp = getPreferences(PREFS)
@@ -83,7 +91,7 @@ object SharedPortalManager {
             val conn = u.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
             conn.connectTimeout = 15000
-            conn.readTimeout = 30000
+            conn.readTimeout = 40000
             conn.setRequestProperty("User-Agent", "KorpTV/1.0.0")
             conn.setRequestProperty("Accept", "*/*")
             if (conn.responseCode in 200..299) conn.inputStream else null
@@ -100,15 +108,44 @@ object SharedPortalManager {
 
     private var pollJob: Job? = null
 
+    /**
+     * Carrega a playlist do disco local instantaneamente sem esperar rede
+     */
+    private suspend fun loadFromDiskCache(): Boolean {
+        if (!cacheFile.exists() || cacheFile.length() <= 0) return false
+        return withContext(Dispatchers.IO) {
+            try {
+                val list = SharedM3uParser.parseStream(cacheFile.inputStream())
+                if (list.isNotEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        playlistItems.clear()
+                        playlistItems.addAll(list)
+                        statusMessage = "Carregado do cache: ${list.size} itens"
+                    }
+                    true
+                } else false
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                false
+            }
+        }
+    }
+
     fun startPolling(scope: CoroutineScope) {
         pollJob?.cancel()
         pollJob = scope.launch(Dispatchers.IO) {
-            // Se já tem playlist salva localmente, carrega ela primeiro
-            val saved = getSavedPlaylistUrl()
-            if (!saved.isNullOrBlank() && playlistItems.isEmpty()) {
-                loadPlaylist(saved)
+            // 1. CARREGAMENTO IMEDIATO DO DISCO LOCAL AO LIGAR O APP (INSTANTÂNEO)
+            if (playlistItems.isEmpty()) {
+                val hasCached = loadFromDiskCache()
+                if (!hasCached) {
+                    val saved = getSavedPlaylistUrl()
+                    if (!saved.isNullOrBlank()) {
+                        loadPlaylist(saved)
+                    }
+                }
             }
 
+            // 2. POLING E VERIFICAÇÃO COM O PORTAL EM SEGUNDO PLANO
             while (isActive) {
                 val portalUrl = getPortalUrl()
                 val devId = SharedDeviceIdentity.getDeviceId()
@@ -134,10 +171,12 @@ object SharedPortalManager {
                     parsePortalResponse(res)
                 } else {
                     isConnected = false
-                    statusMessage = "Falha ao conectar no Portal ($portalUrl)"
+                    if (playlistItems.isEmpty()) {
+                        statusMessage = "Falha ao conectar no Portal ($portalUrl)"
+                    }
                 }
 
-                delay(if (playlistItems.isEmpty()) 4000L else 30000L)
+                delay(if (playlistItems.isEmpty()) 4000L else 45000L)
             }
         }
     }
@@ -148,7 +187,6 @@ object SharedPortalManager {
             tmdbKey = metaKey
         }
 
-        // Parse sem biblioteca pesada
         val plIdx = rawJson.indexOf("\"playlist\":")
         if (plIdx >= 0) {
             val plSub = rawJson.substring(plIdx)
@@ -177,23 +215,48 @@ object SharedPortalManager {
     }
 
     suspend fun loadPlaylist(url: String) {
-        isLoadingPlaylist = true
-        statusMessage = "Baixando playlist do portal..."
+        if (playlistItems.isEmpty()) {
+            isLoadingPlaylist = true
+            statusMessage = "Baixando lista de canais..."
+        }
+
         withContext(Dispatchers.IO) {
             val stream = httpGet(url)
             if (stream != null) {
-                statusMessage = "Processando canais..."
-                val list = SharedM3uParser.parseStream(stream)
-                withContext(Dispatchers.Main) {
-                    playlistItems.clear()
-                    playlistItems.addAll(list)
-                    isLoadingPlaylist = false
-                    statusMessage = "Playlist carregada: ${list.size} itens"
+                val tmpFile = File(cacheDir, "playlist_cache.tmp")
+                try {
+                    // Grava stream no arquivo temporário para persistência em disco
+                    FileOutputStream(tmpFile).use { out ->
+                        stream.copyTo(out)
+                    }
+
+                    // Processa do arquivo salvo
+                    val list = SharedM3uParser.parseStream(tmpFile.inputStream())
+                    if (list.isNotEmpty()) {
+                        // Substitui cache local definitivo
+                        if (cacheFile.exists()) cacheFile.delete()
+                        tmpFile.renameTo(cacheFile)
+
+                        withContext(Dispatchers.Main) {
+                            playlistItems.clear()
+                            playlistItems.addAll(list)
+                            isLoadingPlaylist = false
+                            statusMessage = "Pronto: ${list.size} itens"
+                        }
+                    }
+                } catch (e: Throwable) {
+                    e.printStackTrace()
+                    withContext(Dispatchers.Main) {
+                        isLoadingPlaylist = false
+                    }
                 }
             } else {
+                // Se falhou o download, tenta o cache local
+                if (playlistItems.isEmpty()) {
+                    loadFromDiskCache()
+                }
                 withContext(Dispatchers.Main) {
                     isLoadingPlaylist = false
-                    statusMessage = "Erro ao baixar playlist de $url"
                 }
             }
         }

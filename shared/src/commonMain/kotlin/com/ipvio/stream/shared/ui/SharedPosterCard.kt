@@ -146,9 +146,15 @@ fun SharedPosterCard(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+        val subtitle = if (item.kind == Kind.SERIES && item.episodes.isNotEmpty()) {
+            val sCount = item.episodes.map { it.season }.distinct().size
+            "${sCount} Temp • ${item.episodes.size} Eps"
+        } else {
+            item.group
+        }
         Text(
-            text = item.group,
-            color = KorpLook.TextLow,
+            text = subtitle,
+            color = if (item.kind == Kind.SERIES && item.episodes.isNotEmpty()) KorpLook.Accent1 else KorpLook.TextLow,
             fontSize = 11.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis

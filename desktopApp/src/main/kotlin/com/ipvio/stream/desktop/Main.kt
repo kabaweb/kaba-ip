@@ -12,11 +12,11 @@ import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.window.WindowPlacement
 import com.ipvio.stream.shared.platform.BackDispatcher
 import com.ipvio.stream.shared.platform.FullscreenController
+import com.ipvio.stream.shared.player.SharedPlayerController
 import com.ipvio.stream.shared.ui.SharedApp
 
 fun main() = application {
-    // Interceptor global de teclado do AWT: garante que a tecla ESCAPE sempre volte,
-    // e F ou F11 alternem tela cheia, mesmo com o foco dentro do player.
+    // Interceptor global de teclado do AWT: atalhos funcionam mesmo com foco dentro do VLC/Swing
     java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher { event ->
         if (event.id == java.awt.event.KeyEvent.KEY_RELEASED) {
             when (event.keyCode) {
@@ -27,6 +27,30 @@ fun main() = application {
                 java.awt.event.KeyEvent.VK_F11 -> {
                     FullscreenController.toggle()
                     true
+                }
+                java.awt.event.KeyEvent.VK_SPACE -> {
+                    if (SharedPlayerController.onPlayPause != null) {
+                        SharedPlayerController.playPause()
+                        true
+                    } else false
+                }
+                java.awt.event.KeyEvent.VK_LEFT -> {
+                    if (SharedPlayerController.onRewind != null) {
+                        SharedPlayerController.rewind()
+                        true
+                    } else false
+                }
+                java.awt.event.KeyEvent.VK_RIGHT -> {
+                    if (SharedPlayerController.onForward != null) {
+                        SharedPlayerController.forward()
+                        true
+                    } else false
+                }
+                java.awt.event.KeyEvent.VK_S -> {
+                    if (SharedPlayerController.onStop != null) {
+                        SharedPlayerController.stop()
+                        true
+                    } else false
                 }
                 else -> false
             }

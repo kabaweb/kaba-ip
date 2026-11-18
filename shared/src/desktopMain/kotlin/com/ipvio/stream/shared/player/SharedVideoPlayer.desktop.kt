@@ -51,6 +51,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 
 @Composable
 actual fun SharedVideoPlayer(
@@ -60,7 +61,7 @@ actual fun SharedVideoPlayer(
     modifier: Modifier,
     onBack: () -> Unit
 ) {
-    // Tecla ESC global ou botão Voltar fecha o player e para a reprodução
+    // Tecla ESC global fecha o player e para a reprodução
     BackHandler(onBack = onBack)
 
     // Configura caminho do LibVLC
@@ -78,7 +79,6 @@ actual fun SharedVideoPlayer(
     var currentPlayingUrl by remember(url) { mutableStateOf(url) }
     var currentPlayingTitle by remember(title) { mutableStateOf(title) }
 
-    // Objeto do canal atual para EPG e metadados
     val currentChannelItem = remember(currentPlayingUrl) {
         SharedPortalManager.playlistItems.firstOrNull { it.url == currentPlayingUrl }
     }
@@ -96,7 +96,6 @@ actual fun SharedVideoPlayer(
     val currentEpg = remember(epgList) { SharedEpgRepo.current(epgList) }
     val nextEpg = remember(epgList) { SharedEpgRepo.next(epgList) }
 
-    // Carrega EPG do canal atual em segundo plano
     LaunchedEffect(currentPlayingUrl) {
         showEpgBanner = true
         val ch = currentChannelItem
@@ -107,9 +106,52 @@ actual fun SharedVideoPlayer(
         }
     }
 
-    // Componente nativo de vídeo acelerado por hardware
     val mediaPlayerComponent = remember { EmbeddedMediaPlayerComponent() }
     val mediaPlayer = remember { mediaPlayerComponent.mediaPlayer() }
+
+    // Função de parada definitiva
+    val stopPlayback = {
+        try {
+            mediaPlayer.controls().stop()
+        } catch (_: Throwable) {}
+        onBack()
+    }
+
+    // Vincula teclas globais do Windows (Espaço, Esquerda, Direita, S)
+    DisposableEffect(mediaPlayer) {
+        SharedPlayerController.onPlayPause = {
+            if (isPlaying) {
+                mediaPlayer.controls().pause()
+                isPlaying = false
+                showControls = true
+            } else {
+                mediaPlayer.controls().play()
+                isPlaying = true
+            }
+        }
+        SharedPlayerController.onRewind = {
+            val t = (currentTimeMs - 10000).coerceAtLeast(0)
+            mediaPlayer.controls().setTime(t)
+            currentTimeMs = t
+            showControls = true
+        }
+        SharedPlayerController.onForward = {
+            val t = (currentTimeMs + 10000).coerceAtMost(if (totalDurationMs > 0) totalDurationMs else currentTimeMs + 10000)
+            mediaPlayer.controls().setTime(t)
+            currentTimeMs = t
+            showControls = true
+        }
+        SharedPlayerController.onStop = {
+            stopPlayback()
+        }
+
+        onDispose {
+            SharedPlayerController.onPlayPause = null
+            SharedPlayerController.onRewind = null
+            SharedPlayerController.onForward = null
+            SharedPlayerController.onStop = null
+        }
+    }
 
     DisposableEffect(mediaPlayer) {
         val listener = object : MediaPlayerEventAdapter() {
@@ -120,6 +162,7 @@ actual fun SharedVideoPlayer(
 
             override fun paused(mp: MediaPlayer?) {
                 isPlaying = false
+                showControls = true
             }
 
             override fun timeChanged(mp: MediaPlayer?, newTime: Long) {
@@ -140,6 +183,7 @@ actual fun SharedVideoPlayer(
 
             override fun finished(mp: MediaPlayer?) {
                 isPlaying = false
+                showControls = true
             }
         }
 
@@ -153,7 +197,7 @@ actual fun SharedVideoPlayer(
         }
     }
 
-    // Inicia a reprodução
+    // Inicia a reprodução com buffer de rede
     LaunchedEffect(currentPlayingUrl) {
         isBuffering = true
         var attempts = 0
@@ -177,10 +221,10 @@ actual fun SharedVideoPlayer(
         }
     }
 
-    // Auto-ocultar controles após 5 segundos de inatividade
+    // Auto-oculta controles apenas quando estiver reproduzindo (se pausado, fica sempre visível)
     LaunchedEffect(showControls, isPlaying) {
         if (showControls && isPlaying) {
-            delay(5000)
+            delay(6000)
             showControls = false
             showEpgBanner = false
         }
@@ -190,13 +234,13 @@ actual fun SharedVideoPlayer(
         SharedPortalManager.playlistItems.filter { it.kind == Kind.LIVE }
     }
 
-    // Layout com VÍDEO EM TELA TODA (100% da área do Box) e Controles como Overlays Flutuantes
+    // Layout com VÍDEO EM TELA TODA (100% da janela) e Overlays Flutuantes
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // 1. Camada de Vídeo Acelerada por GPU (OCUPA 100% DA JANELA SEM BARRAS PRETAS)
+        // 1. Superfície de Vídeo do LibVLC
         SwingPanel(
             modifier = Modifier.fillMaxSize(),
             factory = {
@@ -224,7 +268,7 @@ actual fun SharedVideoPlayer(
             }
         )
 
-        // 2. Indicador de Buffering / Carregamento
+        // 2. Indicador de Carregamento / Buffering
         if (isBuffering) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -243,12 +287,12 @@ actual fun SharedVideoPlayer(
                         strokeWidth = 4.dp,
                         modifier = Modifier.size(36.dp)
                     )
-                    Text("Carregando transmissão...", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Text("Carregando vídeo...", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 }
             }
         }
 
-        // 3. Barra Superior Flutuante (Gradiente Superior)
+        // 3. Barra Superior Flutuante com Botão PARAR, Título e Tela Cheia
         AnimatedVisibility(
             visible = showControls,
             enter = fadeIn(),
@@ -260,33 +304,34 @@ actual fun SharedVideoPlayer(
                     .fillMaxWidth()
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color(0xF0070B14), Color(0xCC070B14), Color.Transparent)
+                            listOf(Color(0xF5070B14), Color(0xD0070B14), Color.Transparent)
                         )
                     )
-                    .padding(horizontal = 28.dp, vertical = 20.dp)
+                    .padding(horizontal = 24.dp, vertical = 18.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Botão Voltar e Título
+                    // Botão PARAR e Sair + Título
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
                         modifier = Modifier.weight(1f, fill = false)
                     ) {
+                        // Botão PARAR oficial
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF1E293B))
-                                .clickable { onBack() }
+                                .background(Color(0xFFE5484D))
+                                .clickable { stopPlayback() }
                                 .padding(horizontal = 14.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text("←", color = KorpLook.Accent1, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Text("Voltar (ESC)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("⏹", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("PARAR (ESC)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
 
                         Column {
@@ -310,12 +355,13 @@ actual fun SharedVideoPlayer(
                         }
                     }
 
-                    // Ações da Direita (Zapping, Ao Vivo e Tela Cheia)
+                    // Botões da Direita
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         if (isLive) {
+                            // Zapping
                             Row(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
@@ -325,10 +371,11 @@ actual fun SharedVideoPlayer(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text("≡", color = if (showChannelDrawer) Color.Black else Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                Text("Canais (Zapping)", color = if (showChannelDrawer) Color.Black else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("≡", color = if (showChannelDrawer) Color.Black else Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("Canais", color = if (showChannelDrawer) Color.Black else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
 
+                            // Badge AO VIVO
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -352,7 +399,7 @@ actual fun SharedVideoPlayer(
                             }
                         }
 
-                        // Botão de Tela Cheia Oficial
+                        // Botão Tela Cheia
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
@@ -375,7 +422,7 @@ actual fun SharedVideoPlayer(
             }
         }
 
-        // 4. Banner de EPG e Informações do Canal (Idêntico ao Android TV)
+        // 4. Banner de EPG e Canal para TV Ao Vivo
         AnimatedVisibility(
             visible = isLive && (showControls || showEpgBanner),
             enter = fadeIn(),
@@ -390,18 +437,17 @@ actual fun SharedVideoPlayer(
                             listOf(Color.Transparent, Color(0xCC000000), Color(0xF2070B14))
                         )
                     )
-                    .padding(start = 32.dp, end = 32.dp, top = 40.dp, bottom = 24.dp)
+                    .padding(start = 28.dp, end = 28.dp, top = 36.dp, bottom = 22.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(20.dp)
+                    horizontalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
-                    // Logo do Canal
                     Box(
                         modifier = Modifier
-                            .size(76.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(10.dp))
                             .background(Color(0x33FFFFFF)),
                         contentAlignment = Alignment.Center
                     ) {
@@ -417,16 +463,15 @@ actual fun SharedVideoPlayer(
                             Text(
                                 text = currentPlayingTitle.take(2).uppercase(),
                                 color = Color.White,
-                                fontSize = 24.sp,
+                                fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
 
-                    // Informações do Programa Atual e Barra de Progresso
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -435,33 +480,21 @@ actual fun SharedVideoPlayer(
                             Text(
                                 "LIVE",
                                 color = Color.White,
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(4.dp))
                                     .background(Color(0xFFE5484D))
-                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    .padding(horizontal = 7.dp, vertical = 2.dp)
                             )
                             Text(
                                 text = currentPlayingTitle,
                                 color = Color.White,
-                                fontSize = 22.sp,
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            currentChannelItem?.quality?.takeIf { it.isNotBlank() }?.let { q ->
-                                Text(
-                                    text = q,
-                                    color = Color.White,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(Color(0x40FFFFFF))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
                         }
 
                         if (currentEpg != null) {
@@ -474,7 +507,7 @@ actual fun SharedVideoPlayer(
                                 Text(
                                     text = currentEpg.title,
                                     color = Color.White,
-                                    fontSize = 17.sp,
+                                    fontSize = 16.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
@@ -483,7 +516,7 @@ actual fun SharedVideoPlayer(
                                 Text(
                                     "${formatTimestamp(currentEpg.start)} - ${formatTimestamp(currentEpg.end)}",
                                     color = Color(0xFFA1A1AA),
-                                    fontSize = 14.sp
+                                    fontSize = 13.sp
                                 )
                             }
                             Box(
@@ -502,24 +535,23 @@ actual fun SharedVideoPlayer(
                             }
                         } else {
                             Text(
-                                "Carregando programação do canal...",
+                                "Programação ao vivo",
                                 color = Color(0xFFA1A1AA),
-                                fontSize = 14.sp
+                                fontSize = 13.sp
                             )
                         }
                     }
 
-                    // Próximo Programa ("A Seguir")
                     if (nextEpg != null) {
                         Column(
-                            modifier = Modifier.widthIn(max = 280.dp),
+                            modifier = Modifier.widthIn(max = 260.dp),
                             verticalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
-                            Text("A Seguir", color = KorpLook.Accent1, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("A Seguir", color = KorpLook.Accent1, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             Text(
                                 "${formatTimestamp(nextEpg.start)}  ${nextEpg.title}",
                                 color = Color.White,
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -529,7 +561,7 @@ actual fun SharedVideoPlayer(
             }
         }
 
-        // 5. Barra Inferior de Controles para VOD (Filmes / Séries)
+        // 5. Barra Inferior Completa de VOD (Filmes e Séries): PARAR, VOLTAR 10s, PLAY/PAUSE, AVANÇAR 10s
         if (!isLive) {
             AnimatedVisibility(
                 visible = showControls,
@@ -542,23 +574,29 @@ actual fun SharedVideoPlayer(
                         .fillMaxWidth()
                         .background(
                             Brush.verticalGradient(
-                                listOf(Color.Transparent, Color(0xCC0B101D), Color(0xF20B101D))
+                                listOf(Color.Transparent, Color(0xDD0B101D), Color(0xF80B101D))
                             )
                         )
-                        .padding(horizontal = 32.dp, vertical = 20.dp)
+                        .padding(horizontal = 32.dp, vertical = 22.dp)
                 ) {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        // Linha da Timeline / Barra de progresso do vídeo
                         if (totalDurationMs > 0) {
                             val progress = (currentTimeMs.toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
-                                Text(formatTime(currentTimeMs), color = Color.White, fontSize = 12.sp)
+                                Text(
+                                    formatTime(currentTimeMs),
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                                 Slider(
                                     value = progress,
                                     onValueChange = { newProg ->
@@ -570,37 +608,64 @@ actual fun SharedVideoPlayer(
                                     colors = SliderDefaults.colors(
                                         thumbColor = KorpLook.Accent1,
                                         activeTrackColor = KorpLook.Accent1,
-                                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                                        inactiveTrackColor = Color.White.copy(alpha = 0.25f)
                                     )
                                 )
-                                Text(formatTime(totalDurationMs), color = Color.White, fontSize = 12.sp)
+                                Text(
+                                    formatTime(totalDurationMs),
+                                    color = Color(0xFFA1A1AA),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
 
+                        // Botões de Ação: PARAR, VOLTAR, PAUSE/PLAY, AVANÇAR
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
+                            // 1. Botão PARAR (Stop)
+                            Row(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFFE5484D))
+                                    .clickable { stopPlayback() }
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text("⏹", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text("Parar", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            Spacer(Modifier.width(16.dp))
+
+                            // 2. Botão VOLTAR 10s
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(Color.White.copy(alpha = 0.12f))
                                     .clickable {
                                         val t = (currentTimeMs - 10000).coerceAtLeast(0)
                                         mediaPlayer.controls().setTime(t)
+                                        currentTimeMs = t
                                     }
-                                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                                contentAlignment = Alignment.Center
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text("⏮ 10s", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Text("⏮", color = Color.White, fontSize = 14.sp)
+                                Text("Voltar 10s", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             }
 
-                            Spacer(Modifier.width(20.dp))
+                            Spacer(Modifier.width(16.dp))
 
+                            // 3. Botão PLAY / PAUSE Principal
                             Box(
                                 modifier = Modifier
-                                    .size(50.dp)
+                                    .size(54.dp)
                                     .clip(CircleShape)
                                     .background(KorpLook.Accent1)
                                     .clickable {
@@ -617,25 +682,29 @@ actual fun SharedVideoPlayer(
                                 Text(
                                     text = if (isPlaying) "⏸" else "▶",
                                     color = Color.Black,
-                                    fontSize = 22.sp,
+                                    fontSize = 24.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
 
-                            Spacer(Modifier.width(20.dp))
+                            Spacer(Modifier.width(16.dp))
 
-                            Box(
+                            // 4. Botão AVANÇAR 10s
+                            Row(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(Color.White.copy(alpha = 0.12f))
                                     .clickable {
-                                        val t = (currentTimeMs + 10000).coerceAtMost(totalDurationMs)
+                                        val t = (currentTimeMs + 10000).coerceAtMost(if (totalDurationMs > 0) totalDurationMs else currentTimeMs + 10000)
                                         mediaPlayer.controls().setTime(t)
+                                        currentTimeMs = t
                                     }
-                                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                                contentAlignment = Alignment.Center
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text("10s ⏭", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Text("Avançar 10s", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Text("⏭", color = Color.White, fontSize = 14.sp)
                             }
                         }
                     }
@@ -643,7 +712,22 @@ actual fun SharedVideoPlayer(
             }
         }
 
-        // 6. Gaveta Lateral de Canais (Zapping rápido)
+        // 6. Botão flutuante para reexibir controles caso estejam ocultos
+        if (!showControls) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(24.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0x80000000))
+                    .clickable { showControls = true }
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Text("☰ Controles", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            }
+        }
+
+        // 7. Gaveta Lateral de Canais (Zapping rápido)
         if (isLive && showChannelDrawer) {
             Box(
                 modifier = Modifier
