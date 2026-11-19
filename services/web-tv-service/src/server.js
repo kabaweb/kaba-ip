@@ -4,6 +4,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { db, initDatabase } from './db.js';
+import { PlaylistSyncService } from './syncService.js';
 
 initDatabase();
 
@@ -25,6 +26,15 @@ function sendJson(res, statusCode, data) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization'
   });
   res.end(JSON.stringify(data));
+}
+
+function derivePairingCode(mac, deviceId) {
+  const source = (mac || '').replace(/[^a-zA-Z0-9]/g, '') || (deviceId || '').replace(/[^a-zA-Z0-9]/g, '');
+  const hex = source.slice(-6).toUpperCase();
+  if (hex.length === 6) {
+    return `${hex.slice(0, 3)}-${hex.slice(3)}`;
+  }
+  return hex || '000-000';
 }
 
 function parseBody(req) {
@@ -206,7 +216,119 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // 8. API: Configurações de Reprodução do Cliente
+    // 8. API: Sincronização Direta de Playlist (Xtream Codes ou M3U)
+    if (pathname === '/api/playlist/sync' && method === 'POST') {
+      const body = await parseBody(req);
+      const { type, host, username, password, m3u_url, client_id } = body;
+      const cId = client_id || 'client-demo-1';
+
+      // Cria ou busca playlist
+      let playlist = db.prepare('SELECT * FROM client_playlists WHERE client_id = ?').get(cId);
+      const pId = playlist ? playlist.id : randomUUID();
+
+      if (type === 'm3u') {
+        if (!m3u_url) {
+          sendJson(res, 400, { success: false, error: 'm3u_url é obrigatório' });
+          return;
+        }
+        db.prepare(`
+          INSERT OR REPLACE INTO client_playlists (id, client_id, name, type, server_url, m3u_url, status, created_at)
+          VALUES (?, ?, ?, 'm3u', ?, ?, 'syncing', ?)
+        `).run(pId, cId, 'Lista M3U', m3u_url, m3u_url, Date.now());
+
+        const result = await PlaylistSyncService.syncM3U(pId, m3u_url);
+        sendJson(res, 200, { success: true, message: 'Lista M3U sincronizada com sucesso', ...result });
+        return;
+      }
+
+      // Xtream Codes
+      if (!host || !username || !password) {
+        sendJson(res, 400, { success: false, error: 'host, username e password são obrigatórios para Xtream' });
+        return;
+      }
+
+      db.prepare(`
+        INSERT OR REPLACE INTO client_playlists (id, client_id, name, type, server_url, username, password, status, created_at)
+        VALUES (?, ?, ?, 'xtream', ?, ?, ?, 'syncing', ?)
+      `).run(pId, cId, 'Lista Xtream', host, username, password, Date.now());
+
+      const result = await PlaylistSyncService.syncXtream(pId, host, username, password);
+      sendJson(res, 200, { success: true, message: 'Lista Xtream sincronizada com sucesso', ...result });
+      return;
+    }
+
+    // 9. API: Conexão e Sincronização com o Portal Korp TV
+    if (pathname === '/api/portal/connect' && method === 'POST') {
+      const body = await parseBody(req);
+      const portalUrl = (body.portal_url || 'http://localhost:3000').replace(/\/+$/, '');
+      const deviceId = body.device_id || 'web-tv-' + randomBytes(4).toString('hex');
+      const model = body.model || 'Smart TV Web Edition';
+
+      console.log(`[Portal] Registrando no portal ${portalUrl} como ${deviceId}...`);
+
+      const portalRes = await fetch(`${portalUrl}/api/device/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId,
+          mac: body.mac || '',
+          model,
+          appVersion: '1.6.4-web',
+          versionCode: 31
+        })
+      });
+
+      if (!portalRes.ok) {
+        throw new Error(`Portal retornou status HTTP ${portalRes.status}`);
+      }
+
+      const portalData = await portalRes.json();
+      const p = portalData.playlist;
+
+      // Se o portal já tem lista atribuída a este dispositivo, sincroniza automaticamente!
+      if (p && p.type === 'xtream' && p.host && p.user && p.pass) {
+        console.log(`[Portal] Lista Xtream recebida do portal (${p.host}). Sincronizando...`);
+        const pId = 'playlist-portal-' + deviceId;
+        db.prepare(`
+          INSERT OR REPLACE INTO client_playlists (id, client_id, name, type, server_url, username, password, status, created_at)
+          VALUES (?, 'client-demo-1', 'Lista do Portal', 'xtream', ?, ?, ?, 'syncing', ?)
+        `).run(pId, p.host, p.user, p.pass, Date.now());
+
+        await PlaylistSyncService.syncXtream(pId, p.host, p.user, p.pass);
+      } else if (p && p.type === 'm3u' && p.url) {
+        const pId = 'playlist-portal-' + deviceId;
+        await PlaylistSyncService.syncM3U(pId, p.url);
+      }
+
+      sendJson(res, 200, {
+        success: true,
+        portalConnected: true,
+        deviceStatus: portalData.status,
+        playlist: portalData.playlist,
+        pairingCode: portalData.pairingCode || derivePairingCode('', deviceId)
+      });
+      return;
+    }
+
+    // 10. API: Status Geral do Dispositivo e Playlist
+    if (pathname === '/api/device/status' && method === 'GET') {
+      const totalChannels = db.prepare("SELECT count(*) as c FROM stream_items WHERE stream_type = 'live'").get().c;
+      const totalMovies = db.prepare("SELECT count(*) as c FROM stream_items WHERE stream_type = 'movie'").get().c;
+      const totalCategories = db.prepare("SELECT count(*) as c FROM categories").get().c;
+      const activePlaylist = db.prepare("SELECT * FROM client_playlists ORDER BY last_synced_at DESC LIMIT 1").get();
+
+      sendJson(res, 200, {
+        success: true,
+        channels: totalChannels,
+        movies: totalMovies,
+        categories: totalCategories,
+        playlist: activePlaylist || null,
+        isReady: totalChannels > 0
+      });
+      return;
+    }
+
+    // 11. API: Configurações de Reprodução do Cliente
     if (pathname.startsWith('/api/settings/') && method === 'GET') {
       const clientId = pathname.replace('/api/settings/', '');
       const settings = db.prepare('SELECT * FROM user_settings WHERE client_id = ?').get(clientId);

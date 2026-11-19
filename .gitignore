@@ -29,4 +29,6 @@ transferencia/
 lista-exemplo/
 *.m3u
 *.m3u8
+*.db-shm
+*.db-wal
 

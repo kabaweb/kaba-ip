@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Korp TV Web - Smart TV Edition (Tizen / webOS)</title>
 
-  <!-- Bootstrap 5.3 CSS & Icons (CDN) -->
+  <!-- Bootstrap 5.3 CSS, Icons & HLS.js (CDN) -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <style>
     /* ==============================================================================
@@ -598,6 +599,10 @@
         <a href="#series" class="nav-item-btn tv-focusable" data-view="series" tabindex="0">
           <i class="bi bi-collection-play"></i>
           <span>Séries</span>
+        </a>
+        <a href="#connect" class="nav-item-btn tv-focusable" data-bs-toggle="modal" data-bs-target="#tvConnectModal" tabindex="0">
+          <i class="bi bi-link-45deg"></i>
+          <span>Conectar</span>
         </a>
         <a href="#settings" class="nav-item-btn tv-focusable" data-bs-toggle="modal" data-bs-target="#tvSettingsModal" tabindex="0">
           <i class="bi bi-gear"></i>
@@ -1225,6 +1230,95 @@
   </div>
 
   <!-- ==============================================================================
+       MODAL DE CONEXÃO & PAREAMENTO (PORTAL + XTREAM + M3U)
+       ============================================================================== -->
+  <div class="modal fade" id="tvConnectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content bg-dark border-secondary" style="border-radius: 18px;">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title text-white d-flex align-items-center gap-2">
+            <i class="bi bi-broadcast-pin text-info fs-4"></i>
+            <span>Conectar Lista ou Parear com o Portal</span>
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <ul class="nav nav-pills nav-fill mb-4 gap-2" id="connectTabs" role="tablist">
+            <li class="nav-item">
+              <button class="nav-link active tv-focusable fw-bold" id="tab-portal-btn" data-bs-toggle="pill" data-bs-target="#tab-portal" type="button" tabindex="0">
+                <i class="bi bi-qr-code-scan me-1"></i> Parear via Portal (Recomendado)
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link tv-focusable fw-bold" id="tab-xtream-btn" data-bs-toggle="pill" data-bs-target="#tab-xtream" type="button" tabindex="0">
+                <i class="bi bi-server me-1"></i> Login Xtream Codes
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link tv-focusable fw-bold" id="tab-m3u-btn" data-bs-toggle="pill" data-bs-target="#tab-m3u" type="button" tabindex="0">
+                <i class="bi bi-link me-1"></i> Lista M3U
+              </button>
+            </li>
+          </ul>
+
+          <div class="tab-content">
+            <!-- 1. Pareamento Rápido no Portal -->
+            <div class="tab-pane fade show active text-center py-2" id="tab-portal">
+              <p class="text-secondary mb-3">
+                Acesse o portal do Korp TV no celular ou computador e informe o código de 6 dígitos abaixo:
+              </p>
+              <div class="d-inline-block bg-black p-3 px-5 rounded-4 border border-info mb-3">
+                <div class="text-secondary small fw-bold">CÓDIGO DE ATIVAÇÃO DA SMART TV</div>
+                <div class="fs-1 fw-black text-info tracking-wider my-1" id="tvPairCodeDisplay" style="letter-spacing: 6px;">--- ---</div>
+                <div class="text-success small" id="pairPollingStatus"><i class="bi bi-circle-fill fs-6 me-1 text-success"></i>Aguardando ativação no portal...</div>
+              </div>
+              <div class="d-flex justify-content-center gap-3">
+                <button class="btn btn-outline-info tv-focusable" id="btnRefreshPairCode" tabindex="0">
+                  <i class="bi bi-arrow-clockwise me-1"></i> Gerar Novo Código
+                </button>
+              </div>
+            </div>
+
+            <!-- 2. Login Xtream Codes Direto -->
+            <div class="tab-pane fade" id="tab-xtream">
+              <div class="mb-3">
+                <label class="form-label text-light fw-bold small">Servidor / URL Xtream:</label>
+                <input type="text" class="form-control bg-black text-white border-secondary tv-focusable" id="xtreamHost" placeholder="http://meuprovedor.com:8080" tabindex="0">
+              </div>
+              <div class="row g-3 mb-3">
+                <div class="col-6">
+                  <label class="form-label text-light fw-bold small">Usuário:</label>
+                  <input type="text" class="form-control bg-black text-white border-secondary tv-focusable" id="xtreamUser" placeholder="Seu usuário" tabindex="0">
+                </div>
+                <div class="col-6">
+                  <label class="form-label text-light fw-bold small">Senha:</label>
+                  <input type="password" class="form-control bg-black text-white border-secondary tv-focusable" id="xtreamPass" placeholder="Sua senha" tabindex="0">
+                </div>
+              </div>
+              <button class="btn btn-info w-100 tv-focusable fw-bold py-2" id="btnSyncXtream" tabindex="0">
+                <i class="bi bi-cloud-arrow-down me-1"></i> Conectar e Sincronizar Canais
+              </button>
+            </div>
+
+            <!-- 3. Lista M3U -->
+            <div class="tab-pane fade" id="tab-m3u">
+              <div class="mb-3">
+                <label class="form-label text-light fw-bold small">URL da Lista M3U:</label>
+                <input type="text" class="form-control bg-black text-white border-secondary tv-focusable" id="m3uUrlInput" placeholder="http://meuprovedor.com/playlist.m3u" tabindex="0">
+              </div>
+              <button class="btn btn-info w-100 tv-focusable fw-bold py-2" id="btnSyncM3u" tabindex="0">
+                <i class="bi bi-cloud-arrow-down me-1"></i> Sincronizar Lista M3U
+              </button>
+            </div>
+          </div>
+
+          <div id="syncFeedbackMsg" class="alert alert-info mt-3 d-none mb-0 small"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================================================
        MODAL DE CONFIGURAÇÕES DE RESOLUÇÃO (AJUSTES)
        ============================================================================== -->
   <div class="modal fade" id="tvSettingsModal" tabindex="-1" aria-hidden="true">
@@ -1360,8 +1454,16 @@
       }
 
       play(url, isFullscreen = false) {
-        this.currentUrl = url || this.currentUrl;
+        let streamUrl = url || this.currentUrl;
 
+        // Se estiver rodando no PC em HTTPS e o stream for HTTP remoto com bloqueio de CORS,
+        // pode direcionar pelo proxy do microserviço
+        if (location.protocol === 'https:' && streamUrl.startsWith('http:')) {
+          streamUrl = `/api/stream/proxy?url=${encodeURIComponent(streamUrl)}`;
+        }
+        this.currentUrl = streamUrl;
+
+        // Samsung Tizen Hardware AVPlay
         if (this.isTizen && isFullscreen) {
           try {
             webapis.avplay.stop();
@@ -1380,6 +1482,21 @@
 
         const target = isFullscreen ? this.videoEl : this.miniVideoEl;
         if (target) {
+          // PC Browser HLS.js support for .m3u8 and .ts streams
+          if (window.Hls && Hls.isSupported() && (this.currentUrl.includes('.m3u8') || this.currentUrl.includes('.ts'))) {
+            if (this.hlsInstance) {
+              this.hlsInstance.destroy();
+            }
+            this.hlsInstance = new Hls({ enableWorker: true });
+            this.hlsInstance.loadSource(this.currentUrl);
+            this.hlsInstance.attachMedia(target);
+            this.hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+              target.play().catch(() => {});
+              this.isPlaying = true;
+            });
+            return;
+          }
+
           if (target.src !== this.currentUrl) target.src = this.currentUrl;
           target.play().then(() => { this.isPlaying = true; }).catch(() => {});
         }
@@ -1901,14 +2018,14 @@
       });
     });
 
-    function openFullscreenPlayer(title, prog, q) {
+    function openFullscreenPlayer(title, prog, q, streamUrl = null) {
       const overlay = document.getElementById('tvPlayerOverlay');
       document.getElementById('fullPlayerTitle').textContent = title;
       document.getElementById('fullPlayerShow').textContent = prog;
       document.getElementById('fullPlayerQ').textContent = q || 'SD';
 
       overlay.style.display = 'block';
-      smartPlayer.play(null, true);
+      smartPlayer.play(streamUrl, true);
 
       const backBtn = document.getElementById('btnPlayerBack');
       tvEngine.setFocus(backBtn);
@@ -1957,6 +2074,234 @@
         if (icon) { icon.className = 'bi bi-check2-circle me-2 text-info'; }
       });
     });
+
+    // ==============================================================================
+    // INTEGRAÇÃO DINÂMICA COM O MICROSERVIÇO KORP TV E SINCRONIZAÇÃO DE PLAYLIST
+    // ==============================================================================
+    let currentPairingCode = null;
+    let pairPollingInterval = null;
+
+    // 1. Gera código de pareamento para exibição na TV
+    async function initPairingCode() {
+      const codeDisplay = document.getElementById('tvPairCodeDisplay');
+      if (!codeDisplay) return;
+
+      try {
+        const deviceType = smartPlayer.isTizen ? 'samsung_tizen' : (smartPlayer.isWebOS ? 'lg_webos' : 'pc_browser');
+        const res = await fetch('/api/auth/pair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device_type: deviceType, device_name: `Smart TV (${deviceType})` })
+        });
+        const data = await res.json();
+        if (data.success && data.pair_code) {
+          currentPairingCode = data.pair_code;
+          codeDisplay.textContent = `${data.pair_code.slice(0, 3)} ${data.pair_code.slice(3)}`;
+          startPairPolling();
+        }
+      } catch (err) {
+        console.warn('[Pair] Falha ao obter código de pareamento da API local:', err);
+      }
+    }
+
+    // Polling aguardando ativação no portal
+    function startPairPolling() {
+      if (pairPollingInterval) clearInterval(pairPollingInterval);
+      pairPollingInterval = setInterval(async () => {
+        try {
+          const res = await fetch('/api/device/status');
+          const status = await res.json();
+          if (status.success && status.channels > 0) {
+            const statusEl = document.getElementById('pairPollingStatus');
+            if (statusEl) {
+              statusEl.innerHTML = '<i class="bi bi-check-circle-fill text-info me-1"></i>Conectado com sucesso! Carregando catálogo...';
+            }
+            clearInterval(pairPollingInterval);
+            await loadCatalogFromApi();
+            tvEngine.showTvToast('Lista de canais conectada e pronta!');
+          }
+        } catch (_) {}
+      }, 5000);
+    }
+
+    const btnRefreshPair = document.getElementById('btnRefreshPairCode');
+    if (btnRefreshPair) {
+      btnRefreshPair.addEventListener('click', initPairingCode);
+    }
+
+    // 2. Sincronização Direta de Xtream Codes
+    const btnSyncXtream = document.getElementById('btnSyncXtream');
+    if (btnSyncXtream) {
+      btnSyncXtream.addEventListener('click', async () => {
+        const host = document.getElementById('xtreamHost').value.trim();
+        const username = document.getElementById('xtreamUser').value.trim();
+        const password = document.getElementById('xtreamPass').value.trim();
+        const feedback = document.getElementById('syncFeedbackMsg');
+
+        if (!host || !username || !password) {
+          showFeedback('Preencha servidor, usuário e senha do Xtream Codes.', 'danger');
+          return;
+        }
+
+        showFeedback('Conectando e sincronizando lista Xtream... Aguarde.', 'info');
+        btnSyncXtream.disabled = true;
+
+        try {
+          const res = await fetch('/api/playlist/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'xtream', host, username, password })
+          });
+          const data = await res.json();
+          if (data.success) {
+            showFeedback(`Lista sincronizada com sucesso! ${data.channelsCount || 0} canais encontrados.`, 'success');
+            await loadCatalogFromApi();
+            tvEngine.showTvToast('Catálogo sincronizado!');
+          } else {
+            showFeedback(data.error || 'Erro ao sincronizar com servidor Xtream.', 'danger');
+          }
+        } catch (e) {
+          showFeedback(`Falha na conexão: ${e.message}`, 'danger');
+        } finally {
+          btnSyncXtream.disabled = false;
+        }
+      });
+    }
+
+    // 3. Sincronização de Lista M3U
+    const btnSyncM3u = document.getElementById('btnSyncM3u');
+    if (btnSyncM3u) {
+      btnSyncM3u.addEventListener('click', async () => {
+        const m3uUrl = document.getElementById('m3uUrlInput').value.trim();
+        if (!m3uUrl) {
+          showFeedback('Informe a URL da lista M3U.', 'danger');
+          return;
+        }
+
+        showFeedback('Baixando e processando lista M3U... Aguarde.', 'info');
+        btnSyncM3u.disabled = true;
+
+        try {
+          const res = await fetch('/api/playlist/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'm3u', m3u_url: m3uUrl })
+          });
+          const data = await res.json();
+          if (data.success) {
+            showFeedback(`Lista M3U sincronizada com sucesso! ${data.channelsCount || 0} canais importados.`, 'success');
+            await loadCatalogFromApi();
+            tvEngine.showTvToast('Lista M3U importada!');
+          } else {
+            showFeedback(data.error || 'Erro ao processar lista M3U.', 'danger');
+          }
+        } catch (e) {
+          showFeedback(`Falha na conexão: ${e.message}`, 'danger');
+        } finally {
+          btnSyncM3u.disabled = false;
+        }
+      });
+    }
+
+    function showFeedback(msg, type) {
+      const el = document.getElementById('syncFeedbackMsg');
+      if (!el) return;
+      el.className = `alert alert-${type} mt-3 mb-0 small`;
+      el.textContent = msg;
+      el.classList.remove('d-none');
+    }
+
+    // 4. Carrega Categorias e Canais dinamicamente do banco de dados do microserviço
+    async function loadCatalogFromApi() {
+      try {
+        const catRes = await fetch('/api/categories?type=live');
+        const catData = await catRes.json();
+        if (!catData.success || !catData.categories.length) return;
+
+        const catPanel = document.getElementById('categoryPanel');
+        if (catPanel) {
+          catPanel.innerHTML = '<div class="text-uppercase small text-secondary fw-bold px-2 mb-2">Categorias Xtream</div>';
+          
+          catData.categories.forEach((c, idx) => {
+            const div = document.createElement('div');
+            div.className = `category-row tv-focusable ${idx === 0 ? 'active' : ''}`;
+            div.tabIndex = 0;
+            div.setAttribute('data-category-id', c.category_id);
+            div.setAttribute('data-name', c.name);
+            div.innerHTML = `<span><i class="bi bi-folder2 me-2"></i>${c.name}</span>`;
+            
+            div.addEventListener('click', () => {
+              document.querySelectorAll('.category-row').forEach(r => r.classList.remove('active'));
+              div.classList.add('active');
+              const catTitleEl = document.getElementById('currentCatTitle');
+              if (catTitleEl) catTitleEl.textContent = `Canais (${c.name})`;
+              loadChannelsForCategory(c.category_id);
+            });
+
+            catPanel.appendChild(div);
+          });
+        }
+
+        // Carrega canais da primeira categoria
+        if (catData.categories[0]) {
+          await loadChannelsForCategory(catData.categories[0].category_id);
+        }
+      } catch (err) {
+        console.warn('[Catalog] Falha ao carregar catálogo da API:', err);
+      }
+    }
+
+    async function loadChannelsForCategory(categoryId) {
+      const channelPanel = document.querySelector('.tv-channel-panel');
+      if (!channelPanel) return;
+
+      const header = channelPanel.querySelector('.text-uppercase');
+      channelPanel.innerHTML = '';
+      if (header) channelPanel.appendChild(header);
+
+      try {
+        const res = await fetch(`/api/streams?type=live&category_id=${categoryId}`);
+        const data = await res.json();
+        if (data.success && data.streams.length) {
+          data.streams.forEach((st) => {
+            const row = document.createElement('div');
+            row.className = 'channel-row tv-focusable';
+            row.tabIndex = 0;
+            row.setAttribute('data-title', st.name);
+            row.setAttribute('data-prog', 'Transmissão Ao Vivo');
+            row.setAttribute('data-q', st.resolution || 'SD');
+            row.setAttribute('data-url', st.direct_source);
+
+            row.innerHTML = `
+              <div class="channel-logo">
+                ${st.stream_icon ? `<img src="${st.stream_icon}" style="max-width:100%; max-height:100%; border-radius:6px;" onerror="this.style.display='none';">` : '<i class="bi bi-tv"></i>'}
+              </div>
+              <div class="channel-info flex-grow-1">
+                <div class="channel-name">${st.name}</div>
+                <div class="channel-prog">Transmissão Ao Vivo</div>
+              </div>
+              <span class="badge ${st.resolution === '4K' ? 'bg-danger' : 'bg-secondary'} me-1">${st.resolution || 'SD'}</span>
+            `;
+
+            row.addEventListener('click', () => {
+              document.getElementById('previewTitle').textContent = st.name;
+              document.getElementById('epgCurrentTitle').textContent = 'Transmissão Ao Vivo';
+              openFullscreenPlayer(st.name, 'Transmissão Ao Vivo', st.resolution || 'SD', st.direct_source);
+            });
+
+            channelPanel.appendChild(row);
+          });
+        } else {
+          channelPanel.innerHTML += '<div class="text-secondary small p-3">Nenhum canal nesta categoria.</div>';
+        }
+      } catch (err) {
+        console.warn('[Channels] Erro ao carregar canais:', err);
+      }
+    }
+
+    // Inicializa verificação de status e pareamento
+    initPairingCode();
+    loadCatalogFromApi();
   </script>
 </body>
 </html>
