@@ -145,6 +145,22 @@ fun Guide(
     val catReq = remember { FocusRequester() }
     val idx = shown.indexOfFirst { it.id == curId }.coerceAtLeast(0)
     val ls = key(catIdx) { rememberLazyListState(maxOf(idx - 1, 0)) }
+    val jumpScope = rememberCoroutineScope()
+
+    fun selectCatAndEnter(ci: Int) {
+        val changed = catIdx != ci
+        catIdx = ci
+        inCats = false
+        inBlock = false
+        jumpScope.launch {
+            if (!changed && runCatching { focus.requestFocus() }.isSuccess) return@launch
+            delay(16)
+            repeat(15) {
+                delay(30)
+                if (runCatching { focus.requestFocus() }.isSuccess) return@launch
+            }
+        }
+    }
 
     // Preload program data: first the channels around the current one, 8 at a time
     LaunchedEffect(shown) {
@@ -169,7 +185,6 @@ fun Guide(
     // Focus on a channel cell: info and time window follow only after a short pause. Each shift moves the whole grid and
     // recomposes every visible row; while Down is held this happened on every step. Written only, read in the flow below.
     val rowFocus = remember { mutableStateOf<Pair<EpgEntry?, Item>?>(null) }
-    val jumpScope = rememberCoroutineScope()
     val shiftLatest by androidx.compose.runtime.rememberUpdatedState<(EpgEntry) -> Unit> { e -> shiftFor(e) }
     LaunchedEffect(Unit) {
         androidx.compose.runtime.snapshotFlow { rowFocus.value }.collectLatest { p ->
@@ -286,8 +301,15 @@ fun Guide(
                 verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 itemsIndexed(cats) { ci, c ->
-                    GuideCatRow(c, ci == catIdx, if (ci == catIdx) Modifier.focusRequester(catReq) else Modifier,
-                        onFocus = { inCats = true; inBlock = false; if (catIdx != ci) catIdx = ci }, onLeft = onClose) { runCatching { focus.requestFocus() } }
+                    GuideCatRow(
+                        c = c,
+                        selected = ci == catIdx,
+                        modifier = if (ci == catIdx) Modifier.focusRequester(catReq) else Modifier,
+                        onFocus = { inCats = true; inBlock = false; if (catIdx != ci) catIdx = ci },
+                        onLeft = onClose,
+                        onRight = { selectCatAndEnter(ci) },
+                        onClick = { selectCatAndEnter(ci) }
+                    )
                 }
             }
             Spacer(Modifier.width(12.dp))
@@ -407,16 +429,26 @@ fun guideCategories(list: List<Item>, all: List<Item>): List<GuideCat> {
 }
 
 @Composable
-private fun GuideCatRow(c: GuideCat, selected: Boolean, modifier: Modifier, onFocus: () -> Unit, onLeft: () -> Unit, onClick: () -> Unit) {
+private fun GuideCatRow(c: GuideCat, selected: Boolean, modifier: Modifier, onFocus: () -> Unit, onLeft: () -> Unit, onRight: () -> Unit, onClick: () -> Unit) {
     var f by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(DS.RadiusS)
     Row(
-        modifier.fillMaxWidth().clip(shape)
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
             .background(if (f) RowFocus else if (selected) Accent1.copy(alpha = .18f) else Color.Transparent)
             .border(if (f) DS.Border else 1.dp, if (f) Accent2 else if (selected) Accent1.copy(alpha = .55f) else Color.Transparent, shape)
             .onFocusChanged { f = it.isFocused; if (it.isFocused) onFocus() }
-            // Left in the categories: close the guide (like Back)
-            .onPreviewKeyEvent { ev -> if (ev.type == KeyEventType.KeyDown && ev.key == Key.DirectionLeft) { onLeft(); true } else false }
+            .onPreviewKeyEvent { ev ->
+                if (ev.type == KeyEventType.KeyDown) {
+                    when (ev.key) {
+                        Key.DirectionLeft -> { onLeft(); true }
+                        Key.DirectionRight -> { onRight(); true }
+                        Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> { onClick(); true }
+                        else -> false
+                    }
+                } else false
+            }
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)

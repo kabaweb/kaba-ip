@@ -50,8 +50,8 @@ android {
         minSdk = 24
         targetSdk = 37
         // Raise both for every release; the GitHub release tag must match versionName (e.g. tag "v1.1").
-        versionCode = 30
-        versionName = "1.6.3"
+        versionCode = 31
+        versionName = "1.6.4"
         // Name under the icon; the debug build overrides it (see buildTypes)
         manifestPlaceholders["appLabel"] = APP_NAME
         resValue("string", "app_name", APP_NAME)
