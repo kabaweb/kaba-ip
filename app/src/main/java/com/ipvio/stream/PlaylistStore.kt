@@ -261,6 +261,13 @@ object PlaylistStore {
         inited = true
         cleanupStale(c)
         val p = prefs(c)
+        val lastCode = p.getInt("cache_clean_ver", 0)
+        if (lastCode < 26) {
+            p.edit().putInt("cache_clean_ver", 26).apply()
+            runCatching {
+                c.filesDir.listFiles { _, name -> name.startsWith("pl_") && name.endsWith(".bin") }?.forEach { it.delete() }
+            }
+        }
         // Prefers the encrypted version; fallback to plain-text version if keystore fails on cold boot.
         val enc = p.getString("lists_enc", null)
         val json = (if (enc != null) Secrets.decrypt(enc) else null)?.takeIf { it.isNotBlank() && it != "[]" } ?: p.getString("lists", "[]")

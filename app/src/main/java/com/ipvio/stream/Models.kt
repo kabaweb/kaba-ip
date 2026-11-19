@@ -169,14 +169,11 @@ object M3uParser {
     /** Language of an entry; the category is examined only once per name. */
     private class LangOf(private val pool: StringPool) {
         private val byGroup = HashMap<String, String>()
-        private val vodByGroup = HashMap<String, Boolean>()
         fun of(group: String, name: String, live: Boolean): String {
             val g = byGroup.getOrPut(group) { LangTagLogic.detect(group) ?: "" }
             if (g.isNotEmpty()) return g
             return pool.of(LangTagLogic.of("", name, live))
         }
-        /** Does the category name look like films ("VOD", "Kino" …)? Checked once per category, not once per entry. */
-        fun vod(group: String): Boolean = vodByGroup.getOrPut(group) { VOD_GROUP.containsMatchIn(group) }
     }
 
     // Episode up to 4 digits: anime like One Piece have over 1,000 episodes ("S01 E1050" used to become episode 105)
@@ -187,7 +184,6 @@ object M3uParser {
     private val BRACKETS = Regex("""[\(\[][^\)\]]*[\)\]]""")
     private val TAGS = Regex("""\b(4K|UHD|FHD|HD|HEVC|H265|1080p|720p|MULTI|GERMAN|DUAL)\b""", RegexOption.IGNORE_CASE)
     private val SPACES = Regex("""\s{2,}""")
-    private val VOD_GROUP = Regex("""film|movie|vod|kino|cinema""", RegexOption.IGNORE_CASE)
     /**
      * Address ends in .mp4, .mkv or .avi (case does not matter), optionally followed by a query ("?…").
      * Same result as the regular expression `\.(mp4|mkv|avi)(\?.*)?$`, without scanning the whole address with it.
@@ -362,12 +358,20 @@ object M3uParser {
     private fun classify(e: Entry, st: Stats, langOf: LangOf): Kinded? {
         if (isSeparator(e.name)) return null
         val m = if (mayBeEpisode(e.name)) SE.find(e.name) else null
-        val isSeriesUrl = e.url.contains("/series/")
-        // Stalker channels and live streams (.ts, .m3u8, /live/) are always live, even in groups like "FILMES E SERIES"
+        val isSeriesUrl = e.url.contains("/series/", ignoreCase = true)
         val stalkerLive = e.url.startsWith("stalker://") && e.url.contains("/live/")
-        val isLiveStream = stalkerLive || (isLiveUrl(e.url) && !isSeriesUrl && !e.url.contains("/movie/") && !isVideoFile(e.url))
-        val isMovie = !isLiveStream && (e.url.contains("/movie/") || isVideoFile(e.url) || langOf.vod(e.group))
-        val kind = if (isLiveStream) Kind.LIVE else if (m != null || isSeriesUrl) Kind.SERIES else if (isMovie) Kind.MOVIE else Kind.LIVE
+        val isLiveStream = stalkerLive || isLiveUrl(e.url)
+        val isMovieUrl = e.url.contains("/movie/", ignoreCase = true) || isVideoFile(e.url)
+
+        // 100% fiel ao IPTV: transmissões ao vivo (.ts, .m3u8, /live/) NUNCA viram filme ou série,
+        // mesmo em grupos chamados "FILMES E SERIES" ou "24H SERIES".
+        // Regex por nome de grupo foi completamente removido.
+        val kind = when {
+            isLiveStream -> Kind.LIVE
+            m != null || isSeriesUrl -> Kind.SERIES
+            isMovieUrl -> Kind.MOVIE
+            else -> Kind.LIVE
+        }
         val lang = langOf.of(e.group, e.name, kind == Kind.LIVE)
         val countKey = if (kind == Kind.SERIES) (m?.groupValues?.get(1) ?: e.name).trim().lowercase() else null
         st.add(lang, e.info.length + e.url.length + 2, countKey)
