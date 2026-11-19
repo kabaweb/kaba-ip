@@ -50,7 +50,8 @@ async function checkBasePlaylist(force = false) {
         const lastMod = headRes.headers.get('last-modified') || '';
         const len = headRes.headers.get('content-length') || '';
 
-        if (etag || lastMod || len) {
+        const hasValidLen = len && len !== '0' && len !== 0;
+        if (etag || lastMod || hasValidLen) {
           newIdentifier = `etag:${etag}|mod:${lastMod}|len:${len}`;
           details = `Header HEAD detectado (Tamanho: ${len || 'N/A'}, Modificado: ${lastMod || etag || 'Sim'})`;
         }
@@ -82,11 +83,24 @@ async function checkBasePlaylist(force = false) {
 
       const etag = getRes.headers.get('etag') || '';
       const lastMod = getRes.headers.get('last-modified') || '';
-      const content = await getRes.arrayBuffer();
-      const hash = crypto.createHash('md5').update(Buffer.from(content)).digest('hex');
 
-      newIdentifier = `hash:${hash}|etag:${etag}|mod:${lastMod}|size:${content.byteLength}`;
-      details = `Amostra de dados analisada (Hash MD5: ${hash.substring(0, 8)}...)`;
+      // Lê até 1MB da lista e fecha a conexão (economiza banda e memória)
+      const reader = getRes.body.getReader();
+      const chunks = [];
+      let totalBytes = 0;
+      while (totalBytes < 1048576) {
+        const { done, value } = await reader.read();
+        if (done || !value) break;
+        chunks.push(value);
+        totalBytes += value.length;
+      }
+      try { reader.cancel(); } catch (_) {}
+
+      const buf = Buffer.concat(chunks);
+      const hash = crypto.createHash('md5').update(buf).digest('hex');
+
+      newIdentifier = `hash:${hash}|etag:${etag}|mod:${lastMod}|sample:${totalBytes}`;
+      details = `Amostra de dados analisada (${Math.round(totalBytes / 1024)} KB, Hash: ${hash.substring(0, 8)}...)`;
     }
 
     clearTimeout(timeout);
