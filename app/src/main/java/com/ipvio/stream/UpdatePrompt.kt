@@ -2,7 +2,9 @@ package com.ipvio.stream
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -10,6 +12,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,29 +36,63 @@ fun UpdatePromptHost() {
     var status by remember(upd) { mutableStateOf("") }
     var busy by remember(upd) { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
+    val screenH = LocalConfiguration.current.screenHeightDp.dp
+    val maxDialogH = (screenH * 0.85f).coerceAtLeast(320.dp)
     LaunchedEffect(upd) { delay(150); runCatching { focus.requestFocus() } }
     Dialog(
         onDismissRequest = { if (!busy) AppUpdate.promptDismissed = true },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Box(Modifier.fillMaxSize().background(Color(0xE6000000)), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(Color(0xE6000000)).padding(16.dp), contentAlignment = Alignment.Center) {
             Column(
-                Modifier.widthIn(max = 560.dp).clip(RoundedCornerShape(20.dp)).background(Tok.GlassStrong).padding(32.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                Modifier
+                    .widthIn(max = 560.dp)
+                    .heightIn(max = maxDialogH)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Tok.GlassStrong)
+                    .padding(28.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Update verfügbar", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+                // Topo fixo: título e versão
+                Text(Lang.tr("Update verfügbar"), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
                 Text(
                     Lang.tr("Neue Version {0} (installiert: {1})").replace("{0}", upd.name).replace("{1}", AppUpdate.currentName(ctx)),
-                    color = Tok.TextMid, fontSize = 18.sp, raw = true
+                    color = Tok.TextMid, fontSize = 17.sp, raw = true
                 )
-                if (upd.notes.isNotBlank()) Text(upd.notes, color = Muted, fontSize = 16.sp, lineHeight = 22.sp, raw = true)
-                // T-015: update.json can mark an update as required. Back still closes the dialog (no lock-out when offline).
+
+                // Meio rolável: changelog e avisos que podem ser longos
+                val scrollState = rememberScrollState()
+                Column(
+                    Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(scrollState)
+                        .padding(vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (upd.notes.isNotBlank()) {
+                        Text(upd.notes, color = Muted, fontSize = 15.sp, lineHeight = 21.sp, raw = true)
+                    }
+                    val required = AppUpdate.isRequired(ctx, upd)
+                    if (required) {
+                        Text(Lang.tr("Dieses Update ist erforderlich."), color = Accent2, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Text(
+                        Lang.tr("Deine Playlists und Einstellungen bleiben erhalten. Android fragt vor der Installation einmal nach."),
+                        color = Muted, fontSize = 14.sp, lineHeight = 20.sp
+                    )
+                }
+
+                if (status.isNotBlank()) {
+                    Text(status, color = Accent2, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                }
+
+                // Rodapé sempre visível: botões de ação
                 val required = AppUpdate.isRequired(ctx, upd)
-                if (required) Text("Dieses Update ist erforderlich.", color = Accent2, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Text("Deine Playlists und Einstellungen bleiben erhalten. Android fragt vor der Installation einmal nach.", color = Muted, fontSize = 15.sp, lineHeight = 21.sp)
-                if (status.isNotBlank()) Text(status, color = Accent2, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    PillButton(if (busy) "Bitte warten …" else "Jetzt aktualisieren", light = true, modifier = Modifier.focusRequester(focus)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    PillButton(if (busy) Lang.tr("Bitte warten …") else Lang.tr("Jetzt aktualisieren"), light = true, modifier = Modifier.focusRequester(focus)) {
                         if (busy) return@PillButton
                         busy = true
                         scope.launch {
@@ -63,7 +100,9 @@ fun UpdatePromptHost() {
                             busy = false
                         }
                     }
-                    if (!required) PillButton("Später") { if (!busy) AppUpdate.promptDismissed = true }
+                    if (!required) {
+                        PillButton(Lang.tr("Später")) { if (!busy) AppUpdate.promptDismissed = true }
+                    }
                 }
             }
         }

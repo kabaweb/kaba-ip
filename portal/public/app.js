@@ -403,6 +403,9 @@ function renderDevices(list) {
               <button onclick="openPlaylistModal('${d.id}')" class="btn btn-sm btn-outline-light px-2.5 py-1 rounded-pill" title="Configurar Playlist">
                 Playlist
               </button>
+              <button onclick="forceDevicePlaylistReload('${d.id}')" class="btn btn-sm btn-outline-info px-2.5 py-1 rounded-pill" title="Forçar Carga de Lista (Atualizar Canais)">
+                🔄 Carga
+              </button>
               <button onclick="openMessageModal('${d.id}')" class="btn btn-sm btn-outline-secondary px-2.5 py-1 rounded-pill" title="Enviar Mensagem">
                 Mensagem
               </button>
@@ -532,6 +535,9 @@ function renderDevices(list) {
             </button>
             <button onclick="openPlaylistModal('${d.id}')" class="btn btn-sm btn-outline-light py-1.5 rounded-pill text-truncate">
               Playlist
+            </button>
+            <button onclick="forceDevicePlaylistReload('${d.id}')" class="btn btn-sm btn-outline-info py-1.5 rounded-pill text-truncate" title="Forçar Carga de Lista">
+              🔄 Carga
             </button>
             <button onclick="openMessageModal('${d.id}')" class="btn btn-sm btn-outline-secondary py-1.5 rounded-pill text-truncate">
               Mensagem
@@ -663,6 +669,29 @@ async function triggerExpiryReminder(id) {
       loadDevices();
     } else {
       alert(`Erro ao enviar aviso: ${data.error || 'Falha na requisição'}`);
+    }
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+// Forçar recarga imediata da lista de canais para o dispositivo
+async function forceDevicePlaylistReload(id) {
+  const dev = devices.find(d => d.id === id);
+  const clientName = dev?.client_name || dev?.name || 'Cliente';
+  if (!confirm(`Deseja forçar o recarregamento imediato da lista de canais para "${clientName}"?`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/devices/${id}/force-refresh`, {
+      method: 'POST',
+      headers: authHeaders()
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert(`✅ Ordem de recarga enviada com sucesso!\n\nO aplicativo do dispositivo recarregará a lista completa no próximo sinal/abertura.`);
+      loadDevices();
+    } else {
+      alert(`Erro ao solicitar recarga: ${data.error || 'Falha na requisição'}`);
     }
   } catch (err) {
     alert('Erro: ' + err.message);

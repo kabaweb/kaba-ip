@@ -351,15 +351,23 @@ object M3uParser {
         return false
     }
 
+    /** Address ends in .ts or .m3u8 or contains /live/ (case does not matter, ignores query parameters). */
+    internal fun isLiveUrl(url: String): Boolean {
+        if (url.contains("/live/", ignoreCase = true)) return true
+        val clean = if (url.contains('?')) url.substringBefore('?') else url
+        return clean.endsWith(".ts", ignoreCase = true) || clean.endsWith(".m3u8", ignoreCase = true)
+    }
+
     /** Kind and language of an entry; counts it in [st]. null = separator, skipped. */
     private fun classify(e: Entry, st: Stats, langOf: LangOf): Kinded? {
         if (isSeparator(e.name)) return null
         val m = if (mayBeEpisode(e.name)) SE.find(e.name) else null
         val isSeriesUrl = e.url.contains("/series/")
-        val isMovie = e.url.contains("/movie/") || isVideoFile(e.url) || langOf.vod(e.group)
-        // Stalker channels are always live, even in groups like "ENGLISH | PREMIUM MOVIES" (movie channels)
+        // Stalker channels and live streams (.ts, .m3u8, /live/) are always live, even in groups like "FILMES E SERIES"
         val stalkerLive = e.url.startsWith("stalker://") && e.url.contains("/live/")
-        val kind = if (stalkerLive) Kind.LIVE else if (m != null || isSeriesUrl) Kind.SERIES else if (isMovie) Kind.MOVIE else Kind.LIVE
+        val isLiveStream = stalkerLive || (isLiveUrl(e.url) && !isSeriesUrl && !e.url.contains("/movie/") && !isVideoFile(e.url))
+        val isMovie = !isLiveStream && (e.url.contains("/movie/") || isVideoFile(e.url) || langOf.vod(e.group))
+        val kind = if (isLiveStream) Kind.LIVE else if (m != null || isSeriesUrl) Kind.SERIES else if (isMovie) Kind.MOVIE else Kind.LIVE
         val lang = langOf.of(e.group, e.name, kind == Kind.LIVE)
         val countKey = if (kind == Kind.SERIES) (m?.groupValues?.get(1) ?: e.name).trim().lowercase() else null
         st.add(lang, e.info.length + e.url.length + 2, countKey)

@@ -794,6 +794,37 @@ router.post('/devices/:id/check-validity', async (req, res) => {
   }
 });
 
+// 6.1 Forçar recarga imediata de lista para um dispositivo
+router.post('/devices/:id/force-refresh', async (req, res) => {
+  try {
+    const allowed = await canAccessDevice(req.user, req.params.id);
+    if (!allowed) {
+      return res.status(403).json({ success: false, error: 'Acesso negado a este dispositivo.' });
+    }
+
+    const devRes = await db.query('SELECT * FROM devices WHERE id = ?', [req.params.id]);
+    if (devRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Dispositivo não encontrado' });
+    }
+    const dev = devRes.rows[0];
+    const now = Date.now();
+
+    await db.query(
+      'UPDATE devices SET playlist_updated_at = ? WHERE id = ?',
+      [now, dev.id]
+    );
+
+    res.json({
+      success: true,
+      deviceId: dev.id,
+      updatedAt: now,
+      message: 'Comando de recarga enviado! O aplicativo recarregará a lista completa no próximo sinal.'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 7. Enviar mensagem push para tela do dispositivo
 router.post('/devices/:id/message', async (req, res) => {
   try {

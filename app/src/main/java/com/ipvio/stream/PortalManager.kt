@@ -265,7 +265,8 @@ object PortalManager {
             if (isNewUpdateFromPortal || needsInitialSync) {
                 if (!targetUrl.isNullOrBlank()) {
                     val currentSaved = PlaylistStore.savedUrl(ctx)
-                    if (currentSaved != targetUrl || !hasLocalPlaylist) {
+                    val shouldLoad = (currentSaved != targetUrl || !hasLocalPlaylist || isNewUpdateFromPortal)
+                    if (shouldLoad) {
                         val ok = withContext(Dispatchers.IO) {
                             PlaylistStore.load(ctx, targetUrl, save = true, ask = false)
                         }
@@ -276,8 +277,6 @@ object PortalManager {
                                 onPlaylistLoaded?.invoke()
                             }
                         }
-                    } else if (isNewUpdateFromPortal) {
-                        sp.edit().putLong(KEY_LAST_PLAYLIST_UPDATE, updatedAt).apply()
                     }
                 }
             }
