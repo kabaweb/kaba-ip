@@ -134,8 +134,26 @@ class SportLogicTest {
         assertTrue(SportLogic.isSportChannel(ch("DAZN 1", "DE")))
         assertTrue(SportLogic.isSportChannel(ch("Kanal X", "DE | Sport")))
         assertTrue(SportLogic.isSportChannel(ch("beIN SPORTS 3", "TR")))
+        assertTrue(SportLogic.isSportChannel(ch("Premiere 1 FHD", "PREMIERE")))
+        assertTrue(SportLogic.isSportChannel(ch("SporTV HD", "SPORTV")))
+        assertTrue(SportLogic.isSportChannel(ch("DISNEY+ 01", "FUTEBOL | DISNEY+")))
+        assertTrue(SportLogic.isSportChannel(ch("CazéTV", "FUTEBOL | CAZÉ TV")))
         assertFalse(SportLogic.isSportChannel(ch("Transport TV", "DE")))
         assertFalse(SportLogic.isSportChannel(ch("Das Erste", "DE | Vollprogramm")))
+    }
+
+    @Test fun liveGenreNoSportLeak() {
+        val futeDisney = ch("DISNEY+ 01", "FUTEBOL | DISNEY+")
+        val kidsGenre = LiveGenre.byKey("GEN:kids")!!
+        val moviesGenre = LiveGenre.byKey("GEN:movies")!!
+        val sportGenre = LiveGenre.byKey("GEN:sport")!!
+        assertTrue(LiveGenre.matches(sportGenre, futeDisney))
+        assertFalse(LiveGenre.matches(kidsGenre, futeDisney))
+        assertFalse(LiveGenre.matches(moviesGenre, futeDisney))
+
+        val realKids = ch("Gloob HD", "INFANTIS")
+        assertTrue(LiveGenre.matches(kidsGenre, realKids))
+        assertFalse(LiveGenre.matches(sportGenre, realKids))
     }
 
     @Test fun eventsAndSlots() {

@@ -11,19 +11,23 @@ object LiveGenre {
 
     val ALL = listOf(
         Genre("GEN:sport", "Sport", null),   // sport is detected by SportLogic
-        Genre("GEN:movies", "Filme", rx("""\b(films?|movies?|cinema\w*|kino|cine\w*|sinema\w*|filmovi|premiere|cinemax|hbo|serien|series|serije|dizi)\b""")),
+        Genre("GEN:movies", "Filme", rx("""\b(films?|movies?|cinema\w*|kino|cine\w*|sinema\w*|filmovi|cinemax|hbo|serien|series|serije|dizi|telecine|megapix|maxprime)\b""")),
         Genre("GEN:doku", "Dokumentationen", rx("""documentar\w*|\bdoku\w*|discovery|nat\s?geo|national\s?geographic|\bhistory\b|animal\s?planet|\bdmax\b|nautilus|explore|\bscience\b|dokumentar\w*""")),
-        Genre("GEN:kids", "Kinder", rx("""\bkids?\b|kinder|children|cartoon\w*|\bnick\w*|disney|junior|\bbaby\w*|toon\w*|boomerang|ragazzi|çocuk|djeca|dječji|\bkika\b|jetix|\bpogo\b""")),
-        Genre("GEN:news", "Nachrichten", rx("""\bnews\b|nachrichten|\bn-?tv\b|\bcnn\b|euronews|al\s?jazeera|tagesschau|\bwelt\b|haber|vijesti|noticias|\bnotizie\b|\binfo(rmation)?\b|\brtl\s?aktuell\b""")),
-        Genre("GEN:music", "Musik", rx("""\bmusic\w*|musik|\bmtv\b|\bvh1\b|\bviva\b|\bklubbing\b|\bradio\b|\bmuzik\w*"""))
+        Genre("GEN:kids", "Kinder", rx("""\b(kids?|kinder|children|cartoon\w*|nick\w*|junior|baby\w*|toon\w*|boomerang|ragazzi|çocuk|djeca|dječji|kika|jetix|pogo|infant\w*|desenho\w*|gloob\w*|ra[- ]?tim[- ]?bum|zoomoo|animes?|disney)\b""")),
+        Genre("GEN:news", "Nachrichten", rx("""\b(news|nachrichten|n-?tv|cnn|euronews|al\s?jazeera|tagesschau|welt|haber|vijesti|noticias|notizie|info(rmation)?|rtl\s?aktuell|jornalismo|cbn|bandnews|globonews|jovem\s?pan\s?news|record\s?news)\b""")),
+        Genre("GEN:music", "Musik", rx("""\b(music\w*|musik|mtv\w*|vh1|viva|klubbing|radio|muzik\w*|música|musica|sertanejo|funk|pagode)\b"""))
     )
 
     fun byKey(k: String): Genre? = ALL.firstOrNull { it.key == k }
 
     fun isGenreKey(k: String) = k.startsWith("GEN:")
 
-    fun matches(g: Genre, i: Item): Boolean =
-        if (g.re == null) SportLogic.isSportChannel(i) else g.re.containsMatchIn(i.group) || g.re.containsMatchIn(i.title)
+    fun matches(g: Genre, i: Item): Boolean {
+        val isSport = SportLogic.isSportChannel(i)
+        if (g.key == "GEN:sport") return isSport
+        if (isSport) return false // Sports channels never leak into kids, movies, etc.
+        return g.re?.let { it.containsMatchIn(i.group) || it.containsMatchIn(i.title) } ?: false
+    }
 
     /** Channels per genre; empty genres are missing. */
     fun split(live: List<Item>): LinkedHashMap<String, List<Item>> {

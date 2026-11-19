@@ -7,7 +7,7 @@ package com.ipvio.stream
 object SportLogic {
     // Word boundaries prevent hits like "Transport"; brands without a word boundary (Eurosport, DAZN …) stand alone.
     private val CHANNEL = Regex(
-        """\b(sports?|spor|sportklub|sportdigital|deportes?|esportes?|sportivo)\b|eurosport|dazn|espn|bein\s?sports?|sky\s?sports?|supersport|""" +
+        """\b(sports?|spor|sportklub|sportdigital|deportes?|esportes?|sportivo|sportv|premiere|combate|futebol|jogos do dia|estaduais|pay[- ]per[- ]view|cazé\s?tv|sportynet|nsports|bandsports)\b|eurosport|dazn|espn|bein\s?sports?|sky\s?sports?|supersport|""" +
             """ziggo\s?sport|setanta|\btsn\d?\b|arena\s?sport|nova\s?sport|polsat\s?sport|eleven\s?sports?|\bfox\s?sports?\b|""" +
             """laliga|bundesliga|premier\s?league|champions\s?league|\b(nba|nfl|nhl|mlb|ufc|wwe|f1|motogp|ppv)\b|formula\s?1|formel\s?1|""" +
             """\b(tennis|golf|rugby|cricket|racing|fight|fußball|fussball|football|soccer|futbol|calcio|darts|snooker)\b""",
