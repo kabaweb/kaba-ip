@@ -636,279 +636,94 @@
       </header>
 
       <!-- ==============================================================================
-           VISTA 1: INÍCIO (BILLBOARD HERO + CARROSSÉIS DE FILMES E SÉRIES)
+           TELA DE ATIVAÇÃO & CONEXÃO OFICIAL KORP TV (QUANDO NÃO HÁ LISTA CONECTADA)
            ============================================================================== -->
-      <section class="tv-view active" id="viewHome">
+      <section class="tv-view active" id="viewConnectScreen">
+        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-center px-4" style="min-height: 70vh;">
+          
+          <div class="mb-3 d-flex align-items-center gap-3">
+            <i class="bi bi-play-circle-fill text-info" style="font-size: 3.5rem;"></i>
+            <div class="text-start">
+              <h1 class="display-5 fw-black text-white mb-0" style="letter-spacing: 2px;">KORP TV</h1>
+              <span class="badge bg-info-subtle text-info border border-info-subtle">
+                <i class="bi bi-shield-check me-1"></i>Portal Oficial: https://korp.kabaweb.in
+              </span>
+            </div>
+          </div>
+
+          <div class="card bg-black border-secondary p-4 p-md-5 my-3 shadow-lg" style="max-width: 680px; width: 100%; border-radius: 24px;">
+            <div class="text-uppercase small text-secondary fw-bold mb-2">CÓDIGO DE ATIVAÇÃO DESTA SMART TV</div>
+            <div class="display-3 fw-black text-info my-2 py-2" id="screenPairCode" style="letter-spacing: 10px; font-family: monospace;">--- ---</div>
+            
+            <p class="text-light mt-3 mb-2" style="font-size: clamp(0.95rem, 1.2vw, 1.15rem);">
+              Acesse o portal do <strong>Korp TV</strong> ou informe o código acima ao seu provedor para ativar sua programação.
+            </p>
+
+            <div class="small text-secondary mb-4" id="screenDeviceId">
+              <i class="bi bi-hdd-network me-1"></i>Dispositivo: Conectando...
+            </div>
+
+            <div class="d-flex justify-content-center align-items-center gap-2 mb-4" id="screenPollingIndicator">
+              <span class="spinner-grow spinner-grow-sm text-info" role="status"></span>
+              <span class="text-info small fw-bold">Aguardando ativação no portal oficial...</span>
+            </div>
+
+            <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+              <button class="btn btn-info btn-lg tv-focusable px-4 py-2 fw-bold" id="btnScreenCheckNow" tabindex="0">
+                <i class="bi bi-arrow-repeat me-2"></i>Verificar Ativação
+              </button>
+              <button class="btn btn-outline-light btn-lg tv-focusable px-4 py-2" data-bs-toggle="modal" data-bs-target="#tvConnectModal" tabindex="0">
+                <i class="bi bi-person-fill-lock me-2"></i>Login Direto (Xtream)
+              </button>
+            </div>
+          </div>
+
+          <div class="text-secondary small">
+            Dica do controle remoto: Use <span class="badge bg-secondary">OK / ENTER</span> para selecionar e <span class="badge bg-secondary">VOLTAR</span> para retornar.
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==============================================================================
+           VISTA 1: INÍCIO (CATÁLOGO DINÂMICO APÓS ATIVAÇÃO)
+           ============================================================================== -->
+      <section class="tv-view" id="viewHome">
         <div class="home-scroll-container">
           
-          <!-- Billboard Cinemático Dinâmico -->
-          <div class="tv-billboard" id="homeBillboard" style="background-image: url('https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1600&auto=format&fit=crop');">
+          <!-- Banner Hero com Canal/Conteúdo Real -->
+          <div class="tv-billboard" id="homeBillboard" style="background: linear-gradient(135deg, #09131d 0%, #030712 100%);">
             <div class="billboard-content">
-              <div class="billboard-badge bg-danger text-white">
-                <i class="bi bi-fire"></i> DESTAQUE DA SEMANA
+              <div class="billboard-badge bg-info text-dark fw-bold">
+                <i class="bi bi-broadcast"></i> PROGRAMAÇÃO AO VIVO
               </div>
-              <h1 class="billboard-title" id="bbTitle">Duna: Parte 2</h1>
+              <h1 class="billboard-title" id="bbTitle">Korp TV</h1>
               <div class="billboard-meta">
-                <span class="text-warning fw-bold"><i class="bi bi-star-fill me-1"></i>8.6</span>
-                <span>2024</span>
-                <span class="badge bg-secondary">14+</span>
-                <span>2h 46m</span>
-                <span class="badge bg-info-subtle text-info">4K UHD</span>
-                <span class="badge bg-dark border border-secondary">Dolby Atmos</span>
+                <span class="badge bg-info-subtle text-info">HD / FHD / 4K</span>
+                <span id="bbChannelCount">Canais Conectados</span>
               </div>
               <p class="billboard-synopsis" id="bbSynopsis">
-                Paul Atreides se une a Chani e aos Fremen enquanto busca vingança contra os conspiradores que destruíram sua família. Uma jornada épica pelo deserto de Arrakis.
+                Selecione uma categoria na barra lateral ou navegue pelos canais abaixo para iniciar a reprodução imediata.
               </p>
               <div class="d-flex gap-3">
-                <button class="btn btn-info tv-focusable px-4 py-2" id="btnBbWatch" tabindex="0">
-                  <i class="bi bi-play-fill me-1 fs-5"></i> Assistir Agora
+                <button class="btn btn-info tv-focusable px-4 py-2 fw-bold" id="btnBbWatch" tabindex="0">
+                  <i class="bi bi-play-fill me-1 fs-5"></i> Abrir TV Ao Vivo
                 </button>
-                <button class="btn btn-outline-light tv-focusable px-3 py-2" id="btnBbDetails" tabindex="0">
-                  <i class="bi bi-info-circle me-1"></i> Detalhes
-                </button>
-                <button class="btn btn-outline-secondary tv-focusable px-3 py-2" id="btnBbList" tabindex="0">
-                  <i class="bi bi-plus-lg me-1"></i> Minha Lista
+                <button class="btn btn-outline-light tv-focusable px-3 py-2" data-bs-toggle="modal" data-bs-target="#tvConnectModal" tabindex="0">
+                  <i class="bi bi-sliders me-1"></i> Gerenciar Lista
                 </button>
               </div>
             </div>
           </div>
 
-          <!-- Prateleira 1: Em Alta & Tendências (Filmes e Séries Misturados) -->
-          <div class="tv-shelf">
-            <div class="shelf-header">
-              <h3 class="shelf-title"><i class="bi bi-lightning-charge-fill text-warning"></i> Em Alta no Korp TV</h3>
-              <small class="text-secondary">Os mais assistidos nas últimas 24h</small>
-            </div>
-            <div class="shelf-carousel" id="shelfTrending">
-              
-              <div class="tv-poster-card tv-focusable" tabindex="0" 
-                   data-type="movie" data-title="Oppenheimer" data-year="2023" data-rating="8.9" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=1400"
-                   data-syn="A história do físico J. Robert Oppenheimer e o desenvolvimento do Projeto Manhattan durante a Segunda Guerra Mundial.">
-                <img src="https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=600" alt="Oppenheimer">
-                <div class="poster-overlay">
-                  <div class="poster-title">Oppenheimer</div>
-                  <div class="poster-tags">
-                    <span class="text-warning"><i class="bi bi-star-fill"></i> 8.9</span>
-                    <span class="badge bg-info-subtle text-info">4K</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="tv-poster-card tv-focusable" tabindex="0" 
-                   data-type="series" data-title="The Last of Us" data-year="2023" data-rating="8.8" data-q="FHD"
-                   data-bg="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1400"
-                   data-syn="Vinte anos após uma pandemia devastadora, Joel é contratado para contrabandear Ellie para fora de uma zona militar de quarentena.">
-                <img src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600" alt="The Last of Us">
-                <div class="poster-overlay">
-                  <div class="poster-title">The Last of Us</div>
-                  <div class="poster-tags">
-                    <span class="text-warning"><i class="bi bi-star-fill"></i> 8.8</span>
-                    <span class="badge bg-primary-subtle text-primary">T1</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="tv-poster-card tv-focusable" tabindex="0" 
-                   data-type="movie" data-title="Interestelar" data-year="2014" data-rating="8.7" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1400"
-                   data-syn="Um grupo de exploradores viaja através de um buraco de minhoca no espaço na tentativa de garantir a sobrevivência da humanidade.">
-                <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=600" alt="Interestelar">
-                <div class="poster-overlay">
-                  <div class="poster-title">Interestelar</div>
-                  <div class="poster-tags">
-                    <span class="text-warning"><i class="bi bi-star-fill"></i> 8.7</span>
-                    <span class="badge bg-info-subtle text-info">4K</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="tv-poster-card tv-focusable" tabindex="0" 
-                   data-type="series" data-title="Stranger Things" data-year="2022" data-rating="8.7" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1400"
-                   data-syn="Quando um garoto desaparece, sua mãe, o chefe de polícia e seus amigos precisam enfrentar forças aterrorizantes para tê-lo de volta.">
-                <img src="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=600" alt="Stranger Things">
-                <div class="poster-overlay">
-                  <div class="poster-title">Stranger Things</div>
-                  <div class="poster-tags">
-                    <span class="text-warning"><i class="bi bi-star-fill"></i> 8.7</span>
-                    <span class="badge bg-primary-subtle text-primary">T4</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="tv-poster-card tv-focusable" tabindex="0" 
-                   data-type="movie" data-title="Blade Runner 2049" data-year="2017" data-rating="8.0" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=1400"
-                   data-syn="O policial K desenterra um segredo há muito enterrado que tem o potencial de mergulhar o que resta da sociedade no caos total.">
-                <img src="https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=600" alt="Blade Runner 2049">
-                <div class="poster-overlay">
-                  <div class="poster-title">Blade Runner 2049</div>
-                  <div class="poster-tags">
-                    <span class="text-warning"><i class="bi bi-star-fill"></i> 8.0</span>
-                    <span class="badge bg-info-subtle text-info">4K</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="tv-poster-card tv-focusable" tabindex="0" 
-                   data-type="series" data-title="Succession" data-year="2023" data-rating="8.9" data-q="FHD"
-                   data-bg="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1400"
-                   data-syn="A família Roy é conhecida por controlar o maior conglomerado de mídia do mundo. Quando o patriarca decide se afastar, a briga sucessória começa.">
-                <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=600" alt="Succession">
-                <div class="poster-overlay">
-                  <div class="poster-title">Succession</div>
-                  <div class="poster-tags">
-                    <span class="text-warning"><i class="bi bi-star-fill"></i> 8.9</span>
-                    <span class="badge bg-primary-subtle text-primary">T4</span>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- Prateleira 2: Filmes Recomendados (Catálogo VOD) -->
-          <div class="tv-shelf">
-            <div class="shelf-header">
-              <h3 class="shelf-title"><i class="bi bi-film text-info"></i> Filmes Recomendados</h3>
-              <small class="text-secondary">Adicionados recentemente</small>
-            </div>
-            <div class="shelf-carousel" id="shelfMovies">
-              
-              <div class="tv-poster-card tv-focusable" tabindex="0" 
-                   data-type="movie" data-title="Top Gun: Maverick" data-year="2022" data-rating="8.3" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1508614589041-895b88991e3e?q=80&w=1400"
-                   data-syn="Após trinta anos de serviço como um dos melhores aviadores da Marinha, Pete Mitchell treina uma unidade de graduados de elite para uma missão inédita.">
-                <img src="https://images.unsplash.com/photo-1508614589041-895b88991e3e?q=80&w=600" alt="Top Gun Maverick">
-                <div class="poster-overlay">
-                  <div class="poster-title">Top Gun: Maverick</div>
-                  <div class="poster-tags">
-                    <span class="text-warning"><i class="bi bi-star-fill"></i> 8.3</span>
-                    <span class="badge bg-info-subtle text-info">4K</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="tv-poster-card tv-focusable" tabindex="0" 
-                   data-type="movie" data-title="Batman" data-year="2022" data-rating="7.8" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1509281373149-e957c6296406?q=80&w=1400"
-                   data-syn="Nos seus primeiros anos investigando o submundo do crime em Gotham City, Batman descobre uma rede de corrupção que conecta sua própria família ao Charada.">
-                <img src="https://images.unsplash.com/photo-1509281373149-e957c6296406?q=80&w=600" alt="The Batman">
-                <div class="poster-overlay">
-                  <div class="poster-title">The Batman</div>
-                  <div class="poster-tags">
-                    <span class="text-warning"><i class="bi bi-star-fill"></i> 7.8</span>
-                    <span class="badge bg-info-subtle text-info">4K</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="tv-poster-card tv-focusable" tabindex="0" 
-                   data-type="movie" data-title="Avatar: O Caminho da Água" data-year="2022" data-rating="7.6" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1400"
-                   data-syn="Jake Sully vive com sua nova família no planeta Pandora. Quando uma ameaça familiar retorna para terminar o que começou, ele deve agir.">
-                <img src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600" alt="Avatar">
-                <div class="poster-overlay">
-                  <div class="poster-title">Avatar: Caminho da Água</div>
-                  <div class="poster-tags">
-                    <span class="text-warning"><i class="bi bi-star-fill"></i> 7.6</span>
-                    <span class="badge bg-info-subtle text-info">4K</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="tv-poster-card tv-focusable" tabindex="0" 
-                   data-type="movie" data-title="Gladiador II" data-year="2024" data-rating="7.7" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1461360370896-922624d12aa1?q=80&w=1400"
-                   data-syn="Anos após presenciar a morte do herói Máximus, Lucius deve entrar no Coliseu depois que sua casa é conquistada por imperadores tiranos.">
-                <img src="https://images.unsplash.com/photo-1461360370896-922624d12aa1?q=80&w=600" alt="Gladiador 2">
-                <div class="poster-overlay">
-                  <div class="poster-title">Gladiador II</div>
-                  <div class="poster-tags">
-                    <span class="text-warning"><i class="bi bi-star-fill"></i> 7.7</span>
-                    <span class="badge bg-info-subtle text-info">4K</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="tv-poster-card tv-focusable" tabindex="0" 
-                   data-type="movie" data-title="Coringa: Delírio a Dois" data-year="2024" data-rating="7.0" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=1400"
-                   data-syn="Arthur Fleck é institucionalizado no Asilo Arkham aguardando julgamento por seus crimes como Coringa.">
-                <img src="https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=600" alt="Joker 2">
-                <div class="poster-overlay">
-                  <div class="poster-title">Coringa 2</div>
-                  <div class="poster-tags">
-                    <span class="text-warning"><i class="bi bi-star-fill"></i> 7.0</span>
-                    <span class="badge bg-info-subtle text-info">4K</span>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- Prateleira 3: Canais em Destaque Ao Vivo -->
+          <!-- Prateleira Dinâmica: Categorias e Canais Reais -->
           <div class="tv-shelf mb-4">
             <div class="shelf-header">
-              <h3 class="shelf-title"><i class="bi bi-broadcast text-danger"></i> Jogos e Canais Ao Vivo Agora</h3>
-              <small class="text-secondary">Sintonizar diretamente</small>
+              <h3 class="shelf-title"><i class="bi bi-tv text-info"></i> Canais da Sua Lista</h3>
+              <small class="text-secondary" id="homeChannelsSub">Carregando canais...</small>
             </div>
-            <div class="shelf-carousel" id="shelfLive">
-              
-              <div class="tv-live-card tv-focusable" tabindex="0" data-view-jump="live" data-ch="1" data-title="Premiere Clubes SD" data-prog="Flamengo x Palmeiras (Ao Vivo)">
-                <div class="channel-logo">P1</div>
-                <div class="flex-grow-1 overflow-hidden">
-                  <div class="d-flex align-items-center gap-2 mb-1">
-                    <span class="live-badge-pulse"></span>
-                    <span class="badge bg-danger p-1 small" style="font-size: 0.65rem;">AO VIVO</span>
-                    <span class="badge bg-secondary p-1 small" style="font-size: 0.65rem;">SD</span>
-                  </div>
-                  <div class="fw-bold text-white text-truncate">Premiere Clubes</div>
-                  <small class="text-secondary text-truncate d-block">Flamengo x Palmeiras</small>
-                </div>
-              </div>
-
-              <div class="tv-live-card tv-focusable" tabindex="0" data-view-jump="live" data-ch="2" data-title="SporTV SD" data-prog="Tá na Área - Pré Jogo">
-                <div class="channel-logo">STV</div>
-                <div class="flex-grow-1 overflow-hidden">
-                  <div class="d-flex align-items-center gap-2 mb-1">
-                    <span class="live-badge-pulse"></span>
-                    <span class="badge bg-danger p-1 small" style="font-size: 0.65rem;">AO VIVO</span>
-                    <span class="badge bg-secondary p-1 small" style="font-size: 0.65rem;">SD</span>
-                  </div>
-                  <div class="fw-bold text-white text-truncate">SporTV</div>
-                  <small class="text-secondary text-truncate d-block">Tá na Área</small>
-                </div>
-              </div>
-
-              <div class="tv-live-card tv-focusable" tabindex="0" data-view-jump="live" data-ch="3" data-title="ESPN Brasil SD" data-prog="Premier League: Arsenal x Chelsea">
-                <div class="channel-logo">ESPN</div>
-                <div class="flex-grow-1 overflow-hidden">
-                  <div class="d-flex align-items-center gap-2 mb-1">
-                    <span class="live-badge-pulse"></span>
-                    <span class="badge bg-danger p-1 small" style="font-size: 0.65rem;">AO VIVO</span>
-                    <span class="badge bg-secondary p-1 small" style="font-size: 0.65rem;">SD</span>
-                  </div>
-                  <div class="fw-bold text-white text-truncate">ESPN Brasil</div>
-                  <small class="text-secondary text-truncate d-block">Arsenal x Chelsea</small>
-                </div>
-              </div>
-
-              <div class="tv-live-card tv-focusable" tabindex="0" data-view-jump="live" data-ch="4" data-title="CazéTV HD" data-prog="Futebol Europeu em Tempo Real">
-                <div class="channel-logo">CZ</div>
-                <div class="flex-grow-1 overflow-hidden">
-                  <div class="d-flex align-items-center gap-2 mb-1">
-                    <span class="live-badge-pulse"></span>
-                    <span class="badge bg-danger p-1 small" style="font-size: 0.65rem;">AO VIVO</span>
-                    <span class="badge bg-info p-1 small text-dark fw-bold" style="font-size: 0.65rem;">HD</span>
-                  </div>
-                  <div class="fw-bold text-white text-truncate">CazéTV</div>
-                  <small class="text-secondary text-truncate d-block">Transmissão Especial</small>
-                </div>
-              </div>
-
+            <div class="shelf-carousel" id="shelfHomeChannels">
+              <div class="text-secondary small p-3">Nenhum canal carregado. Conecte sua lista para começar.</div>
             </div>
           </div>
 
@@ -923,104 +738,27 @@
           
           <!-- Coluna 1: Categorias Xtream -->
           <section class="tv-category-panel" id="categoryPanel">
-            <div class="text-uppercase small text-secondary fw-bold px-2 mb-2">Categorias Xtream</div>
-            <div class="category-row tv-focusable active" tabindex="0" data-cat="jogos">
-              <span>⚽ JOGOS DO DIA</span>
-              <span class="badge bg-info-subtle text-info">14</span>
-            </div>
-            <div class="category-row tv-focusable" tabindex="0" data-cat="abertos">
-              <span>📺 CANAIS ABERTOS</span>
-              <span class="badge bg-secondary-subtle text-secondary">28</span>
-            </div>
-            <div class="category-row tv-focusable" tabindex="0" data-cat="esportes">
-              <span>🏆 ESPORTES</span>
-              <span class="badge bg-secondary-subtle text-secondary">42</span>
-            </div>
-            <div class="category-row tv-focusable" tabindex="0" data-cat="filmes">
-              <span>🎬 FILMES E SÉRIES</span>
-              <span class="badge bg-secondary-subtle text-secondary">36</span>
-            </div>
-            <div class="category-row tv-focusable" tabindex="0" data-cat="noticias">
-              <span>📰 NOTÍCIAS</span>
-              <span class="badge bg-secondary-subtle text-secondary">18</span>
-            </div>
-            <div class="category-row tv-focusable" tabindex="0" data-cat="infantil">
-              <span>🎨 INFANTIL</span>
-              <span class="badge bg-secondary-subtle text-secondary">15</span>
-            </div>
-            <div class="category-row tv-focusable" tabindex="0" data-cat="documentarios">
-              <span>🌍 DOCUMENTÁRIOS</span>
-              <span class="badge bg-secondary-subtle text-secondary">12</span>
-            </div>
-            <div class="category-row tv-focusable" tabindex="0" data-cat="adultos">
-              <span>🔒 [XXX] ADULTOS</span>
-              <span class="badge bg-danger-subtle text-danger">8</span>
-            </div>
+            <div class="text-uppercase small text-secondary fw-bold px-2 mb-2">Categorias</div>
+            <div class="text-secondary small p-3">Nenhuma categoria encontrada. Conecte sua lista pelo menu lateral.</div>
           </section>
 
           <!-- Coluna 2: Lista de Canais -->
           <section class="tv-channel-panel" id="channelPanel">
             <div class="text-uppercase small text-secondary fw-bold px-2 mb-2 d-flex justify-content-between">
-              <span id="currentCatTitle">Canais (JOGOS DO DIA)</span>
-              <span class="text-info">Padrão: SD</span>
+              <span id="currentCatTitle">Canais</span>
+              <span class="text-info">Ao Vivo</span>
             </div>
-
-            <div class="channel-row tv-focusable active" tabindex="0" data-ch="1" data-title="Premiere Clubes SD" data-q="SD" data-prog="Brasileirão: Flamengo x Palmeiras (Ao Vivo)">
-              <div class="channel-logo">P1</div>
-              <div class="flex-grow-1 overflow-hidden">
-                <div class="text-truncate fw-semibold">Premiere Clubes</div>
-                <small class="text-secondary text-truncate d-block">Ao vivo: Flamengo x Palmeiras</small>
-              </div>
-              <span class="badge bg-secondary">SD</span>
-            </div>
-
-            <div class="channel-row tv-focusable" tabindex="0" data-ch="2" data-title="SporTV SD" data-q="SD" data-prog="Tá na Área - Pré Jogo">
-              <div class="channel-logo">STV</div>
-              <div class="flex-grow-1 overflow-hidden">
-                <div class="text-truncate fw-semibold">SporTV</div>
-                <small class="text-secondary text-truncate d-block">Tá na Área - Pré Jogo</small>
-              </div>
-              <span class="badge bg-secondary">SD</span>
-            </div>
-
-            <div class="channel-row tv-focusable" tabindex="0" data-ch="3" data-title="ESPN Brasil SD" data-q="SD" data-prog="Futebol Europeu: Premier League">
-              <div class="channel-logo">ESPN</div>
-              <div class="flex-grow-1 overflow-hidden">
-                <div class="text-truncate fw-semibold">ESPN Brasil</div>
-                <small class="text-secondary text-truncate d-block">Futebol Europeu: Premier League</small>
-              </div>
-              <span class="badge bg-secondary">SD</span>
-            </div>
-
-            <div class="channel-row tv-focusable" tabindex="0" data-ch="4" data-title="CazéTV HD" data-q="HD" data-prog="Transmissão Especial">
-              <div class="channel-logo">CZ</div>
-              <div class="flex-grow-1 overflow-hidden">
-                <div class="text-truncate fw-semibold">CazéTV</div>
-                <small class="text-secondary text-truncate d-block">Transmissão Especial</small>
-              </div>
-              <span class="badge bg-info text-dark fw-bold">HD</span>
-            </div>
-
-            <div class="channel-row tv-focusable" tabindex="0" data-ch="5" data-title="TNT Sports SD" data-q="SD" data-prog="Champions League Highlights">
-              <div class="channel-logo">TNT</div>
-              <div class="flex-grow-1 overflow-hidden">
-                <div class="text-truncate fw-semibold">TNT Sports</div>
-                <small class="text-secondary text-truncate d-block">Champions League Highlights</small>
-              </div>
-              <span class="badge bg-secondary">SD</span>
-            </div>
+            <div class="text-secondary small p-3">Selecione uma categoria para listar os canais.</div>
           </section>
 
           <!-- Coluna 3: Pré-Visualização / Mini Player + EPG -->
           <section class="tv-preview-panel">
             <div class="mini-player-card">
-              <video id="miniVideo" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;">
-                <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
-              </video>
+              <video id="miniVideo" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
               <div class="position-absolute bottom-0 start-0 end-0 p-3 bg-dark bg-opacity-75 d-flex justify-content-between align-items-center">
                 <div>
                   <span class="badge bg-danger me-2">AO VIVO</span>
-                  <span class="fw-bold" id="previewTitle">Premiere Clubes SD</span>
+                  <span class="fw-bold" id="previewTitle">Korp TV</span>
                 </div>
                 <button class="btn btn-sm btn-info tv-focusable" id="btnFullscreen" tabindex="0">
                   <i class="bi bi-arrows-fullscreen me-1"></i> Tela Cheia
@@ -1031,25 +769,16 @@
             <div class="epg-timeline-card">
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold mb-0 text-white"><i class="bi bi-clock-history me-2 text-info"></i>Programação do Canal</h5>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Fuso: Horário de Brasília</span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">EPG Sincronizado</span>
               </div>
 
               <div class="epg-show-box tv-focusable" tabindex="0">
                 <div class="d-flex justify-content-between text-info small fw-bold">
-                  <span>AGORA (19:30 - 21:45)</span>
+                  <span>AGORA</span>
                   <span>AO VIVO</span>
                 </div>
-                <h6 class="fw-bold my-1 text-white" id="epgCurrentTitle">Brasileirão Série A: Flamengo vs Palmeiras</h6>
-                <p class="text-secondary small mb-0">Transmissão completa em tempo real com som surround e análise tática.</p>
-              </div>
-
-              <div class="epg-show-box tv-focusable" tabindex="0">
-                <div class="d-flex justify-content-between text-muted small fw-bold">
-                  <span>A SEGUIR (21:45 - 22:30)</span>
-                  <span>PÓS-JOGO</span>
-                </div>
-                <h6 class="fw-bold my-1 text-light">Linha de Passe: Melhores Momentos & Coletiva</h6>
-                <p class="text-secondary small mb-0">Debate completo dos lances, entrevistas exclusivas com os técnicos e classificação atualizada.</p>
+                <h6 class="fw-bold my-1 text-white" id="epgCurrentTitle">Transmissão em Tempo Real</h6>
+                <p class="text-secondary small mb-0">Selecione um canal da lista para sintonizar a transmissão.</p>
               </div>
             </div>
           </section>
@@ -1058,112 +787,28 @@
       </section>
 
       <!-- ==============================================================================
-           VISTA 3: FILMES (CATÁLOGO VOD FILTRÁVEL)
+           VISTA 3: FILMES (CATÁLOGO VOD REAL)
            ============================================================================== -->
       <section class="tv-view" id="viewMovies">
         <div class="home-scroll-container">
-          <div class="d-flex gap-2 mb-3 overflow-auto pb-1" style="scrollbar-width: none;">
-            <button class="btn btn-info tv-focusable rounded-pill px-3 active" tabindex="0">Todos</button>
-            <button class="btn btn-outline-secondary tv-focusable rounded-pill px-3" tabindex="0">Ação</button>
-            <button class="btn btn-outline-secondary tv-focusable rounded-pill px-3" tabindex="0">Ficção Científica</button>
-            <button class="btn btn-outline-secondary tv-focusable rounded-pill px-3" tabindex="0">Comédia</button>
-            <button class="btn btn-outline-secondary tv-focusable rounded-pill px-3" tabindex="0">Suspense</button>
-            <button class="btn btn-outline-secondary tv-focusable rounded-pill px-3" tabindex="0">Terror</button>
-            <button class="btn btn-outline-secondary tv-focusable rounded-pill px-3" tabindex="0">Animação</button>
-          </div>
-
           <div class="tv-shelf">
-            <h4 class="shelf-title mb-3"><i class="bi bi-stars text-warning"></i> Lançamentos 2024 / 2025</h4>
-            <div class="d-flex flex-wrap gap-3">
-              <!-- Grid responsivo de Filmes -->
-              <div class="tv-poster-card tv-focusable" style="flex: 0 0 clamp(140px, 12vw, 180px);" tabindex="0"
-                   data-type="movie" data-title="Duna: Parte 2" data-year="2024" data-rating="8.6" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1400"
-                   data-syn="Paul Atreides busca vingança contra os conspiradores que destruíram sua família.">
-                <img src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=600" alt="Duna 2">
-                <div class="poster-overlay">
-                  <div class="poster-title">Duna: Parte 2</div>
-                  <div class="poster-tags"><span>2024</span><span class="badge bg-info-subtle text-info">4K</span></div>
-                </div>
-              </div>
-
-              <div class="tv-poster-card tv-focusable" style="flex: 0 0 clamp(140px, 12vw, 180px);" tabindex="0"
-                   data-type="movie" data-title="Oppenheimer" data-year="2023" data-rating="8.9" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=1400"
-                   data-syn="A criação da bomba atômica liderada por J. Robert Oppenheimer.">
-                <img src="https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=600" alt="Oppenheimer">
-                <div class="poster-overlay">
-                  <div class="poster-title">Oppenheimer</div>
-                  <div class="poster-tags"><span>2023</span><span class="badge bg-info-subtle text-info">4K</span></div>
-                </div>
-              </div>
-
-              <div class="tv-poster-card tv-focusable" style="flex: 0 0 clamp(140px, 12vw, 180px);" tabindex="0"
-                   data-type="movie" data-title="Gladiador II" data-year="2024" data-rating="7.7" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1461360370896-922624d12aa1?q=80&w=1400"
-                   data-syn="Lucius entra no Coliseu para restaurar a honra de Roma.">
-                <img src="https://images.unsplash.com/photo-1461360370896-922624d12aa1?q=80&w=600" alt="Gladiador 2">
-                <div class="poster-overlay">
-                  <div class="poster-title">Gladiador II</div>
-                  <div class="poster-tags"><span>2024</span><span class="badge bg-info-subtle text-info">4K</span></div>
-                </div>
-              </div>
-
-              <div class="tv-poster-card tv-focusable" style="flex: 0 0 clamp(140px, 12vw, 180px);" tabindex="0"
-                   data-type="movie" data-title="Interestelar" data-year="2014" data-rating="8.7" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1400"
-                   data-syn="Uma missão interestelar em busca de um novo lar para a humanidade.">
-                <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=600" alt="Interestelar">
-                <div class="poster-overlay">
-                  <div class="poster-title">Interestelar</div>
-                  <div class="poster-tags"><span>2014</span><span class="badge bg-info-subtle text-info">4K</span></div>
-                </div>
-              </div>
+            <h4 class="shelf-title mb-3"><i class="bi bi-film text-info"></i> Catálogo de Filmes (VOD)</h4>
+            <div class="d-flex flex-wrap gap-3" id="vodMoviesGrid">
+              <div class="text-secondary small p-3">Nenhum filme disponível nesta lista. Conecte sua lista pelo menu lateral.</div>
             </div>
           </div>
         </div>
       </section>
 
       <!-- ==============================================================================
-           VISTA 4: SÉRIES (EPISÓDIOS E TEMPORADAS)
+           VISTA 4: SÉRIES (CATÁLOGO DE SÉRIES REAL)
            ============================================================================== -->
       <section class="tv-view" id="viewSeries">
         <div class="home-scroll-container">
           <div class="tv-shelf">
-            <h4 class="shelf-title mb-3"><i class="bi bi-collection-play text-info"></i> Séries Populares & Novas Temporadas</h4>
-            <div class="d-flex flex-wrap gap-3">
-              <div class="tv-poster-card tv-focusable" style="flex: 0 0 clamp(140px, 12vw, 180px);" tabindex="0"
-                   data-type="series" data-title="The Last of Us" data-year="2023" data-rating="8.8" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1400"
-                   data-syn="Joel e Ellie atravessam um Estados Unidos pós-apocalíptico infectado por fungos.">
-                <img src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600" alt="The Last of Us">
-                <div class="poster-overlay">
-                  <div class="poster-title">The Last of Us</div>
-                  <div class="poster-tags"><span>1ª Temporada</span><span class="badge bg-primary">9 Eps</span></div>
-                </div>
-              </div>
-
-              <div class="tv-poster-card tv-focusable" style="flex: 0 0 clamp(140px, 12vw, 180px);" tabindex="0"
-                   data-type="series" data-title="Stranger Things" data-year="2022" data-rating="8.7" data-q="4K"
-                   data-bg="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1400"
-                   data-syn="Mistérios sobrenaturais e conspirações governamentais na cidade de Hawkins.">
-                <img src="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=600" alt="Stranger Things">
-                <div class="poster-overlay">
-                  <div class="poster-title">Stranger Things</div>
-                  <div class="poster-tags"><span>4ª Temporada</span><span class="badge bg-primary">34 Eps</span></div>
-                </div>
-              </div>
-
-              <div class="tv-poster-card tv-focusable" style="flex: 0 0 clamp(140px, 12vw, 180px);" tabindex="0"
-                   data-type="series" data-title="Succession" data-year="2023" data-rating="8.9" data-q="FHD"
-                   data-bg="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1400"
-                   data-syn="A batalha impiedosa pelo império de mídia da família Roy.">
-                <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=600" alt="Succession">
-                <div class="poster-overlay">
-                  <div class="poster-title">Succession</div>
-                  <div class="poster-tags"><span>4ª Temporada</span><span class="badge bg-primary">39 Eps</span></div>
-                </div>
-              </div>
+            <h4 class="shelf-title mb-3"><i class="bi bi-collection-play text-info"></i> Catálogo de Séries</h4>
+            <div class="d-flex flex-wrap gap-3" id="seriesGrid">
+              <div class="text-secondary small p-3">Nenhuma série disponível nesta lista. Conecte sua lista pelo menu lateral.</div>
             </div>
           </div>
         </div>
@@ -2104,43 +1749,59 @@
     });
 
     // ==============================================================================
-    // INTEGRAÇÃO DINÂMICA COM O MICROSERVIÇO KORP TV E SINCRONIZAÇÃO DE PLAYLIST
+    // INTEGRAÇÃO COM O PORTAL OFICIAL KORP TV (https://korp.kabaweb.in)
     // ==============================================================================
+    const OFFICIAL_PORTAL_URL = 'https://korp.kabaweb.in';
     let currentPairingCode = null;
     let pairPollingInterval = null;
 
-    // Obtém ou gera Device ID único persistente para esta TV/Navegador
+    // Obtém ou gera Device ID único persistente para esta Smart TV / Navegador
     function getOrCreateDeviceId() {
       let devId = localStorage.getItem('korp_tv_device_id');
       if (!devId) {
-        devId = 'webtv-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+        devId = 'webtv-' + Math.random().toString(36).substring(2, 8).toUpperCase();
         localStorage.setItem('korp_tv_device_id', devId);
       }
       return devId;
     }
 
-    // 1. Gera código de pareamento para exibição na TV e sincroniza status inicial
+    // Inicializa comunicação e registra no Portal Oficial Korp TV
     async function initPairingCode() {
-      const codeDisplay = document.getElementById('tvPairCodeDisplay');
+      const screenCode = document.getElementById('screenPairCode');
+      const modalCode = document.getElementById('tvPairCodeDisplay');
+      const devIdEl = document.getElementById('screenDeviceId');
       const devId = getOrCreateDeviceId();
 
+      if (devIdEl) devIdEl.innerHTML = `<i class="bi bi-hdd-network me-1"></i>Dispositivo ID: <strong>${devId}</strong>`;
+
       try {
-        const deviceType = smartPlayer.isTizen ? 'samsung_tizen' : (smartPlayer.isWebOS ? 'lg_webos' : 'pc_browser');
-        const res = await fetch('/api/auth/pair', {
+        const res = await fetch('/api/portal/connect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ device_type: deviceType, device_name: `Smart TV (${deviceType})` })
+          body: JSON.stringify({
+            portal_url: OFFICIAL_PORTAL_URL,
+            device_id: devId,
+            model: smartPlayer.isTizen ? 'Samsung Smart TV' : (smartPlayer.isWebOS ? 'LG webOS TV' : 'Web TV Player')
+          })
         });
+
         const data = await res.json();
-        if (data.success && data.pair_code) {
-          currentPairingCode = data.pair_code;
-          if (codeDisplay) {
-            codeDisplay.textContent = `${data.pair_code.slice(0, 3)} ${data.pair_code.slice(3)}`;
+        if (data.success) {
+          const rawCode = (data.pairingCode || devId.slice(-6)).toUpperCase();
+          currentPairingCode = rawCode;
+          const formattedCode = rawCode.length === 6 ? `${rawCode.slice(0, 3)} ${rawCode.slice(3)}` : rawCode;
+
+          if (screenCode) screenCode.textContent = formattedCode;
+          if (modalCode) modalCode.textContent = formattedCode;
+
+          if (data.hasPlaylist) {
+            tvEngine.showTvToast('Lista oficial ativada pelo portal!');
+            await checkDeviceStatus();
+            return;
           }
-          startPairPolling();
         }
       } catch (err) {
-        console.warn('[Pair] Falha ao obter código de pareamento:', err);
+        console.warn('[Portal Oficial] Erro ao registrar no portal:', err);
       }
 
       await checkDeviceStatus();
@@ -2157,6 +1818,7 @@
         const detailsEl = document.getElementById('activeListDetails');
 
         if (st.success && st.channels > 0) {
+          // Já possui lista conectada -> Exibe a programação
           if (badge) {
             badge.className = 'badge bg-success';
             badge.textContent = `Online: ${st.channels} Canais`;
@@ -2164,37 +1826,96 @@
           if (banner) {
             banner.classList.remove('d-none');
             if (nameEl) nameEl.innerHTML = `<i class="bi bi-check-circle-fill text-success me-2"></i>${st.playlist ? st.playlist.name : 'Lista Conectada'}`;
-            if (detailsEl) detailsEl.textContent = `${st.channels} canais ao vivo e ${st.movies} filmes carregados`;
+            if (detailsEl) detailsEl.textContent = `${st.channels} canais ao vivo carregados`;
           }
+
+          // Se estiver na tela de ativação, vai para o Live TV
+          const activeView = document.querySelector('.tv-view.active');
+          if (activeView && activeView.id === 'viewConnectScreen') {
+            switchView('live');
+          }
+
+          await loadCatalogFromApi();
         } else {
+          // Sem lista conectada -> Exibe a tela de ativação oficial
           if (badge) {
             badge.className = 'badge bg-secondary';
             badge.textContent = 'Sem Lista';
           }
           if (banner) banner.classList.add('d-none');
+
+          document.querySelectorAll('.tv-view').forEach(v => v.classList.remove('active'));
+          const connectScreen = document.getElementById('viewConnectScreen');
+          if (connectScreen) {
+            connectScreen.classList.add('active');
+            const checkBtn = document.getElementById('btnScreenCheckNow');
+            if (checkBtn) setTimeout(() => tvEngine.setFocus(checkBtn), 150);
+          }
+
+          startPairPolling();
         }
       } catch (_) {}
     }
 
-    // Polling aguardando ativação no portal
+    // Polling contínuo consultando o portal oficial https://korp.kabaweb.in
     function startPairPolling() {
       if (pairPollingInterval) clearInterval(pairPollingInterval);
       pairPollingInterval = setInterval(async () => {
         try {
-          const res = await fetch('/api/device/status');
-          const status = await res.json();
-          if (status.success && status.channels > 0) {
-            const statusEl = document.getElementById('pairPollingStatus');
-            if (statusEl) {
-              statusEl.innerHTML = '<i class="bi bi-check-circle-fill text-info me-1"></i>Conectado com sucesso!';
-            }
+          const devId = getOrCreateDeviceId();
+          const res = await fetch('/api/portal/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              portal_url: OFFICIAL_PORTAL_URL,
+              device_id: devId,
+              pairing_code: currentPairingCode || undefined
+            })
+          });
+
+          const data = await res.json();
+          if (data.success && data.hasPlaylist) {
             clearInterval(pairPollingInterval);
+            tvEngine.showTvToast('Lista liberada pelo Portal Korp TV!');
             await checkDeviceStatus();
-            await loadCatalogFromApi();
-            tvEngine.showTvToast('Lista conectada com sucesso!');
           }
         } catch (_) {}
-      }, 6000);
+      }, 5000);
+    }
+
+    // Botão de checagem imediata da tela de ativação
+    const btnScreenCheck = document.getElementById('btnScreenCheckNow');
+    if (btnScreenCheck) {
+      btnScreenCheck.addEventListener('click', async () => {
+        btnScreenCheck.disabled = true;
+        btnScreenCheck.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Consultando Portal...';
+
+        try {
+          const devId = getOrCreateDeviceId();
+          const res = await fetch('/api/portal/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              portal_url: OFFICIAL_PORTAL_URL,
+              device_id: devId,
+              pairing_code: currentPairingCode || undefined
+            })
+          });
+
+          const data = await res.json();
+          if (data.success && data.hasPlaylist) {
+            tvEngine.showTvToast('Lista oficial sincronizada com sucesso!');
+            await checkDeviceStatus();
+          } else {
+            tvEngine.showTvToast(`Dispositivo registrado no portal (${data.pairingCode || 'Aguardando lista'}). Atribua a lista no painel.`);
+          }
+        } catch (e) {
+          tvEngine.showTvToast(`Erro ao conectar ao portal: ${e.message}`);
+        } finally {
+          btnScreenCheck.disabled = false;
+          btnScreenCheck.innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>Verificar Ativação';
+        }
+      });
     }
 
     const btnRefreshPair = document.getElementById('btnRefreshPairCode');
@@ -2202,16 +1923,13 @@
       btnRefreshPair.addEventListener('click', initPairingCode);
     }
 
-    // Consulta manual ao Portal Korp TV para buscar lista atribuída
+    // Consulta manual do Modal
     const btnCheckPortalNow = document.getElementById('btnCheckPortalNow');
     if (btnCheckPortalNow) {
       btnCheckPortalNow.addEventListener('click', async () => {
-        const portalUrl = (document.getElementById('portalServerUrl').value || 'http://localhost:3000').trim();
+        const portalUrl = (document.getElementById('portalServerUrl').value || OFFICIAL_PORTAL_URL).trim();
         const devId = getOrCreateDeviceId();
-        const statusEl = document.getElementById('pairPollingStatus');
-        const feedback = document.getElementById('syncFeedbackMsg');
-
-        showFeedback('Consultando portal Korp TV... Aguarde.', 'info');
+        showFeedback('Consultando portal oficial... Aguarde.', 'info');
         btnCheckPortalNow.disabled = true;
 
         try {
@@ -2221,27 +1939,19 @@
             body: JSON.stringify({
               portal_url: portalUrl,
               device_id: devId,
-              pairing_code: currentPairingCode || undefined,
-              model: smartPlayer.isTizen ? 'Samsung Smart TV' : (smartPlayer.isWebOS ? 'LG webOS TV' : 'Web TV Player')
+              pairing_code: currentPairingCode || undefined
             })
           });
 
           const data = await res.json();
-          if (data.success) {
-            if (data.hasPlaylist) {
-              showFeedback(`Lista sincronizada do portal! ${data.channelsSynced || 0} canais carregados.`, 'success');
-              if (statusEl) statusEl.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i>Lista recebida do portal!';
-              await checkDeviceStatus();
-              await loadCatalogFromApi();
-              tvEngine.showTvToast('Lista do portal carregada!');
-            } else {
-              showFeedback(`Dispositivo registrado no portal! Código: ${data.pairingCode || '---'}. Vincule uma lista no painel do portal e clique em Buscar Lista novamente.`, 'warning');
-            }
+          if (data.success && data.hasPlaylist) {
+            showFeedback(`Lista sincronizada! ${data.channelsSynced || 0} canais carregados.`, 'success');
+            await checkDeviceStatus();
           } else {
-            showFeedback(data.error || 'Erro ao conectar ao portal Korp TV.', 'danger');
+            showFeedback(`Dispositivo registrado no portal! Código: ${data.pairingCode || '---'}. Atribua uma lista no painel oficial.`, 'warning');
           }
         } catch (e) {
-          showFeedback(`Não foi possível conectar ao portal (${portalUrl}): ${e.message}`, 'danger');
+          showFeedback(`Não foi possível conectar ao portal: ${e.message}`, 'danger');
         } finally {
           btnCheckPortalNow.disabled = false;
         }
@@ -2274,7 +1984,6 @@
           if (data.success) {
             showFeedback(`Lista sincronizada com sucesso! ${data.channelsCount || 0} canais encontrados.`, 'success');
             await checkDeviceStatus();
-            await loadCatalogFromApi();
             tvEngine.showTvToast('Login Xtream realizado com sucesso!');
           } else {
             showFeedback(data.error || 'Erro ao sincronizar com servidor Xtream.', 'danger');
@@ -2310,7 +2019,6 @@
           if (data.success) {
             showFeedback(`Lista M3U sincronizada com sucesso! ${data.channelsCount || 0} canais importados.`, 'success');
             await checkDeviceStatus();
-            await loadCatalogFromApi();
             tvEngine.showTvToast('Lista M3U importada!');
           } else {
             showFeedback(data.error || 'Erro ao processar lista M3U.', 'danger');
@@ -2334,7 +2042,6 @@
           if (data.success) {
             showFeedback('Lista desconectada e limpa com sucesso.', 'info');
             await checkDeviceStatus();
-            await loadCatalogFromApi();
             tvEngine.showTvToast('Lista removida.');
           }
         } catch (e) {
@@ -2360,13 +2067,13 @@
         const channelPanel = document.querySelector('.tv-channel-panel');
 
         if (!catData.success || !catData.categories.length) {
-          if (catPanel) catPanel.innerHTML = '<div class="text-secondary small p-3">Nenhuma categoria encontrada. Conecte sua lista pelo menu Conectar.</div>';
+          if (catPanel) catPanel.innerHTML = '<div class="text-secondary small p-3">Nenhuma categoria encontrada.</div>';
           if (channelPanel) channelPanel.innerHTML = '<div class="text-secondary small p-3">Sem canais carregados.</div>';
           return;
         }
 
         if (catPanel) {
-          catPanel.innerHTML = '<div class="text-uppercase small text-secondary fw-bold px-2 mb-2">Categorias Xtream</div>';
+          catPanel.innerHTML = '<div class="text-uppercase small text-secondary fw-bold px-2 mb-2">Categorias</div>';
           
           catData.categories.forEach((c, idx) => {
             const div = document.createElement('div');
@@ -2445,9 +2152,8 @@
       }
     }
 
-    // Inicializa verificação de status e pareamento
+    // Inicializa comunicação oficial com o portal ao abrir o aplicativo
     initPairingCode();
-    loadCatalogFromApi();
   </script>
 </body>
 </html>

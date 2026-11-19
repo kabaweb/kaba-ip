@@ -257,14 +257,15 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // 9. API: Conexão e Sincronização com o Portal Korp TV
+    // 9. API: Conexão e Sincronização com o Portal Korp TV Oficial
     if (pathname === '/api/portal/connect' && method === 'POST') {
       const body = await parseBody(req);
-      const portalUrl = (body.portal_url || 'http://localhost:3000').replace(/\/+$/, '');
+      const DEFAULT_PORTAL_URL = process.env.PORTAL_URL || 'https://korp.kabaweb.in';
+      const portalUrl = (body.portal_url || DEFAULT_PORTAL_URL).replace(/\/+$/, '');
       const deviceId = body.device_id || 'web-tv-' + randomBytes(4).toString('hex');
       const model = body.model || 'Smart TV Web Edition';
 
-      console.log(`[Portal] Registrando no portal ${portalUrl} como ${deviceId}...`);
+      console.log(`[Portal Oficial] Registrando no portal ${portalUrl} como ${deviceId}...`);
 
       const portalRes = await fetch(`${portalUrl}/api/device/register`, {
         method: 'POST',
@@ -280,7 +281,7 @@ const server = createServer(async (req, res) => {
       });
 
       if (!portalRes.ok) {
-        throw new Error(`Portal retornou status HTTP ${portalRes.status}`);
+        throw new Error(`Portal oficial retornou status HTTP ${portalRes.status}`);
       }
 
       const portalData = await portalRes.json();
@@ -293,7 +294,7 @@ const server = createServer(async (req, res) => {
         const pId = 'playlist-portal-' + deviceId;
         db.prepare(`
           INSERT OR REPLACE INTO client_playlists (id, client_id, name, type, server_url, username, password, status, created_at)
-          VALUES (?, 'client-demo-1', 'Lista do Portal', 'xtream', ?, ?, ?, 'syncing', ?)
+          VALUES (?, 'client-demo-1', 'Lista Oficial do Portal', 'xtream', ?, ?, ?, 'syncing', ?)
         `).run(pId, p.host, p.user, p.pass, Date.now());
 
         const syncRes = await PlaylistSyncService.syncXtream(pId, p.host, p.user, p.pass);
@@ -306,6 +307,7 @@ const server = createServer(async (req, res) => {
 
       sendJson(res, 200, {
         success: true,
+        portalUrl,
         portalConnected: true,
         deviceStatus: portalData.status,
         hasPlaylist: Boolean(p && ((p.type === 'xtream' && p.user) || (p.type === 'm3u' && p.url))),
