@@ -1875,12 +1875,17 @@
 
           const data = await res.json();
           if (data.success && data.hasPlaylist) {
-            clearInterval(pairPollingInterval);
-            tvEngine.showTvToast('Lista liberada pelo Portal Korp TV!');
-            await checkDeviceStatus();
+            if (data.syncError) {
+              const pollingEl = document.getElementById('screenPollingIndicator');
+              if (pollingEl) pollingEl.innerHTML = `<span class="text-danger small fw-bold"><i class="bi bi-exclamation-circle-fill me-1"></i>Erro no servidor IPTV: ${data.syncError}</span>`;
+            } else if (data.channelsSynced > 0) {
+              clearInterval(pairPollingInterval);
+              tvEngine.showTvToast(`Lista ativada! ${data.channelsSynced} canais carregados.`);
+              await checkDeviceStatus();
+            }
           }
         } catch (_) {}
-      }, 5000);
+      }, 4000);
     }
 
     // Botão de checagem imediata da tela de ativação
@@ -1903,11 +1908,19 @@
           });
 
           const data = await res.json();
-          if (data.success && data.hasPlaylist) {
-            tvEngine.showTvToast('Lista oficial sincronizada com sucesso!');
-            await checkDeviceStatus();
+          if (data.syncError) {
+            tvEngine.showTvToast(`Erro no provedor IPTV: ${data.syncError}`);
+            const pollingEl = document.getElementById('screenPollingIndicator');
+            if (pollingEl) pollingEl.innerHTML = `<span class="text-danger small fw-bold"><i class="bi bi-exclamation-circle-fill me-1"></i>Erro ao carregar lista: ${data.syncError}</span>`;
+          } else if (data.success && data.hasPlaylist) {
+            if (data.channelsSynced > 0) {
+              tvEngine.showTvToast(`Lista sincronizada com sucesso! ${data.channelsSynced} canais.`);
+              await checkDeviceStatus();
+            } else {
+              tvEngine.showTvToast('Lista conectada no portal, mas nenhum canal foi retornado.');
+            }
           } else {
-            tvEngine.showTvToast(`Dispositivo registrado no portal (${data.pairingCode || 'Aguardando lista'}). Atribua a lista no painel.`);
+            tvEngine.showTvToast(`Código do dispositivo: ${data.pairingCode || '---'}. Vincule a lista no painel do portal.`);
           }
         } catch (e) {
           tvEngine.showTvToast(`Erro ao conectar ao portal: ${e.message}`);
@@ -2098,6 +2111,85 @@
         // Carrega canais da primeira categoria
         if (catData.categories[0]) {
           await loadChannelsForCategory(catData.categories[0].category_id);
+        }
+
+        // Carrega canais em destaque na prateleira da Tela Inicial (Home)
+        const homeCarousel = document.getElementById('shelfHomeChannels');
+        const homeSub = document.getElementById('homeChannelsSub');
+        const bbCount = document.getElementById('bbChannelCount');
+
+        const allLiveRes = await fetch('/api/streams?type=live&limit=20');
+        const allLiveData = await allLiveRes.json();
+        if (allLiveData.success && allLiveData.streams.length && homeCarousel) {
+          homeCarousel.innerHTML = '';
+          if (homeSub) homeSub.textContent = `${allLiveData.streams.length} canais carregados`;
+          if (bbCount) bbCount.textContent = `${allLiveData.streams.length} canais sincronizados`;
+
+          allLiveData.streams.forEach(st => {
+            const card = document.createElement('div');
+            card.className = 'tv-live-card tv-focusable';
+            card.tabIndex = 0;
+            card.setAttribute('data-title', st.name);
+            card.setAttribute('data-prog', 'Ao Vivo');
+            card.setAttribute('data-url', st.direct_source);
+
+            card.innerHTML = `
+              <div class="channel-logo">
+                ${st.stream_icon ? `<img src="${st.stream_icon}" style="max-width:100%; max-height:100%; border-radius:6px;" onerror="this.style.display='none';">` : '<i class="bi bi-tv"></i>'}
+              </div>
+              <div class="flex-grow-1 overflow-hidden">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="live-badge-pulse"></span>
+                  <span class="badge bg-danger p-1 small" style="font-size: 0.65rem;">AO VIVO</span>
+                  <span class="badge bg-secondary p-1 small" style="font-size: 0.65rem;">${st.resolution || 'SD'}</span>
+                </div>
+                <div class="fw-bold text-white text-truncate">${st.name}</div>
+                <small class="text-secondary text-truncate d-block">Ao Vivo</small>
+              </div>
+            `;
+
+            card.addEventListener('click', () => {
+              switchView('live');
+              openFullscreenPlayer(st.name, 'Transmissão Ao Vivo', st.resolution || 'SD', st.direct_source);
+            });
+
+            homeCarousel.appendChild(card);
+          });
+        }
+
+        // Carrega Filmes VOD se disponíveis
+        const vodRes = await fetch('/api/streams?type=movie&limit=30');
+        const vodData = await vodRes.json();
+        const vodGrid = document.getElementById('vodMoviesGrid');
+        if (vodData.success && vodData.streams.length && vodGrid) {
+          vodGrid.innerHTML = '';
+          vodData.streams.forEach(m => {
+            const card = document.createElement('div');
+            card.className = 'tv-poster-card tv-focusable';
+            card.style.flex = '0 0 clamp(140px, 12vw, 180px)';
+            card.tabIndex = 0;
+            card.setAttribute('data-type', 'movie');
+            card.setAttribute('data-title', m.name);
+            card.setAttribute('data-year', m.release_date || 'VOD');
+            card.setAttribute('data-rating', m.rating || '0.0');
+            card.setAttribute('data-q', m.resolution || 'HD');
+            card.setAttribute('data-bg', m.stream_icon || '');
+            card.setAttribute('data-syn', m.plot || 'Filme do catálogo VOD');
+
+            card.innerHTML = `
+              ${m.stream_icon ? `<img src="${m.stream_icon}" alt="${m.name}" onerror="this.style.display='none';">` : '<div class="p-3 text-center"><i class="bi bi-film fs-1"></i></div>'}
+              <div class="poster-overlay">
+                <div class="poster-title">${m.name}</div>
+                <div class="poster-tags"><span>${m.release_date || 'Filme'}</span><span class="badge bg-info-subtle text-info">${m.resolution || 'HD'}</span></div>
+              </div>
+            `;
+
+            card.addEventListener('click', () => {
+              openFullscreenPlayer(m.name, m.plot || 'Filme VOD', m.resolution || 'HD', m.direct_source);
+            });
+
+            vodGrid.appendChild(card);
+          });
         }
       } catch (err) {
         console.warn('[Catalog] Falha ao carregar catálogo da API:', err);

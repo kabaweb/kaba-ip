@@ -126,8 +126,8 @@ const server = createServer(async (req, res) => {
     // 4. API: Listagem de Canais / VOD
     if (pathname === '/api/streams' && method === 'GET') {
       const type = urlObj.searchParams.get('type'); // 'live', 'movie', 'series'
-      const catId = urlObj.searchParams.get('cat');
-      const limit = parseInt(urlObj.searchParams.get('limit') || '50', 10);
+      const catId = urlObj.searchParams.get('cat') || urlObj.searchParams.get('category_id');
+      const limit = parseInt(urlObj.searchParams.get('limit') || '100', 10);
       const offset = parseInt(urlObj.searchParams.get('offset') || '0', 10);
 
       let query = 'SELECT * FROM stream_items WHERE is_active = 1';
@@ -265,7 +265,7 @@ const server = createServer(async (req, res) => {
       const deviceId = body.device_id || 'web-tv-' + randomBytes(4).toString('hex');
       const model = body.model || 'Smart TV Web Edition';
 
-      console.log(`[Portal Oficial] Registrando no portal ${portalUrl} como ${deviceId}...`);
+      console.log(`[Portal Oficial] Registrando/Verificando no portal ${portalUrl} como ${deviceId}...`);
 
       const portalRes = await fetch(`${portalUrl}/api/device/register`, {
         method: 'POST',
@@ -286,33 +286,77 @@ const server = createServer(async (req, res) => {
 
       const portalData = await portalRes.json();
       const p = portalData.playlist;
+      console.log(`[Portal Oficial] Resposta da playlist para ${deviceId}:`, JSON.stringify(p));
 
-      // Se o portal já tem lista atribuída a este dispositivo, sincroniza automaticamente!
-      let syncedCount = 0;
-      if (p && p.type === 'xtream' && p.host && p.user && p.pass) {
-        console.log(`[Portal] Lista Xtream recebida do portal (${p.host}). Sincronizando...`);
-        const pId = 'playlist-portal-' + deviceId;
-        db.prepare(`
-          INSERT OR REPLACE INTO client_playlists (id, client_id, name, type, server_url, username, password, status, created_at)
-          VALUES (?, 'client-demo-1', 'Lista Oficial do Portal', 'xtream', ?, ?, ?, 'syncing', ?)
-        `).run(pId, p.host, p.user, p.pass, Date.now());
-
-        const syncRes = await PlaylistSyncService.syncXtream(pId, p.host, p.user, p.pass);
-        syncedCount = syncRes.channelsCount || 0;
-      } else if (p && p.type === 'm3u' && p.url) {
-        const pId = 'playlist-portal-' + deviceId;
-        const syncRes = await PlaylistSyncService.syncM3U(pId, p.url);
-        syncedCount = syncRes.channelsCount || 0;
+      // Extrai credenciais Xtream caso seja Xtream direto OU uma URL M3U com parâmetros Xtream embutidos
+      let xtreamCreds = null;
+      if (p && p.host && p.user && p.pass) {
+        xtreamCreds = { host: p.host, user: p.user, pass: p.pass };
+      } else if (p && p.url) {
+        try {
+          const u = new URL(p.url);
+          const user = u.searchParams.get('username') || u.searchParams.get('user') || p.user;
+          const pass = u.searchParams.get('password') || u.searchParams.get('pass') || p.pass;
+          if (user && pass) {
+            xtreamCreds = { host: `${u.protocol}//${u.host}`, user, pass };
+          }
+        } catch (_) {}
       }
+
+      let syncedCount = 0;
+      let syncError = null;
+      const pId = 'playlist-portal-' + deviceId;
+
+      if (xtreamCreds) {
+        try {
+          console.log(`[Portal] Sincronizando Xtream (${xtreamCreds.host}, usuário: ${xtreamCreds.user})...`);
+          db.prepare(`
+            INSERT OR REPLACE INTO client_playlists (id, client_id, name, type, server_url, username, password, status, created_at)
+            VALUES (?, 'client-demo-1', 'Lista Oficial do Portal', 'xtream', ?, ?, ?, 'syncing', ?)
+          `).run(pId, xtreamCreds.host, xtreamCreds.user, xtreamCreds.pass, Date.now());
+
+          // Limpa canais anteriores antes de sincronizar nova versão
+          db.prepare("DELETE FROM stream_items WHERE playlist_id = ?").run(pId);
+          db.prepare("DELETE FROM categories WHERE playlist_id = ?").run(pId);
+
+          const syncRes = await PlaylistSyncService.syncXtream(pId, xtreamCreds.host, xtreamCreds.user, xtreamCreds.pass);
+          syncedCount = syncRes.channelsCount || 0;
+          console.log(`[Portal] Xtream sincronizado: ${syncedCount} canais.`);
+        } catch (err) {
+          console.error(`[Portal] Erro ao sincronizar Xtream: ${err.message}`);
+          syncError = err.message;
+        }
+      } else if (p && p.url) {
+        try {
+          console.log(`[Portal] Sincronizando M3U direto: ${p.url}...`);
+          db.prepare(`
+            INSERT OR REPLACE INTO client_playlists (id, client_id, name, type, server_url, username, password, status, created_at)
+            VALUES (?, 'client-demo-1', 'Lista Oficial do Portal', 'm3u', ?, '', '', 'syncing', ?)
+          `).run(pId, p.url, Date.now());
+
+          db.prepare("DELETE FROM stream_items WHERE playlist_id = ?").run(pId);
+          db.prepare("DELETE FROM categories WHERE playlist_id = ?").run(pId);
+
+          const syncRes = await PlaylistSyncService.syncM3U(pId, p.url);
+          syncedCount = syncRes.channelsCount || 0;
+          console.log(`[Portal] M3U sincronizado: ${syncedCount} canais.`);
+        } catch (err) {
+          console.error(`[Portal] Erro ao sincronizar M3U: ${err.message}`);
+          syncError = err.message;
+        }
+      }
+
+      const hasPlaylist = Boolean(xtreamCreds || (p && p.url));
 
       sendJson(res, 200, {
         success: true,
         portalUrl,
         portalConnected: true,
         deviceStatus: portalData.status,
-        hasPlaylist: Boolean(p && ((p.type === 'xtream' && p.user) || (p.type === 'm3u' && p.url))),
+        hasPlaylist,
         playlist: portalData.playlist,
         channelsSynced: syncedCount,
+        syncError,
         pairingCode: portalData.pairingCode || derivePairingCode('', deviceId)
       });
       return;
