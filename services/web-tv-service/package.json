@@ -1,0 +1,21 @@
+{
+  "name": "korp-web-tv-service",
+  "version": "1.0.0",
+  "description": "Microserviço dedicado Korp TV para PC Web, Samsung Tizen e LG webOS",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "seed": "node src/seed.js",
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "iptv",
+    "smart-tv",
+    "tizen",
+    "webos",
+    "microservice"
+  ],
+  "author": "KabaWeb",
+  "license": "MIT"
+}

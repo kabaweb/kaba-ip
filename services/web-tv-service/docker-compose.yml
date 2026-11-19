@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  korp-web-tv:
+    build:
+      context: ../..
+      dockerfile: services/web-tv-service/Dockerfile
+    image: korp-web-tv:latest
+    container_name: korp-web-tv-service
+    restart: unless-stopped
+    ports:
+      - "3333:3333"
+    environment:
+      - PORT=3333
+      - DATABASE_PATH=/app/data/korp_tv.db
+    volumes:
+      - korp_tv_data:/app/data
+
+volumes:
+  korp_tv_data:
+    name: korp_tv_data
