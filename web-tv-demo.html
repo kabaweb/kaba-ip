@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Korp TV Web - Smart TV Edition (Tizen / webOS)</title>
+
+  <!-- Bootstrap 5.3 CSS & Icons (CDN) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <style>
+    /* ==============================================================================
+       10-Foot UI & Smart TV Optimizations (Samsung Tizen / LG webOS)
+       ============================================================================== */
+    :root {
+      --tv-safe-gap: 28px;
+      --tv-accent: #06b6d4;
+      --tv-accent-glow: rgba(6, 182, 212, 0.45);
+      --tv-card-bg: #161b26;
+      --tv-sidebar-width: 90px;
+      --tv-sidebar-expanded: 240px;
+      --tv-focus-border: #38bdf8;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      outline: none !important;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at 15% 15%, #131722 0%, #090b10 100%);
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Overscan Safe Container para Smart TVs */
+    .tv-screen-container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      padding: var(--tv-safe-gap);
+      gap: 20px;
+      position: relative;
+    }
+
+    /* ==============================================================================
+       SISTEMA DE FOCO VISUAL PARA CONTROLE REMOTO (D-PAD)
+       ============================================================================== */
+    .tv-focusable {
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+
+    /* Efeito de Foco de Alta Visibilidade (visível a 3 metros de distância) */
+    .tv-focusable:focus,
+    .tv-focusable.tv-focused {
+      border-color: var(--tv-focus-border) !important;
+      box-shadow: 0 0 0 3px var(--tv-accent-glow), 0 8px 24px rgba(0, 0, 0, 0.7) !important;
+      transform: scale(1.035);
+      background-color: rgba(56, 189, 248, 0.14) !important;
+      z-index: 10;
+    }
+
+    /* Botões focados com preenchimento forte */
+    .btn.tv-focusable:focus,
+    .btn.tv-focusable.tv-focused {
+      background-color: var(--tv-accent) !important;
+      color: #041019 !important;
+      font-weight: 700;
+    }
+
+    /* ==============================================================================
+       SIDEBAR DE NAVEGAÇÃO RÁPIDA
+       ============================================================================== */
+    .tv-sidebar {
+      width: var(--tv-sidebar-width);
+      background: rgba(18, 22, 34, 0.85);
+      backdrop-filter: blur(16px);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 8px;
+      transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 20;
+    }
+
+    .tv-sidebar:focus-within,
+    .tv-sidebar.expanded {
+      width: var(--tv-sidebar-expanded);
+      align-items: stretch;
+      box-shadow: 10px 0 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 12px;
+      margin-bottom: 24px;
+      color: var(--tv-accent);
+      font-weight: 800;
+      font-size: 1.25rem;
+    }
+
+    .sidebar-brand span {
+      display: none;
+      white-space: nowrap;
+    }
+
+    .tv-sidebar:focus-within .sidebar-brand span,
+    .tv-sidebar.expanded .sidebar-brand span {
+      display: inline;
+    }
+
+    .nav-item-btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 1.05rem;
+      margin-bottom: 8px;
+    }
+
+    .nav-item-btn i {
+      font-size: 1.4rem;
+      min-width: 28px;
+      text-align: center;
+    }
+
+    .nav-item-btn span {
+      display: none;
+      white-space: nowrap;
+    }
+
+    .tv-sidebar:focus-within .nav-item-btn span,
+    .tv-sidebar.expanded .nav-item-btn span {
+      display: inline;
+    }
+
+    .nav-item-btn.active {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    /* ==============================================================================
+       CONTEÚDO PRINCIPAL (LAYOUT 3 COLUNAS / GRIDS)
+       ============================================================================== */
+    .tv-main-content {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .tv-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .tv-category-panel {
+      width: 260px;
+      height: 100%;
+      background: rgba(22, 27, 38, 0.7);
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 12px;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+    .tv-category-panel::-webkit-scrollbar { display: none; }
+
+    .tv-channel-panel {
+      width: 380px;
+      height: 100%;
+      background: rgba(18, 22, 31, 0.9);
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 12px;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+    .tv-channel-panel::-webkit-scrollbar { display: none; }
+
+    .tv-preview-panel {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .category-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 10px;
+      margin-bottom: 6px;
+      color: #cbd5e1;
+      font-size: 0.98rem;
+    }
+    .category-row.active {
+      background: rgba(6, 182, 212, 0.15);
+      color: #fff;
+      font-weight: 600;
+      border-left: 4px solid var(--tv-accent);
+    }
+
+    .channel-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-bottom: 6px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .channel-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      background: #1e2536;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: var(--tv-accent);
+    }
+
+    .badge-quality {
+      font-size: 0.72rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #38bdf8;
+      font-weight: 700;
+    }
+
+    /* ==============================================================================
+       MINI PLAYER & GUIA TV EPG
+       ============================================================================== */
+    .mini-player-card {
+      height: 260px;
+      border-radius: 14px;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .epg-timeline-card {
+      flex: 1;
+      background: rgba(18, 22, 31, 0.7);
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .epg-show-box {
+      background: rgba(255, 255, 255, 0.04);
+      border-left: 3px solid var(--tv-accent);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    /* ==============================================================================
+       FULLSCREEN PLAYER OVERLAY (MODO TV PLAYBACK)
+       ============================================================================== */
+    #tvPlayerOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      z-index: 100;
+      display: none;
+    }
+
+    .player-osd {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 75%, transparent 100%);
+      padding: var(--tv-safe-gap);
+      padding-top: 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: opacity 0.3s ease;
+    }
+
+    /* ==============================================================================
+       BARRA DE ATALHOS DO CONTROLE REMOTO (LEGENDA VISUAL)
+       ============================================================================== */
+    .remote-hints-bar {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 10px;
+      padding: 8px 16px;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    .key-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #334155;
+      color: #fff;
+      font-weight: bold;
+      font-size: 0.75rem;
+      margin-right: 6px;
+    }
+
+    .key-badge.red { background: #ef4444; }
+    .key-badge.green { background: #10b981; }
+    .key-badge.yellow { background: #f59e0b; color: #000; }
+    .key-badge.blue { background: #3b82f6; }
+  </style>
+</head>
+<body>
+
+  <!-- Container Seguro para TVs 16:9 -->
+  <div class="tv-screen-container">
+
+    <!-- 1. SIDEBAR TV (Navegação D-PAD Esquerda/Direita) -->
+    <nav class="tv-sidebar" id="tvSidebar">
+      <div class="sidebar-brand">
+        <i class="bi bi-play-circle-fill fs-3"></i>
+        <span>KORP TV</span>
+      </div>
+
+      <div class="w-100 d-flex flex-column gap-1">
+        <a href="#live" class="nav-item-btn tv-focusable active" data-nav="live" tabindex="0">
+          <i class="bi bi-tv"></i>
+          <span>Ao Vivo</span>
+        </a>
+        <a href="#guide" class="nav-item-btn tv-focusable" data-nav="guide" tabindex="0">
+          <i class="bi bi-grid-3x3-gap"></i>
+          <span>Guia TV</span>
+        </a>
+        <a href="#movies" class="nav-item-btn tv-focusable" data-nav="movies" tabindex="0">
+          <i class="bi bi-film"></i>
+          <span>Filmes</span>
+        </a>
+        <a href="#series" class="nav-item-btn tv-focusable" data-nav="series" tabindex="0">
+          <i class="bi bi-collection-play"></i>
+          <span>Séries</span>
+        </a>
+        <a href="#settings" class="nav-item-btn tv-focusable" data-bs-toggle="modal" data-bs-target="#tvSettingsModal" tabindex="0">
+          <i class="bi bi-gear"></i>
+          <span>Ajustes</span>
+        </a>
+      </div>
+
+      <div class="mt-auto text-center text-muted small py-2 d-none d-lg-block">
+        <span class="badge bg-secondary-subtle text-secondary">v1.6.4 Web</span>
+      </div>
+    </nav>
+
+    <!-- 2. ÁREA PRINCIPAL -->
+    <main class="tv-main-content">
+      <!-- Topo: Título da Seção e Status -->
+      <header class="tv-header">
+        <div>
+          <h2 class="fw-bold mb-0 text-white d-flex align-items-center gap-2">
+            <span class="text-info" id="viewTitle">TV Ao Vivo</span>
+            <span class="badge bg-success-subtle text-success fs-6 border border-success-subtle">Online</span>
+          </h2>
+          <small class="text-secondary" id="viewSubtitle">Ordem oficial Xtream · Qualidade padrão selecionada</small>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          <div class="text-end">
+            <div class="fs-4 fw-bold text-white" id="clockTime">19:45</div>
+            <small class="text-secondary" id="clockDate">Qui, 19 Nov</small>
+          </div>
+        </div>
+      </header>
+
+      <!-- Painel de TV Ao Vivo (3 Colunas: Grupos, Canais, Prévia/EPG) -->
+      <div class="d-flex gap-3 flex-grow-1 overflow-hidden">
+        
+        <!-- Coluna 1: Categorias (Ordem Oficial Xtream: Jogos primeiro, Adultos por último) -->
+        <section class="tv-category-panel" id="categoryPanel">
+          <div class="text-uppercase small text-secondary fw-bold px-2 mb-2">Categorias</div>
+          <div class="category-row tv-focusable active" tabindex="0" data-cat="jogos">
+            <span>⚽ JOGOS DO DIA</span>
+            <span class="badge bg-info-subtle text-info">14</span>
+          </div>
+          <div class="category-row tv-focusable" tabindex="0" data-cat="abertos">
+            <span>📺 CANAIS ABERTOS</span>
+            <span class="badge bg-secondary-subtle text-secondary">28</span>
+          </div>
+          <div class="category-row tv-focusable" tabindex="0" data-cat="esportes">
+            <span>🏆 ESPORTES</span>
+            <span class="badge bg-secondary-subtle text-secondary">42</span>
+          </div>
+          <div class="category-row tv-focusable" tabindex="0" data-cat="filmes">
+            <span>🎬 FILMES E SÉRIES</span>
+            <span class="badge bg-secondary-subtle text-secondary">36</span>
+          </div>
+          <div class="category-row tv-focusable" tabindex="0" data-cat="noticias">
+            <span>📰 NOTÍCIAS</span>
+            <span class="badge bg-secondary-subtle text-secondary">18</span>
+          </div>
+          <div class="category-row tv-focusable" tabindex="0" data-cat="infantil">
+            <span>🎨 INFANTIL</span>
+            <span class="badge bg-secondary-subtle text-secondary">15</span>
+          </div>
+          <div class="category-row tv-focusable" tabindex="0" data-cat="documentarios">
+            <span>🌍 DOCUMENTÁRIOS</span>
+            <span class="badge bg-secondary-subtle text-secondary">12</span>
+          </div>
+          <div class="category-row tv-focusable" tabindex="0" data-cat="adultos">
+            <span>🔒 [XXX] ADULTOS</span>
+            <span class="badge bg-danger-subtle text-danger">8</span>
+          </div>
+        </section>
+
+        <!-- Coluna 2: Lista de Canais do Grupo Selecionado -->
+        <section class="tv-channel-panel" id="channelPanel">
+          <div class="text-uppercase small text-secondary fw-bold px-2 mb-2 d-flex justify-content-between">
+            <span>Canais (JOGOS DO DIA)</span>
+            <span class="text-info">Resolução: SD</span>
+          </div>
+
+          <div class="channel-row tv-focusable" tabindex="0" data-ch="1" data-title="Premiere Clubes SD" data-q="SD" data-prog="Brasileirão: Flamengo x Palmeiras (Ao Vivo)">
+            <div class="channel-logo">P1</div>
+            <div class="flex-grow-1 overflow-hidden">
+              <div class="text-truncate fw-semibold">Premiere Clubes</div>
+              <small class="text-secondary text-truncate d-block">Ao vivo: Flamengo x Palmeiras</small>
+            </div>
+            <span class="badge-quality">SD</span>
+          </div>
+
+          <div class="channel-row tv-focusable" tabindex="0" data-ch="2" data-title="SporTV SD" data-q="SD" data-prog="Tá na Área - Pré Jogo">
+            <div class="channel-logo">STV</div>
+            <div class="flex-grow-1 overflow-hidden">
+              <div class="text-truncate fw-semibold">SporTV</div>
+              <small class="text-secondary text-truncate d-block">Tá na Área - Pré Jogo</small>
+            </div>
+            <span class="badge-quality">SD</span>
+          </div>
+
+          <div class="channel-row tv-focusable" tabindex="0" data-ch="3" data-title="ESPN Brasil SD" data-q="SD" data-prog="Futebol Europeu: Premier League">
+            <div class="channel-logo">ESPN</div>
+            <div class="flex-grow-1 overflow-hidden">
+              <div class="text-truncate fw-semibold">ESPN Brasil</div>
+              <small class="text-secondary text-truncate d-block">Futebol Europeu: Premier League</small>
+            </div>
+            <span class="badge-quality">SD</span>
+          </div>
+
+          <div class="channel-row tv-focusable" tabindex="0" data-ch="4" data-title="CazéTV HD" data-q="HD" data-prog="Transmissão Especial">
+            <div class="channel-logo">CZ</div>
+            <div class="flex-grow-1 overflow-hidden">
+              <div class="text-truncate fw-semibold">CazéTV</div>
+              <small class="text-secondary text-truncate d-block">Transmissão Especial</small>
+            </div>
+            <span class="badge-quality">HD</span>
+          </div>
+
+          <div class="channel-row tv-focusable" tabindex="0" data-ch="5" data-title="TNT Sports SD" data-q="SD" data-prog="Champions League Highlights">
+            <div class="channel-logo">TNT</div>
+            <div class="flex-grow-1 overflow-hidden">
+              <div class="text-truncate fw-semibold">TNT Sports</div>
+              <small class="text-secondary text-truncate d-block">Champions League Highlights</small>
+            </div>
+            <span class="badge-quality">SD</span>
+          </div>
+        </section>
+
+        <!-- Coluna 3: Pré-Visualização / Player Ativo + EPG Completo -->
+        <section class="tv-preview-panel">
+          <!-- Mini Player / Janela PiP -->
+          <div class="mini-player-card">
+            <!-- Simulação de Vídeo com Canvas/HTML5 Video -->
+            <video id="miniVideo" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;">
+              <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+            </video>
+            <div class="position-absolute bottom-0 start-0 end-0 p-3 bg-dark bg-opacity-75 d-flex justify-content-between align-items-center">
+              <div>
+                <span class="badge bg-danger me-2">AO VIVO</span>
+                <span class="fw-bold" id="previewTitle">Premiere Clubes SD</span>
+              </div>
+              <button class="btn btn-sm btn-info tv-focusable" id="btnFullscreen" tabindex="0">
+                <i class="bi bi-arrows-fullscreen me-1"></i> Tela Cheia
+              </button>
+            </div>
+          </div>
+
+          <!-- Guia de Programação (EPG) -->
+          <div class="epg-timeline-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold mb-0 text-white"><i class="bi bi-clock-history me-2 text-info"></i>Programação do Canal</h5>
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Fuso Oficial: Brasil/SP</span>
+            </div>
+
+            <div class="epg-show-box tv-focusable" tabindex="0">
+              <div class="d-flex justify-content-between text-info small fw-bold">
+                <span>AGORA (19:30 - 21:45)</span>
+                <span>AO VIVO</span>
+              </div>
+              <h6 class="fw-bold my-1 text-white" id="epgCurrentTitle">Brasileirão Série A: Flamengo vs Palmeiras</h6>
+              <p class="text-secondary small mb-0">Transmissão completa em tempo real direto do Maracanã com som surround e análise tática.</p>
+            </div>
+
+            <div class="epg-show-box tv-focusable" tabindex="0">
+              <div class="d-flex justify-content-between text-muted small fw-bold">
+                <span>A SEGUIR (21:45 - 22:30)</span>
+                <span>PÓS-JOGO</span>
+              </div>
+              <h6 class="fw-bold my-1 text-light">Linha de Passe: Melhores Momentos & Coletiva</h6>
+              <p class="text-secondary small mb-0">Debate completo dos lances, entrevistas exclusivas com os técnicos e classificação atualizada.</p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- 3. BARRA DE ATALHOS DO CONTROLE REMOTO (LEGENDA DE BOTÕES) -->
+      <footer class="remote-hints-bar">
+        <div><span class="key-badge">OK</span> Assistir / Abrir</div>
+        <div><span class="key-badge">SETAS</span> Navegar D-Pad</div>
+        <div><span class="key-badge">VOLTAR</span> Voltar / Sair</div>
+        <div><span class="key-badge red">VERMELHO</span> Favoritos</div>
+        <div><span class="key-badge blue">AZUL</span> Guia Completo</div>
+        <div class="ms-auto"><span class="badge bg-dark border border-secondary">Smart TV Ready (Tizen/webOS)</span></div>
+      </footer>
+    </main>
+
+  </div>
+
+  <!-- ==============================================================================
+       MODAL DE CONFIGURAÇÕES DE RESOLUÇÃO (BOOSTRAP 5.3 + CONTROLE REMOTO)
+       ============================================================================== -->
+  <div class="modal fade" id="tvSettingsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title text-white"><i class="bi bi-sliders me-2 text-info"></i>Configurações de Reprodução</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-4">
+            <label class="form-label text-light fw-bold">Resolução Padrão do Live TV:</label>
+            <div class="d-flex flex-column gap-2" id="resOptionsGroup">
+              <button class="btn btn-outline-secondary text-start tv-focusable active" data-res="auto" tabindex="0">
+                <i class="bi bi-check2-circle me-2 text-info"></i> Automático (Melhor disponível)
+              </button>
+              <button class="btn btn-outline-secondary text-start tv-focusable" data-res="sd" tabindex="0">
+                <i class="bi bi-circle me-2"></i> SD (Economia de dados / 480p)
+              </button>
+              <button class="btn btn-outline-secondary text-start tv-focusable" data-res="hd" tabindex="0">
+                <i class="bi bi-circle me-2"></i> HD (Equilibrado / 720p)
+              </button>
+              <button class="btn btn-outline-secondary text-start tv-focusable" data-res="fhd" tabindex="0">
+                <i class="bi bi-circle me-2"></i> Full HD (1080p)
+              </button>
+              <button class="btn btn-outline-secondary text-start tv-focusable" data-res="4k" tabindex="0">
+                <i class="bi bi-circle me-2"></i> 4K / UHD
+              </button>
+            </div>
+            <small class="text-secondary d-block mt-2">
+              Ao selecionar SD, todos os canais de TV ao vivo iniciarão automaticamente na variante SD.
+            </small>
+          </div>
+
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input tv-focusable" type="checkbox" id="autoFallbackSwitch" checked tabindex="0">
+            <label class="form-check-label text-light" for="autoFallbackSwitch">
+              Fallback automático de qualidade se o stream cair
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary tv-focusable" data-bs-dismiss="modal" tabindex="0">Fechar</button>
+          <button type="button" class="btn btn-info tv-focusable" data-bs-dismiss="modal" tabindex="0">Salvar Alterações</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================================================
+       OVERLAY DO PLAYER EM TELA CHEIA (CONTROLE TOTAL VIA D-PAD)
+       ============================================================================== -->
+  <div id="tvPlayerOverlay">
+    <video id="fullVideo" style="width: 100%; height: 100%; object-fit: contain;">
+      <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+    </video>
+
+    <!-- OSD (On-Screen Display) -->
+    <div class="player-osd" id="playerOsd">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="badge bg-danger me-2 fs-6">AO VIVO</span>
+          <span class="badge bg-secondary fs-6 me-2" id="fullPlayerQ">SD</span>
+          <span class="fs-3 fw-bold text-white" id="fullPlayerTitle">Premiere Clubes SD</span>
+        </div>
+        <div class="fs-4 text-white" id="osdClock">19:45</div>
+      </div>
+
+      <div>
+        <div class="text-info fw-semibold mb-1" id="fullPlayerShow">Flamengo vs Palmeiras - Brasileirão Série A</div>
+        <div class="progress" style="height: 6px;">
+          <div class="progress-bar bg-info" role="progressbar" style="width: 65%;"></div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-3 mt-2">
+        <button class="btn btn-outline-light tv-focusable" id="btnPlayerBack" tabindex="0">
+          <i class="bi bi-arrow-left me-1"></i> Sair do Player (Voltar)
+        </button>
+        <button class="btn btn-outline-light tv-focusable" id="btnPlayerToggleRes" tabindex="0">
+          <i class="bi bi-gear-wide-connected me-1"></i> Alternar Qualidade (SD / HD / FHD)
+        </button>
+        <button class="btn btn-outline-light tv-focusable" id="btnPlayerAudio" tabindex="0">
+          <i class="bi bi-volume-up me-1"></i> Áudio & Legendas
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5.3 Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- ==============================================================================
+       SMART TV REMOTE ENGINE (SAMSUNG TIZEN + LG WEBOS + D-PAD NAVEGAÇÃO)
+       ============================================================================== -->
+  <script>
+    /**
+     * Motor de Navegação Espacial e Teclas de Smart TV (Tizen / webOS)
+     */
+    const TV_KEYS = {
+      // Teclas Padrão
+      LEFT: 37,
+      UP: 38,
+      RIGHT: 39,
+      DOWN: 40,
+      ENTER: 13,
+      RETURN_BACK: 8,       // Backspace em navegadores normais
+      ESC: 27,
+      // Tizen (Samsung)
+      TIZEN_RETURN: 10009,
+      TIZEN_EXIT: 10182,
+      // LG webOS
+      WEBOS_BACK: 461,
+      // Teclas de Cores
+      RED: 403,
+      GREEN: 404,
+      YELLOW: 405,
+      BLUE: 406,
+      // Mídia
+      PLAY: 415,
+      PAUSE: 19,
+      STOP: 413,
+      FAST_FWD: 417,
+      REWIND: 412
+    };
+
+    class TVNavigationEngine {
+      constructor() {
+        this.currentFocused = null;
+        this.init();
+      }
+
+      init() {
+        // Registra teclas de TV em Tizen / webOS se disponível na plataforma
+        this.registerPlatformKeys();
+
+        // Escuta eventos de teclado globais
+        window.addEventListener('keydown', (e) => this.handleKeyDown(e));
+
+        // Inicializa o primeiro elemento com foco
+        const firstFocus = document.querySelector('.tv-category-panel .tv-focusable') || document.querySelector('.tv-focusable');
+        if (firstFocus) {
+          this.setFocus(firstFocus);
+        }
+
+        // Relógio da TV em tempo real
+        this.startClock();
+
+        // Mapeamento de cliques do mouse para sincronizar o foco em testes de desktop
+        document.addEventListener('click', (e) => {
+          const el = e.target.closest('.tv-focusable');
+          if (el) this.setFocus(el);
+        });
+      }
+
+      registerPlatformKeys() {
+        // Samsung Tizen API: registra teclas especiais do controle para não serem interceptadas pelo sistema
+        if (window.tizen && window.tizen.tvinputdevice) {
+          try {
+            const keys = ['MediaPlay', 'MediaPause', 'MediaStop', 'MediaFastForward', 'MediaRewind', 'ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue'];
+            keys.forEach(k => tizen.tvinputdevice.registerKey(k));
+          } catch (err) {
+            console.warn('Tizen TV keys registration:', err);
+          }
+        }
+      }
+
+      setFocus(element) {
+        if (!element) return;
+        if (this.currentFocused) {
+          this.currentFocused.classList.remove('tv-focused');
+        }
+        this.currentFocused = element;
+        this.currentFocused.classList.add('tv-focused');
+        this.currentFocused.focus();
+
+        // Rolagem suave para manter sempre dentro da área segura da TV
+        this.currentFocused.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'nearest'
+        });
+      }
+
+      handleKeyDown(e) {
+        const key = e.keyCode;
+
+        // 1. Trata Botão Voltar (Tizen 10009, webOS 461, Esc 27, Backspace 8)
+        if (key === TV_KEYS.RETURN_BACK || key === TV_KEYS.TIZEN_RETURN || key === TV_KEYS.WEBOS_BACK || key === TV_KEYS.ESC) {
+          e.preventDefault();
+          this.handleBackAction();
+          return;
+        }
+
+        // 2. Tecla Enter / OK no controle
+        if (key === TV_KEYS.ENTER) {
+          e.preventDefault();
+          if (this.currentFocused) {
+            this.currentFocused.click();
+          }
+          return;
+        }
+
+        // 3. Teclas de Cores do Controle Remoto
+        if (key === TV_KEYS.BLUE) { // Tecla Azul = Alterna / Abre Guia
+          e.preventDefault();
+          alert('Atalho [AZUL]: Alternando modo Guia TV EPG');
+          return;
+        }
+
+        if (key === TV_KEYS.RED) { // Tecla Vermelha = Favoritar
+          e.preventDefault();
+          alert('Atalho [VERMELHO]: Canal adicionado aos Favoritos!');
+          return;
+        }
+
+        // 4. Navegação Espacial D-Pad (Up, Down, Left, Right)
+        if ([TV_KEYS.UP, TV_KEYS.DOWN, TV_KEYS.LEFT, TV_KEYS.RIGHT].includes(key)) {
+          e.preventDefault();
+          this.navigateDirection(key);
+        }
+      }
+
+      handleBackAction() {
+        const overlay = document.getElementById('tvPlayerOverlay');
+        if (overlay && overlay.style.display === 'block') {
+          closeFullscreenPlayer();
+          return;
+        }
+
+        // Se modal aberto, fecha o modal
+        const modalEl = document.querySelector('.modal.show');
+        if (modalEl) {
+          const modalInstance = bootstrap.Modal.getInstance(modalEl);
+          if (modalInstance) modalInstance.hide();
+          return;
+        }
+
+        // Se estiver nos canais, volta o foco para as categorias
+        if (this.currentFocused && this.currentFocused.closest('.tv-channel-panel')) {
+          const cat = document.querySelector('.tv-category-panel .category-row.active') || document.querySelector('.tv-category-panel .tv-focusable');
+          this.setFocus(cat);
+          return;
+        }
+
+        // Se estiver nas categorias, volta para o menu lateral
+        if (this.currentFocused && this.currentFocused.closest('.tv-category-panel')) {
+          const side = document.querySelector('.tv-sidebar .nav-item-btn.active') || document.querySelector('.tv-sidebar .tv-focusable');
+          this.setFocus(side);
+        }
+      }
+
+      navigateDirection(key) {
+        if (!this.currentFocused) {
+          const first = document.querySelector('.tv-focusable');
+          if (first) this.setFocus(first);
+          return;
+        }
+
+        const focusables = Array.from(document.querySelectorAll('.tv-focusable:not([disabled])')).filter(el => {
+          return el.offsetParent !== null && window.getComputedStyle(el).visibility !== 'hidden';
+        });
+
+        const currentRect = this.currentFocused.getBoundingClientRect();
+        let bestCandidate = null;
+        let shortestDist = Infinity;
+
+        focusables.forEach(candidate => {
+          if (candidate === this.currentFocused) return;
+          const rect = candidate.getBoundingClientRect();
+
+          let isMatch = false;
+          let dist = 0;
+
+          // Cálculo euclidiano ponderado na direção da tecla
+          switch (key) {
+            case TV_KEYS.UP:
+              if (rect.bottom <= currentRect.top + 5) {
+                isMatch = true;
+                dist = (currentRect.top - rect.bottom) * 1.5 + Math.abs(rect.left - currentRect.left);
+              }
+              break;
+            case TV_KEYS.DOWN:
+              if (rect.top >= currentRect.bottom - 5) {
+                isMatch = true;
+                dist = (rect.top - currentRect.bottom) * 1.5 + Math.abs(rect.left - currentRect.left);
+              }
+              break;
+            case TV_KEYS.LEFT:
+              if (rect.right <= currentRect.left + 5) {
+                isMatch = true;
+                dist = (currentRect.left - rect.right) * 1.5 + Math.abs(rect.top - currentRect.top);
+              }
+              break;
+            case TV_KEYS.RIGHT:
+              if (rect.left >= currentRect.right - 5) {
+                isMatch = true;
+                dist = (rect.left - currentRect.right) * 1.5 + Math.abs(rect.top - currentRect.top);
+              }
+              break;
+          }
+
+          if (isMatch && dist < shortestDist) {
+            shortestDist = dist;
+            bestCandidate = candidate;
+          }
+        });
+
+        if (bestCandidate) {
+          this.setFocus(bestCandidate);
+        }
+      }
+
+      startClock() {
+        const update = () => {
+          const now = new Date();
+          const clockEl = document.getElementById('clockTime');
+          const osdClock = document.getElementById('osdClock');
+          if (clockEl) clockEl.textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          if (osdClock) osdClock.textContent = clockEl.textContent;
+        };
+        update();
+        setInterval(update, 1000);
+      }
+    }
+
+    // Instancia o motor do controle
+    const tvEngine = new TVNavigationEngine();
+
+    // ==============================================================================
+    // AÇÕES DE INTERFACE (CANAIS, CATEGORIAS, PLAYER TELA CHEIA)
+    // ==============================================================================
+
+    // 1. Troca de Categoria
+    document.querySelectorAll('.category-row').forEach(catRow => {
+      catRow.addEventListener('click', () => {
+        document.querySelectorAll('.category-row').forEach(r => r.classList.remove('active'));
+        catRow.classList.add('active');
+
+        // Foca automaticamente no primeiro canal da lista carregada
+        const firstChannel = document.querySelector('.tv-channel-panel .channel-row');
+        if (firstChannel) tvEngine.setFocus(firstChannel);
+      });
+    });
+
+    // 2. Clique em Canal (Atualiza Mini Player e Inicia)
+    document.querySelectorAll('.channel-row').forEach(chRow => {
+      chRow.addEventListener('click', () => {
+        const title = chRow.getAttribute('data-title');
+        const prog = chRow.getAttribute('data-prog');
+        const q = chRow.getAttribute('data-q');
+
+        document.getElementById('previewTitle').textContent = title;
+        document.getElementById('epgCurrentTitle').textContent = prog;
+
+        // Opcional: abre player em tela cheia diretamente no clique duplo ou seleção
+        openFullscreenPlayer(title, prog, q);
+      });
+    });
+
+    // 3. Player em Tela Cheia
+    function openFullscreenPlayer(title, prog, q) {
+      const overlay = document.getElementById('tvPlayerOverlay');
+      document.getElementById('fullPlayerTitle').textContent = title;
+      document.getElementById('fullPlayerShow').textContent = prog;
+      document.getElementById('fullPlayerQ').textContent = q || 'SD';
+
+      overlay.style.display = 'block';
+      const backBtn = document.getElementById('btnPlayerBack');
+      tvEngine.setFocus(backBtn);
+    }
+
+    function closeFullscreenPlayer() {
+      const overlay = document.getElementById('tvPlayerOverlay');
+      overlay.style.display = 'none';
+      const chActive = document.querySelector('.channel-row.tv-focused') || document.querySelector('.channel-row');
+      tvEngine.setFocus(chActive);
+    }
+
+    document.getElementById('btnFullscreen').addEventListener('click', () => {
+      const activeTitle = document.getElementById('previewTitle').textContent;
+      const activeProg = document.getElementById('epgCurrentTitle').textContent;
+      openFullscreenPlayer(activeTitle, activeProg, 'SD');
+    });
+
+    document.getElementById('btnPlayerBack').addEventListener('click', closeFullscreenPlayer);
+
+    // 4. Seleção de Resolução Padrão (Modal de Ajustes)
+    document.querySelectorAll('#resOptionsGroup button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#resOptionsGroup button').forEach(b => {
+          b.classList.remove('active');
+          const icon = b.querySelector('i');
+          if (icon) { icon.className = 'bi bi-circle me-2'; }
+        });
+        btn.classList.add('active');
+        const icon = btn.querySelector('i');
+        if (icon) { icon.className = 'bi bi-check2-circle me-2 text-info'; }
+      });
+    });
+  </script>
+</body>
+</html>
