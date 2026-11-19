@@ -139,7 +139,7 @@ fun Guide(
     var showSettings by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
     // Categories on the left (as in the design): current list, all channels, favorites, own lists, provider groups
-    val cats = remember(list, all, Library.favs.size, ChannelLists.lists.size) { guideCategories(list, all) }
+    val cats = remember(list, all, Library.favs.size, ChannelLists.lists.size, PlaybackPrefs.liveResPref, General.bundleLive, PlaylistStore.catOrder) { guideCategories(list, all) }
     var catIdx by remember { mutableIntStateOf(0) }
     val shown = cats.getOrNull(catIdx)?.items ?: list
     val catReq = remember { FocusRequester() }
@@ -374,9 +374,17 @@ class GuideCat(val name: String, val items: List<Item>, val icon: AIcon?)
 fun guideCategories(list: List<Item>, all: List<Item>): List<GuideCat> {
     val out = ArrayList<GuideCat>()
     val allIds = all.size
-    if (list.size != allIds && list.isNotEmpty()) out.add(GuideCat("Aktuelle Liste", list, AIcon.Play))
-    out.add(GuideCat("Alle Sender", all, AIcon.Grid))
-    val byId = all.associateBy { it.id }
+    val order = PlaylistStore.catOrder
+    val bundleOn = General.bundleLive
+    val pref = PlaybackPrefs.liveResPref
+    fun bundleIf(l: List<Item>) = if (bundleOn) LiveBundleLogic.bundle(l, pref).list else l
+
+    val bundledAll = bundleIf(all)
+    val bundledList = bundleIf(list)
+
+    if (list.size != allIds && list.isNotEmpty()) out.add(GuideCat("Aktuelle Liste", bundledList, AIcon.Play))
+    out.add(GuideCat("Alle Sender", bundledAll, AIcon.Grid))
+    val byId = bundledAll.associateBy { it.id }
     val favs = Library.favs.mapNotNull { byId[it] }
     if (favs.isNotEmpty()) out.add(GuideCat("Favoriten", favs, AIcon.Star))
     for (l in ChannelLists.lists.toList()) {
@@ -384,8 +392,16 @@ fun guideCategories(list: List<Item>, all: List<Item>): List<GuideCat> {
         if (items.isNotEmpty()) out.add(GuideCat(l.name, items, AIcon.Lists))
     }
     val groups = LinkedHashMap<String, ArrayList<Item>>()
-    for (it in all) groups.getOrPut(it.group) { ArrayList() }.add(it)
-    val sortedKeys = CatOrder.sorted(CatOrder.LIVE, groups.keys.toList())
+    for (it in bundledAll) groups.getOrPut(it.group) { ArrayList() }.add(it)
+    val rawKeys = groups.keys.toList()
+    val orderedKeys = if (order.isEmpty()) rawKeys else rawKeys.sortedWith(compareBy(
+        { key ->
+            val k = key.trim()
+            order["live:$key"] ?: order["live:$k"] ?: order[key] ?: order[k] ?: Int.MAX_VALUE
+        },
+        { _ -> 0 }
+    ))
+    val sortedKeys = CatOrder.sorted(CatOrder.LIVE, orderedKeys)
     if (groups.size > 1) for (g in sortedKeys) groups[g]?.let { l -> out.add(GuideCat(g, l, null)) }
     return out
 }

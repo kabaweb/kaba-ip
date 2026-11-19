@@ -363,7 +363,20 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
     fun switchTo(it: Item, src: List<Item>) {
         if ((cur.live || cur.archive != null) && cur.itemId != it.id) lastChId = cur.itemId
         History.add(ctx, it.id)
-        cur = PlayReq(it.title, it.url, it.id, true, 0L)
+        var target = it
+        if (it.kind == Kind.LIVE && liveAll.isNotEmpty() && PlaybackPrefs.liveResPref != PlaybackPrefs.LIVE_RES_AUTO) {
+            val base = LiveBundleLogic.baseName(it.title)
+            val lang = it.lang
+            if (base.isNotEmpty()) {
+                val siblings = if (lang.isEmpty()) liveAll.filter { LiveBundleLogic.baseName(it.title) == base }
+                    else liveAll.filter { it.lang == lang && LiveBundleLogic.baseName(it.title) == base }
+                if (siblings.size > 1) {
+                    val sorted = siblings.sortedByDescending { LiveBundleLogic.rank(it.title, it.quality) }
+                    target = LiveBundleLogic.pickPreferred(sorted, PlaybackPrefs.liveResPref)
+                }
+            }
+        }
+        cur = PlayReq(target.title, target.url, target.id, true, 0L)
         zapSrc = src
         showChannels = false
         showCats = false

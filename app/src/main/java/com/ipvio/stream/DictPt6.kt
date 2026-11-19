@@ -286,4 +286,8 @@ Kleinere Zeilen zeigen mehr Sender auf einmal, das hilft auf großen Fernsehern.
 Setzt alle Einstellungen auf die Standardwerte zurück: Ansicht, Design, Menü, Player, Ton, Genres, Live TV und mehr. Playlists, Favoriten, Verlauf, Fortsetzen-Positionen und die PIN der Kindersicherung bleiben erhalten. Den Cache leerst du unter Speicher.¦Restablece todos los ajustes: vista, diseño, menú, reproductor, sonido, géneros, TV en directo y más. Se conservan las listas, los favoritos, el historial, las posiciones de reanudación y el PIN del control parental. Vacía la caché en Almacenamiento.
 Nur eine Seite zurücksetzen? Jede Einstellungsseite hat unten ihren eigenen Zurücksetzen-Knopf.¦¿Solo quieres restablecer una página? Cada página de ajustes tiene su propio botón de restablecer al final.
 Beim Markieren einer Auswahl zeigt die Vorschau sofort die Wirkung, OK übernimmt sie.¦Al marcar una opción la vista previa muestra el efecto al instante, OK la aplica.
+Standardauflösung Live-TV¦Resolução padrão da TV ao vivo
+Automatisch (Beste verfügbare)¦Automático (melhor disponível)
+Automatischer Fallback bei Live-TV¦Fallback automático na TV ao vivo
+Fällt ein Live-Sender aus oder ist offline, wechselt die App automatisch zur nächsten verfügbaren Auflösung desselben Senders.¦Se um canal ao vivo falhar ou estiver offline, o app muda automaticamente para a próxima resolução disponível do mesmo canal.
 """

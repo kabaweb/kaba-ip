@@ -287,7 +287,22 @@ private fun AppContent() {
     }
 
     val all = PlaylistStore.channels
-    val liveAll = remember(all) { all.filter { it.kind == Kind.LIVE } }
+    val liveAll = remember(all, PlaylistStore.catOrder) {
+        val live = all.filter { it.kind == Kind.LIVE }
+        val order = PlaylistStore.catOrder
+        if (order.isEmpty()) live
+        else {
+            val groups = live.groupBy { it.group }
+            val sorted = groups.entries.sortedWith(compareBy(
+                { entry ->
+                    val k = entry.key.trim()
+                    order["live:" + entry.key] ?: order["live:" + k] ?: order[entry.key] ?: order[k] ?: Int.MAX_VALUE
+                },
+                { _ -> 0 }
+            ))
+            sorted.flatMap { it.value }
+        }
+    }
     // Do not fall into the screensaver while downloading and parsing the playlist
     KeepScreenOn("playlist", PlaylistStore.loading)
     // Genre detection in the background; restarts cleanly with every new list (reload, language filter, parental control)
@@ -308,9 +323,28 @@ private fun AppContent() {
         val ep = sm?.groupValues?.get(2)?.toIntOrNull() ?: 0
         val tmdb = MetaRepo.cached(item)?.tmdbId?.takeIf { it > 0 } ?: 0
         var playUrl = url
+        var playItem = item
+        var playTitle = title
         var alts = emptyList<Variant>()
         var note: String? = null
-        if (item.kind == Kind.MOVIE && !item.id.startsWith("rec:")) {
+        if (item.kind == Kind.LIVE) {
+            val base = LiveBundleLogic.baseName(item.title)
+            if (base.isNotEmpty() && liveAll.isNotEmpty()) {
+                val siblings = if (item.lang.isEmpty()) liveAll.filter { LiveBundleLogic.baseName(it.title) == base }
+                    else liveAll.filter { it.lang == item.lang && LiveBundleLogic.baseName(it.title) == base }
+                if (siblings.size > 1) {
+                    val sorted = siblings.sortedByDescending { LiveBundleLogic.rank(it.title, it.quality) }
+                    alts = sorted.map { Variant(it.url, it.title, it.quality ?: LiveBundleLogic.rank(it.title, it.quality).toString(), it.lang) }
+                    val pref = PlaybackPrefs.liveResPref
+                    if (pref != PlaybackPrefs.LIVE_RES_AUTO) {
+                        val chosen = LiveBundleLogic.pickPreferred(sorted, pref)
+                        playUrl = chosen.url
+                        playItem = chosen
+                        playTitle = chosen.title
+                    }
+                }
+            }
+        } else if (item.kind == Kind.MOVIE && !item.id.startsWith("rec:")) {
             // Same movie in other qualities (own entries of the provider): choose to suit the device, the rest as fallbacks
             val list = Sources.alternatives(item, all)
             if (list.size > 1) {
@@ -337,7 +371,7 @@ private fun AppContent() {
                 }
             }
         }
-        playing = PlayReq(title, playUrl, item.id, item.kind == Kind.LIVE, startMs, tmdb, season, ep, alts, note)
+        playing = PlayReq(playTitle, playUrl, playItem.id, playItem.kind == Kind.LIVE, startMs, tmdb, season, ep, alts, note)
     }
 
     /** EPG (sidebar/tile): start the last watched channel (otherwise the first) and show the TV guide right away. */
