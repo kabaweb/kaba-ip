@@ -1235,23 +1235,38 @@
   <div class="modal fade" id="tvConnectModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content bg-dark border-secondary" style="border-radius: 18px;">
-        <div class="modal-header border-secondary">
-          <h5 class="modal-title text-white d-flex align-items-center gap-2">
+        <div class="modal-header border-secondary d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
             <i class="bi bi-broadcast-pin text-info fs-4"></i>
-            <span>Conectar Lista ou Parear com o Portal</span>
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <h5 class="modal-title text-white mb-0">Gerenciador de Listas e Login</h5>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span id="currentListBadge" class="badge bg-secondary">Sem Lista</span>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
         </div>
         <div class="modal-body p-4">
+
+          <!-- Painel de Lista Ativa -->
+          <div id="activeListBanner" class="d-none alert alert-dark border-secondary d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <div class="fw-bold text-white" id="activeListName"><i class="bi bi-tv me-2 text-info"></i>Lista Ativa</div>
+              <small class="text-secondary" id="activeListDetails">0 canais carregados</small>
+            </div>
+            <button class="btn btn-outline-danger btn-sm tv-focusable" id="btnClearPlaylist" tabindex="0">
+              <i class="bi bi-trash3 me-1"></i> Desconectar
+            </button>
+          </div>
+
           <ul class="nav nav-pills nav-fill mb-4 gap-2" id="connectTabs" role="tablist">
             <li class="nav-item">
-              <button class="nav-link active tv-focusable fw-bold" id="tab-portal-btn" data-bs-toggle="pill" data-bs-target="#tab-portal" type="button" tabindex="0">
-                <i class="bi bi-qr-code-scan me-1"></i> Parear via Portal (Recomendado)
+              <button class="nav-link active tv-focusable fw-bold" id="tab-xtream-btn" data-bs-toggle="pill" data-bs-target="#tab-xtream" type="button" tabindex="0">
+                <i class="bi bi-person-lock me-1"></i> Login Xtream Codes
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link tv-focusable fw-bold" id="tab-xtream-btn" data-bs-toggle="pill" data-bs-target="#tab-xtream" type="button" tabindex="0">
-                <i class="bi bi-server me-1"></i> Login Xtream Codes
+              <button class="nav-link tv-focusable fw-bold" id="tab-portal-btn" data-bs-toggle="pill" data-bs-target="#tab-portal" type="button" tabindex="0">
+                <i class="bi bi-qr-code-scan me-1"></i> Receber do Portal Korp TV
               </button>
             </li>
             <li class="nav-item">
@@ -1262,28 +1277,11 @@
           </ul>
 
           <div class="tab-content">
-            <!-- 1. Pareamento Rápido no Portal -->
-            <div class="tab-pane fade show active text-center py-2" id="tab-portal">
-              <p class="text-secondary mb-3">
-                Acesse o portal do Korp TV no celular ou computador e informe o código de 6 dígitos abaixo:
-              </p>
-              <div class="d-inline-block bg-black p-3 px-5 rounded-4 border border-info mb-3">
-                <div class="text-secondary small fw-bold">CÓDIGO DE ATIVAÇÃO DA SMART TV</div>
-                <div class="fs-1 fw-black text-info tracking-wider my-1" id="tvPairCodeDisplay" style="letter-spacing: 6px;">--- ---</div>
-                <div class="text-success small" id="pairPollingStatus"><i class="bi bi-circle-fill fs-6 me-1 text-success"></i>Aguardando ativação no portal...</div>
-              </div>
-              <div class="d-flex justify-content-center gap-3">
-                <button class="btn btn-outline-info tv-focusable" id="btnRefreshPairCode" tabindex="0">
-                  <i class="bi bi-arrow-clockwise me-1"></i> Gerar Novo Código
-                </button>
-              </div>
-            </div>
-
-            <!-- 2. Login Xtream Codes Direto -->
-            <div class="tab-pane fade" id="tab-xtream">
+            <!-- 1. Login Xtream Codes Direto -->
+            <div class="tab-pane fade show active" id="tab-xtream">
               <div class="mb-3">
                 <label class="form-label text-light fw-bold small">Servidor / URL Xtream:</label>
-                <input type="text" class="form-control bg-black text-white border-secondary tv-focusable" id="xtreamHost" placeholder="http://meuprovedor.com:8080" tabindex="0">
+                <input type="text" class="form-control bg-black text-white border-secondary tv-focusable" id="xtreamHost" placeholder="Ex: http://servidor.com:8080" tabindex="0">
               </div>
               <div class="row g-3 mb-3">
                 <div class="col-6">
@@ -1296,8 +1294,38 @@
                 </div>
               </div>
               <button class="btn btn-info w-100 tv-focusable fw-bold py-2" id="btnSyncXtream" tabindex="0">
-                <i class="bi bi-cloud-arrow-down me-1"></i> Conectar e Sincronizar Canais
+                <i class="bi bi-box-arrow-in-right me-1"></i> Entrar e Carregar Canais
               </button>
+            </div>
+
+            <!-- 2. Pareamento com o Portal Korp TV -->
+            <div class="tab-pane fade text-center py-2" id="tab-portal">
+              <p class="text-secondary mb-2 small">
+                Informe o código de 6 dígitos no seu painel do Portal para vincular uma lista automaticamente:
+              </p>
+              <div class="d-inline-block bg-black p-3 px-5 rounded-4 border border-info mb-3">
+                <div class="text-secondary small fw-bold">CÓDIGO DESTE DISPOSITIVO</div>
+                <div class="fs-1 fw-black text-info tracking-wider my-1" id="tvPairCodeDisplay" style="letter-spacing: 6px;">--- ---</div>
+                <div class="text-secondary small" id="pairPollingStatus"><i class="bi bi-circle-fill fs-6 me-1 text-info"></i>Sincronizado com o portal</div>
+              </div>
+              
+              <div class="row g-2 justify-content-center text-start mb-3">
+                <div class="col-md-8">
+                  <label class="form-label text-light fw-bold small">Endereço do Portal Korp TV:</label>
+                  <div class="input-group">
+                    <input type="text" class="form-control bg-black text-white border-secondary tv-focusable" id="portalServerUrl" value="http://localhost:3000" tabindex="0">
+                    <button class="btn btn-info tv-focusable" id="btnCheckPortalNow" tabindex="0">
+                      <i class="bi bi-cloud-download me-1"></i> Buscar Lista no Portal
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-center gap-3">
+                <button class="btn btn-outline-secondary btn-sm tv-focusable" id="btnRefreshPairCode" tabindex="0">
+                  <i class="bi bi-arrow-clockwise me-1"></i> Gerar Novo Código
+                </button>
+              </div>
             </div>
 
             <!-- 3. Lista M3U -->
@@ -2081,10 +2109,20 @@
     let currentPairingCode = null;
     let pairPollingInterval = null;
 
-    // 1. Gera código de pareamento para exibição na TV
+    // Obtém ou gera Device ID único persistente para esta TV/Navegador
+    function getOrCreateDeviceId() {
+      let devId = localStorage.getItem('korp_tv_device_id');
+      if (!devId) {
+        devId = 'webtv-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+        localStorage.setItem('korp_tv_device_id', devId);
+      }
+      return devId;
+    }
+
+    // 1. Gera código de pareamento para exibição na TV e sincroniza status inicial
     async function initPairingCode() {
       const codeDisplay = document.getElementById('tvPairCodeDisplay');
-      if (!codeDisplay) return;
+      const devId = getOrCreateDeviceId();
 
       try {
         const deviceType = smartPlayer.isTizen ? 'samsung_tizen' : (smartPlayer.isWebOS ? 'lg_webos' : 'pc_browser');
@@ -2096,12 +2134,46 @@
         const data = await res.json();
         if (data.success && data.pair_code) {
           currentPairingCode = data.pair_code;
-          codeDisplay.textContent = `${data.pair_code.slice(0, 3)} ${data.pair_code.slice(3)}`;
+          if (codeDisplay) {
+            codeDisplay.textContent = `${data.pair_code.slice(0, 3)} ${data.pair_code.slice(3)}`;
+          }
           startPairPolling();
         }
       } catch (err) {
-        console.warn('[Pair] Falha ao obter código de pareamento da API local:', err);
+        console.warn('[Pair] Falha ao obter código de pareamento:', err);
       }
+
+      await checkDeviceStatus();
+    }
+
+    // Verifica status da lista atual conectada
+    async function checkDeviceStatus() {
+      try {
+        const res = await fetch('/api/device/status');
+        const st = await res.json();
+        const badge = document.getElementById('currentListBadge');
+        const banner = document.getElementById('activeListBanner');
+        const nameEl = document.getElementById('activeListName');
+        const detailsEl = document.getElementById('activeListDetails');
+
+        if (st.success && st.channels > 0) {
+          if (badge) {
+            badge.className = 'badge bg-success';
+            badge.textContent = `Online: ${st.channels} Canais`;
+          }
+          if (banner) {
+            banner.classList.remove('d-none');
+            if (nameEl) nameEl.innerHTML = `<i class="bi bi-check-circle-fill text-success me-2"></i>${st.playlist ? st.playlist.name : 'Lista Conectada'}`;
+            if (detailsEl) detailsEl.textContent = `${st.channels} canais ao vivo e ${st.movies} filmes carregados`;
+          }
+        } else {
+          if (badge) {
+            badge.className = 'badge bg-secondary';
+            badge.textContent = 'Sem Lista';
+          }
+          if (banner) banner.classList.add('d-none');
+        }
+      } catch (_) {}
     }
 
     // Polling aguardando ativação no portal
@@ -2114,19 +2186,66 @@
           if (status.success && status.channels > 0) {
             const statusEl = document.getElementById('pairPollingStatus');
             if (statusEl) {
-              statusEl.innerHTML = '<i class="bi bi-check-circle-fill text-info me-1"></i>Conectado com sucesso! Carregando catálogo...';
+              statusEl.innerHTML = '<i class="bi bi-check-circle-fill text-info me-1"></i>Conectado com sucesso!';
             }
             clearInterval(pairPollingInterval);
+            await checkDeviceStatus();
             await loadCatalogFromApi();
-            tvEngine.showTvToast('Lista de canais conectada e pronta!');
+            tvEngine.showTvToast('Lista conectada com sucesso!');
           }
         } catch (_) {}
-      }, 5000);
+      }, 6000);
     }
 
     const btnRefreshPair = document.getElementById('btnRefreshPairCode');
     if (btnRefreshPair) {
       btnRefreshPair.addEventListener('click', initPairingCode);
+    }
+
+    // Consulta manual ao Portal Korp TV para buscar lista atribuída
+    const btnCheckPortalNow = document.getElementById('btnCheckPortalNow');
+    if (btnCheckPortalNow) {
+      btnCheckPortalNow.addEventListener('click', async () => {
+        const portalUrl = (document.getElementById('portalServerUrl').value || 'http://localhost:3000').trim();
+        const devId = getOrCreateDeviceId();
+        const statusEl = document.getElementById('pairPollingStatus');
+        const feedback = document.getElementById('syncFeedbackMsg');
+
+        showFeedback('Consultando portal Korp TV... Aguarde.', 'info');
+        btnCheckPortalNow.disabled = true;
+
+        try {
+          const res = await fetch('/api/portal/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              portal_url: portalUrl,
+              device_id: devId,
+              pairing_code: currentPairingCode || undefined,
+              model: smartPlayer.isTizen ? 'Samsung Smart TV' : (smartPlayer.isWebOS ? 'LG webOS TV' : 'Web TV Player')
+            })
+          });
+
+          const data = await res.json();
+          if (data.success) {
+            if (data.hasPlaylist) {
+              showFeedback(`Lista sincronizada do portal! ${data.channelsSynced || 0} canais carregados.`, 'success');
+              if (statusEl) statusEl.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i>Lista recebida do portal!';
+              await checkDeviceStatus();
+              await loadCatalogFromApi();
+              tvEngine.showTvToast('Lista do portal carregada!');
+            } else {
+              showFeedback(`Dispositivo registrado no portal! Código: ${data.pairingCode || '---'}. Vincule uma lista no painel do portal e clique em Buscar Lista novamente.`, 'warning');
+            }
+          } else {
+            showFeedback(data.error || 'Erro ao conectar ao portal Korp TV.', 'danger');
+          }
+        } catch (e) {
+          showFeedback(`Não foi possível conectar ao portal (${portalUrl}): ${e.message}`, 'danger');
+        } finally {
+          btnCheckPortalNow.disabled = false;
+        }
+      });
     }
 
     // 2. Sincronização Direta de Xtream Codes
@@ -2136,14 +2255,13 @@
         const host = document.getElementById('xtreamHost').value.trim();
         const username = document.getElementById('xtreamUser').value.trim();
         const password = document.getElementById('xtreamPass').value.trim();
-        const feedback = document.getElementById('syncFeedbackMsg');
 
         if (!host || !username || !password) {
           showFeedback('Preencha servidor, usuário e senha do Xtream Codes.', 'danger');
           return;
         }
 
-        showFeedback('Conectando e sincronizando lista Xtream... Aguarde.', 'info');
+        showFeedback('Autenticando e sincronizando lista Xtream... Aguarde.', 'info');
         btnSyncXtream.disabled = true;
 
         try {
@@ -2155,8 +2273,9 @@
           const data = await res.json();
           if (data.success) {
             showFeedback(`Lista sincronizada com sucesso! ${data.channelsCount || 0} canais encontrados.`, 'success');
+            await checkDeviceStatus();
             await loadCatalogFromApi();
-            tvEngine.showTvToast('Catálogo sincronizado!');
+            tvEngine.showTvToast('Login Xtream realizado com sucesso!');
           } else {
             showFeedback(data.error || 'Erro ao sincronizar com servidor Xtream.', 'danger');
           }
@@ -2190,6 +2309,7 @@
           const data = await res.json();
           if (data.success) {
             showFeedback(`Lista M3U sincronizada com sucesso! ${data.channelsCount || 0} canais importados.`, 'success');
+            await checkDeviceStatus();
             await loadCatalogFromApi();
             tvEngine.showTvToast('Lista M3U importada!');
           } else {
@@ -2203,6 +2323,26 @@
       });
     }
 
+    // 4. Limpar Playlist / Desconectar
+    const btnClearPlaylist = document.getElementById('btnClearPlaylist');
+    if (btnClearPlaylist) {
+      btnClearPlaylist.addEventListener('click', async () => {
+        if (!confirm('Deseja realmente desconectar e remover a lista salva?')) return;
+        try {
+          const res = await fetch('/api/playlist/clear', { method: 'POST' });
+          const data = await res.json();
+          if (data.success) {
+            showFeedback('Lista desconectada e limpa com sucesso.', 'info');
+            await checkDeviceStatus();
+            await loadCatalogFromApi();
+            tvEngine.showTvToast('Lista removida.');
+          }
+        } catch (e) {
+          showFeedback(`Erro ao limpar lista: ${e.message}`, 'danger');
+        }
+      });
+    }
+
     function showFeedback(msg, type) {
       const el = document.getElementById('syncFeedbackMsg');
       if (!el) return;
@@ -2211,14 +2351,20 @@
       el.classList.remove('d-none');
     }
 
-    // 4. Carrega Categorias e Canais dinamicamente do banco de dados do microserviço
+    // 5. Carrega Categorias e Canais dinamicamente do banco de dados do microserviço
     async function loadCatalogFromApi() {
       try {
         const catRes = await fetch('/api/categories?type=live');
         const catData = await catRes.json();
-        if (!catData.success || !catData.categories.length) return;
-
         const catPanel = document.getElementById('categoryPanel');
+        const channelPanel = document.querySelector('.tv-channel-panel');
+
+        if (!catData.success || !catData.categories.length) {
+          if (catPanel) catPanel.innerHTML = '<div class="text-secondary small p-3">Nenhuma categoria encontrada. Conecte sua lista pelo menu Conectar.</div>';
+          if (channelPanel) channelPanel.innerHTML = '<div class="text-secondary small p-3">Sem canais carregados.</div>';
+          return;
+        }
+
         if (catPanel) {
           catPanel.innerHTML = '<div class="text-uppercase small text-secondary fw-bold px-2 mb-2">Categorias Xtream</div>';
           

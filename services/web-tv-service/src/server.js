@@ -272,6 +272,7 @@ const server = createServer(async (req, res) => {
         body: JSON.stringify({
           deviceId,
           mac: body.mac || '',
+          pairingCode: body.pairing_code || undefined,
           model,
           appVersion: '1.6.4-web',
           versionCode: 31
@@ -286,6 +287,7 @@ const server = createServer(async (req, res) => {
       const p = portalData.playlist;
 
       // Se o portal já tem lista atribuída a este dispositivo, sincroniza automaticamente!
+      let syncedCount = 0;
       if (p && p.type === 'xtream' && p.host && p.user && p.pass) {
         console.log(`[Portal] Lista Xtream recebida do portal (${p.host}). Sincronizando...`);
         const pId = 'playlist-portal-' + deviceId;
@@ -294,23 +296,36 @@ const server = createServer(async (req, res) => {
           VALUES (?, 'client-demo-1', 'Lista do Portal', 'xtream', ?, ?, ?, 'syncing', ?)
         `).run(pId, p.host, p.user, p.pass, Date.now());
 
-        await PlaylistSyncService.syncXtream(pId, p.host, p.user, p.pass);
+        const syncRes = await PlaylistSyncService.syncXtream(pId, p.host, p.user, p.pass);
+        syncedCount = syncRes.channelsCount || 0;
       } else if (p && p.type === 'm3u' && p.url) {
         const pId = 'playlist-portal-' + deviceId;
-        await PlaylistSyncService.syncM3U(pId, p.url);
+        const syncRes = await PlaylistSyncService.syncM3U(pId, p.url);
+        syncedCount = syncRes.channelsCount || 0;
       }
 
       sendJson(res, 200, {
         success: true,
         portalConnected: true,
         deviceStatus: portalData.status,
+        hasPlaylist: Boolean(p && ((p.type === 'xtream' && p.user) || (p.type === 'm3u' && p.url))),
         playlist: portalData.playlist,
+        channelsSynced: syncedCount,
         pairingCode: portalData.pairingCode || derivePairingCode('', deviceId)
       });
       return;
     }
 
-    // 10. API: Status Geral do Dispositivo e Playlist
+    // 10. API: Limpar Playlist / Desconectar
+    if (pathname === '/api/playlist/clear' && method === 'POST') {
+      db.prepare("DELETE FROM stream_items").run();
+      db.prepare("DELETE FROM categories").run();
+      db.prepare("DELETE FROM client_playlists").run();
+      sendJson(res, 200, { success: true, message: 'Dados de canais e lista limpos com sucesso' });
+      return;
+    }
+
+    // 11. API: Status Geral do Dispositivo e Playlist
     if (pathname === '/api/device/status' && method === 'GET') {
       const totalChannels = db.prepare("SELECT count(*) as c FROM stream_items WHERE stream_type = 'live'").get().c;
       const totalMovies = db.prepare("SELECT count(*) as c FROM stream_items WHERE stream_type = 'movie'").get().c;
