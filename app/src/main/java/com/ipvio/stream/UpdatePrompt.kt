@@ -51,7 +51,7 @@ fun UpdatePromptHost() {
                     .clip(RoundedCornerShape(20.dp))
                     .background(Tok.GlassStrong)
                     .padding(28.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Topo fixo: título e versão
                 Text(Lang.tr("Update verfügbar"), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
@@ -60,36 +60,10 @@ fun UpdatePromptHost() {
                     color = Tok.TextMid, fontSize = 17.sp, raw = true
                 )
 
-                // Meio rolável: changelog e avisos que podem ser longos
-                val scrollState = rememberScrollState()
-                Column(
-                    Modifier
-                        .weight(1f, fill = false)
-                        .verticalScroll(scrollState)
-                        .padding(vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    if (upd.notes.isNotBlank()) {
-                        Text(upd.notes, color = Muted, fontSize = 15.sp, lineHeight = 21.sp, raw = true)
-                    }
-                    val required = AppUpdate.isRequired(ctx, upd)
-                    if (required) {
-                        Text(Lang.tr("Dieses Update ist erforderlich."), color = Accent2, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                    Text(
-                        Lang.tr("Deine Playlists und Einstellungen bleiben erhalten. Android fragt vor der Installation einmal nach."),
-                        color = Muted, fontSize = 14.sp, lineHeight = 20.sp
-                    )
-                }
-
-                if (status.isNotBlank()) {
-                    Text(status, color = Accent2, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                }
-
-                // Rodapé sempre visível: botões de ação
+                // BOTÕES NA PARTE DE CIMA: Sempre visíveis logo no topo
                 val required = AppUpdate.isRequired(ctx, upd)
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     PillButton(if (busy) Lang.tr("Bitte warten …") else Lang.tr("Jetzt aktualisieren"), light = true, modifier = Modifier.focusRequester(focus)) {
@@ -103,6 +77,32 @@ fun UpdatePromptHost() {
                     if (!required) {
                         PillButton(Lang.tr("Später")) { if (!busy) AppUpdate.promptDismissed = true }
                     }
+                }
+
+                if (status.isNotBlank()) {
+                    Text(status, color = Accent2, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                }
+
+                if (required) {
+                    Text(Lang.tr("Dieses Update ist erforderlich."), color = Accent2, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
+
+                // Abaixo dos botões: changelog e observações roláveis
+                val scrollState = rememberScrollState()
+                Column(
+                    Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(scrollState)
+                        .padding(top = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (upd.notes.isNotBlank()) {
+                        Text(upd.notes, color = Muted, fontSize = 15.sp, lineHeight = 21.sp, raw = true)
+                    }
+                    Text(
+                        Lang.tr("Deine Playlists und Einstellungen bleiben erhalten. Android fragt vor der Installation einmal nach."),
+                        color = Muted, fontSize = 14.sp, lineHeight = 20.sp
+                    )
                 }
             }
         }
