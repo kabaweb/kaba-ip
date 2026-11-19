@@ -94,7 +94,10 @@ private fun providerGroups(list: List<Item>, order: Map<String, Int> = emptyMap(
     val groups = list.groupBy { it.group }
     if (order.isEmpty()) return groups
     val sorted = groups.entries.sortedWith(compareBy(
-        { entry -> order[prefix + entry.key] ?: order[entry.key] ?: Int.MAX_VALUE },
+        { entry ->
+            val k = entry.key.trim()
+            order[prefix + entry.key] ?: order[prefix + k] ?: order[entry.key] ?: order[k] ?: Int.MAX_VALUE
+        },
         { _ -> 0 }
     ))
     return sorted.associate { it.key to it.value }
@@ -124,6 +127,7 @@ private fun buildHome(all: List<Item>, ipvioWanted: Boolean, trend: Set<String>,
     val movieP = providerGroups(movies, order, "movie:")
     val seriesP = providerGroups(series, order, "series:")
     val liveP = providerGroups(live, order, "live:")
+    val liveOrdered = if (order.isNotEmpty() && liveP.isNotEmpty()) liveP.values.flatten() else live
     // Home rows never show adult titles if wanted; categories, "All movies" and Live TV keep them (whoever looks finds them there)
     val rm = if (noAdult) movies.filterNot { ParentalLogic.isAdult(it.group, it.title) } else movies
     val rs = if (noAdult) series.filterNot { ParentalLogic.isAdult(it.group, it.title) } else series
@@ -131,7 +135,7 @@ private fun buildHome(all: List<Item>, ipvioWanted: Boolean, trend: Set<String>,
     val rowMP = if (rm === movies) movieP else providerGroups(rm, order, "movie:")
     val rowSP = if (rs === series) seriesP else providerGroups(rs, order, "series:")
     return HomeData(
-        live, movies, series, liveP, movieP, seriesP,
+        liveOrdered, movies, series, liveP, movieP, seriesP,
         if (ipvio) ipvioGroups(rm) else rowMP, if (ipvio) ipvioGroups(rs) else rowSP,
         topRated(rm), topRated(rs), all.associateBy { it.id }, trendItems, genresOk, rm, rs
     )

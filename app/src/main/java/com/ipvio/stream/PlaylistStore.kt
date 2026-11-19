@@ -262,8 +262,8 @@ object PlaylistStore {
         cleanupStale(c)
         val p = prefs(c)
         val lastCode = p.getInt("cache_clean_ver", 0)
-        if (lastCode < 27) {
-            p.edit().putInt("cache_clean_ver", 27).apply()
+        if (lastCode < 29) {
+            p.edit().putInt("cache_clean_ver", 29).apply()
             runCatching {
                 c.filesDir.listFiles { _, name -> name.startsWith("pl_") }?.forEach { it.delete() }
             }
@@ -1149,9 +1149,9 @@ object PlaylistStore {
                 val cached = readCache(c, u, hidden)
                 if (cached != null && cached.counts.isNotEmpty()) {
                     var ord = cached.order
-                    if (ord.isEmpty() && XtreamLogic.fromUrl(u) != null) {
+                    if (XtreamLogic.fromUrl(u) != null) {
                         val fetched = fetchOrder(u)
-                        if (fetched.isNotEmpty()) {
+                        if (fetched.isNotEmpty() && fetched != ord) {
                             ord = fetched
                             writeCache(c, u, cached.items, cached.epg, ord, cached.counts, cached.bytes, hidden)
                         }
@@ -1257,7 +1257,7 @@ object PlaylistStore {
                 runCatching { DeadLinks.clear(c) }
                 val list = parsed.items
                 if (sig(list) != before || !usedCache || b.hidden != shownHidden) show(c, u, list, urls, order, parsed.counts, parsed.bytes, b.hidden)
-                else { primaryEpg = urls; primaryOrder = order; langCounts = parsed.counts; langBytes = parsed.bytes; restartCatchup(c) }
+                else { primaryEpg = urls; primaryOrder = order; langCounts = parsed.counts; langBytes = parsed.bytes; restartCatchup(c); rebuild(c) }
                 // Renew further shown playlists from the server as well
                 loadExtras(c, network = true)
                 if (save) finishSave(c, u)

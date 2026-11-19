@@ -45,7 +45,7 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
     }
 
     private fun categories(a: XtreamLogic.Acct, action: String): Map<String, String> {
-        val out = HashMap<String, String>()
+        val out = LinkedHashMap<String, String>()
         val arr = runCatching { JSONArray(text(XtreamLogic.api(a, action))) }.getOrNull() ?: return out
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
@@ -202,21 +202,30 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
         val out = LinkedHashMap<String, Int>()
         var idx = 0
         for (name in live.values) {
-            out["live:$name"] = idx
-            if (!out.containsKey(name)) out[name] = idx
-            idx++
+            val t = name.trim()
+            if (t.isNotEmpty()) {
+                out["live:$t"] = idx
+                if (!out.containsKey(t)) out[t] = idx
+                idx++
+            }
         }
         idx = 0
         for (name in vod.values) {
-            out["movie:$name"] = idx
-            if (!out.containsKey(name)) out[name] = idx
-            idx++
+            val t = name.trim()
+            if (t.isNotEmpty()) {
+                out["movie:$t"] = idx
+                if (!out.containsKey(t)) out[t] = idx
+                idx++
+            }
         }
         idx = 0
         for (name in ser.values) {
-            out["series:$name"] = idx
-            if (!out.containsKey(name)) out[name] = idx
-            idx++
+            val t = name.trim()
+            if (t.isNotEmpty()) {
+                out["series:$t"] = idx
+                if (!out.containsKey(t)) out[t] = idx
+                idx++
+            }
         }
         return out
     }
