@@ -54,24 +54,41 @@ object LiveBundleLogic {
     }
 
     class Result(
-        /** One item per channel: the best variant, in order of first appearance. */
+        /** One item per channel: the preferred variant, in order of first appearance. */
         val list: List<Item>,
-        /** Best variant id → all variants (best first), only for channels with more than one variant. */
+        /** Variant id → all variants (best first), only for channels with more than one variant. */
         val variants: Map<String, List<Item>>
     )
 
+    fun pickPreferred(sorted: List<Item>, pref: Int): Item {
+        if (pref == PlaybackPrefs.LIVE_RES_AUTO || sorted.isEmpty()) return sorted.first()
+        val target = when (pref) {
+            PlaybackPrefs.LIVE_RES_4K -> 7
+            PlaybackPrefs.LIVE_RES_FHD -> 5
+            PlaybackPrefs.LIVE_RES_HD -> 4
+            PlaybackPrefs.LIVE_RES_SD -> 2
+            else -> 8
+        }
+        val comp = if (pref == PlaybackPrefs.LIVE_RES_SD) {
+            compareBy<Item> { kotlin.math.abs(rank(it.title, it.quality) - target) }.thenBy { rank(it.title, it.quality) }
+        } else {
+            compareBy<Item> { kotlin.math.abs(rank(it.title, it.quality) - target) }.thenByDescending { rank(it.title, it.quality) }
+        }
+        return sorted.minWithOrNull(comp) ?: sorted.first()
+    }
+
     // Bundling a big list (all channels) takes noticeable time: results of the last lists are kept (same list object = same result)
-    private val cache = ArrayList<Pair<List<Item>, Result>>()
+    private val cache = ArrayList<Triple<List<Item>, Int, Result>>()
 
     @Synchronized
-    fun bundle(items: List<Item>): Result {
-        cache.firstOrNull { it.first === items }?.let { return it.second }
-        val r = bundleNow(items)
-        if (items.size > 300) { cache.add(0, items to r); while (cache.size > 6) cache.removeAt(cache.size - 1) }
+    fun bundle(items: List<Item>, pref: Int = PlaybackPrefs.liveResPref): Result {
+        cache.firstOrNull { it.first === items && it.second == pref }?.let { return it.third }
+        val r = bundleNow(items, pref)
+        if (items.size > 300) { cache.add(0, Triple(items, pref, r)); while (cache.size > 6) cache.removeAt(cache.size - 1) }
         return r
     }
 
-    private fun bundleNow(items: List<Item>): Result {
+    private fun bundleNow(items: List<Item>, pref: Int = PlaybackPrefs.liveResPref): Result {
         val groups = LinkedHashMap<String, ArrayList<Item>>()
         for (i in items) {
             val base = baseName(i.title)
@@ -84,8 +101,9 @@ object LiveBundleLogic {
         for (g in groups.values) {
             if (g.size == 1) { out.add(g[0]); continue }
             val sorted = g.sortedByDescending { rank(it.title, it.quality) }
-            out.add(sorted[0])
-            variants[sorted[0].id] = sorted
+            val chosen = pickPreferred(sorted, pref)
+            out.add(chosen)
+            for (v in sorted) variants[v.id] = sorted
         }
         return Result(out, variants)
     }

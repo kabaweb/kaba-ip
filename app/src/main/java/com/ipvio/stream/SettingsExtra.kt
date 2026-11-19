@@ -56,12 +56,21 @@ fun SourceSettingsSection(ctx: Context) {
     DeviceCaps.init(ctx)
     SectionTitle("Quelle & Qualität")
     val opts = listOf("Automatisch (passend zum Gerät)", "Immer die höchste", "Höchstens Full HD", "Höchstens HD (spart Daten)")
-    SelectRow("Bei mehreren Quellen", opts[PlaybackPrefs.quality], opts, PlaybackPrefs.quality) { PlaybackPrefs.setQuality(ctx, it) }
+    SelectRow("Bei mehreren Quellen (Filme/Serien)", opts[PlaybackPrefs.quality], opts, PlaybackPrefs.quality) { PlaybackPrefs.setQuality(ctx, it) }
     ToggleRow(
-        "Bei Störung automatisch wechseln",
+        "Bei VOD-Störung automatisch wechseln",
         "Ruckelt ein Titel mehrmals oder lässt er sich nicht abspielen, nimmt die App eine andere (kleinere) Quelle desselben Titels – an derselben Stelle.",
         PlaybackPrefs.autoFallback
     ) { PlaybackPrefs.setFallback(ctx, it) }
+
+    val liveResOpts = listOf("Automatisch (Beste verfügbare)", "4K / UHD", "Full HD (1080p)", "HD (720p)", "SD")
+    SelectRow("Standardauflösung Live-TV", liveResOpts[PlaybackPrefs.liveResPref], liveResOpts, PlaybackPrefs.liveResPref) { PlaybackPrefs.setLiveResPref(ctx, it) }
+    ToggleRow(
+        "Automatischer Fallback bei Live-TV",
+        "Fällt ein Live-Sender aus oder ist offline, wechselt die App automatisch zur nächsten verfügbaren Auflösung desselben Senders.",
+        PlaybackPrefs.liveAutoFallback
+    ) { PlaybackPrefs.setLiveAutoFallback(ctx, it) }
+
     Text("Dieses Gerät: " + DeviceCaps.summary(), color = Muted, fontSize = 15.sp)
     if (PlaybackPrefs.learnedCap in 1..3) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Gelernt: 4K ruckelte hier mehrmals – Automatik nimmt höchstens Full HD.", color = DS.Gold, fontSize = 15.sp)

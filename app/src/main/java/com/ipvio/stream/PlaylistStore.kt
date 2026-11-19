@@ -490,7 +490,14 @@ object PlaylistStore {
         if (lists.isEmpty()) setItems(emptyList())
     }
 
-    private fun fetchOrder(url: String): Map<String, Int> = emptyMap()
+    private fun fetchOrder(url: String): Map<String, Int> {
+        val acct = XtreamLogic.fromUrl(url) ?: return emptyMap()
+        return try {
+            xtreamApi().categoryOrder(acct)
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
 
     // ------------------------------------------------------------------ files per playlist
 
@@ -1141,7 +1148,15 @@ object PlaylistStore {
             if (!legacyTooBig && (head.hidden == null || head.hidden == hidden)) {
                 val cached = readCache(c, u, hidden)
                 if (cached != null && cached.counts.isNotEmpty()) {
-                    show(c, u, cached.items, cached.epg, cached.order, cached.counts, cached.bytes, hidden)
+                    var ord = cached.order
+                    if (ord.isEmpty() && XtreamLogic.fromUrl(u) != null) {
+                        val fetched = fetchOrder(u)
+                        if (fetched.isNotEmpty()) {
+                            ord = fetched
+                            writeCache(c, u, cached.items, cached.epg, ord, cached.counts, cached.bytes, hidden)
+                        }
+                    }
+                    show(c, u, cached.items, cached.epg, ord, cached.counts, cached.bytes, hidden)
                     return Local.OK
                 }
             }

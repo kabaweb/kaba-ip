@@ -424,7 +424,23 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
 
     /** Further sources of the running title: for a movie from the playlist, for series the sources of the episode. */
     fun currentAlts(): List<Variant> = when {
-        cur.live -> liveAlts
+        cur.live -> {
+            if (liveAlts.isNotEmpty()) liveAlts
+            else {
+                val me = liveAll.firstOrNull { it.id == cur.itemId }
+                if (me == null) emptyList()
+                else {
+                    val base = LiveBundleLogic.baseName(me.title)
+                    if (base.isEmpty()) emptyList()
+                    else liveAll.filter { it.lang == me.lang && LiveBundleLogic.baseName(it.title) == base }
+                        .sortedByDescending { LiveBundleLogic.rank(it.title, it.quality) }
+                        .map { v ->
+                            val q = when (LiveBundleLogic.rank(v.title, v.quality)) { 8 -> "8K"; 7 -> "4K"; 5 -> "Full HD"; 4 -> "HD"; 2 -> "SD"; else -> "Standard" }
+                            Variant(v.url, q + "  ·  " + v.title, v.quality ?: q, v.lang)
+                        }
+                }
+            }
+        }
         cur.alts.isNotEmpty() -> cur.alts
         cur.season > 0 || cur.episode > 0 -> epList.firstOrNull { it.season == cur.season && it.num == cur.episode }?.variants.orEmpty()
         else -> emptyList()
@@ -432,16 +448,25 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
 
     /** Switch to another (preferably smaller) source – after an error or on stutter. true = switched. */
     fun switchSource(reason: String, sameFirst: Boolean = false): Boolean {
-        if (cur.live || !PlaybackPrefs.autoFallback) return false
+        if (cur.live) {
+            if (!PlaybackPrefs.liveAutoFallback) return false
+        } else {
+            if (!PlaybackPrefs.autoFallback) return false
+        }
         val alts = currentAlts()
         if (alts.size < 2) return false
         triedUrls.add(cur.url)
         val curI = alts.indexOfFirst { it.url == cur.url }.coerceAtLeast(0)
         val tried = alts.indices.filter { alts[it].url in triedUrls }.toSet()
-        val ni = QualityLogic.fallback(alts.map { it.quality }, curI, tried, sameFirst) ?: return false
+        var ni = QualityLogic.fallback(alts.map { it.quality }, curI, tried, sameFirst)
+        if (ni == null && cur.live) {
+            val open = alts.indices.filter { it !in tried && it != curI }
+            ni = open.minByOrNull { kotlin.math.abs(QualityLogic.rank(alts[it].quality) - QualityLogic.rank(alts[curI].quality)) }
+        }
+        if (ni == null) return false
         // 4K had to give way because of stutter/decoder: counts for the learned device limit (a dead link does not)
         if (!sameFirst && QualityLogic.rank(alts[curI].quality) >= 4 && QualityLogic.rank(alts[ni].quality) < 4) PlaybackPrefs.note4kTrouble(ctx)
-        val at = player.currentPosition.coerceAtLeast(0L)
+        val at = if (cur.live) 0L else player.currentPosition.coerceAtLeast(0L)
         val t = alts[ni]
         stalls = emptyList()
         cur = cur.copy(url = t.url, startMs = if (at > 0) at else cur.startMs, note = null)
@@ -752,7 +777,8 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                     }
                 }
                 val liveNow = cur.live && cur.archive == null
-                if (retries < (if (liveNow) 50 else 3) && !isPermanentHttp(status) && !decoder) {
+                val maxRetries = if (liveNow) (if (PlaybackPrefs.liveAutoFallback) 2 else 50) else 3
+                if (retries < maxRetries && !isPermanentHttp(status) && !decoder) {
                     retries++
                     msg = if (liveNow) "Verbindung unterbrochen – neuer Versuch ($retries)" else "Verbindung unterbrochen – neuer Versuch ($retries/3)"
                     // Live: keep trying with a growing pause (at most 15 s), and back to the live picture
@@ -785,15 +811,19 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                         val before = AppSettings.bufferLearned
                         AppSettings.learnBuffer(ctx)
                         if (AppSettings.bufferLearned != before) notice = "Ruckelt – Puffer wird beim nächsten Start größer"
-                        if (!cur.live) switchSource("Ruckelt") else stalls = emptyList()
+                        if (!cur.live || PlaybackPrefs.liveAutoFallback) switchSource("Ruckelt") else stalls = emptyList()
                     }
                 }
                 if (state == Player.STATE_ENDED) {
                     // Live stream ended by the server (common with IPTV): reconnect immediately instead of stalling
-                    if (cur.live && cur.archive == null && liveEnds < 30) {
-                        liveEnds++
-                        msg = "Stream beendet – verbinde neu …"
-                        h.postDelayed({ LiveTimeshift.reconnect(player) }, 800L)
+                    if (cur.live && cur.archive == null) {
+                        if (liveEnds < (if (PlaybackPrefs.liveAutoFallback) 2 else 30)) {
+                            liveEnds++
+                            msg = "Stream beendet – verbinde neu …"
+                            h.postDelayed({ LiveTimeshift.reconnect(player) }, 800L)
+                        } else if (PlaybackPrefs.liveAutoFallback && switchSource("Stream beendet")) {
+                            liveEnds = 0; pError = false; msg = null
+                        } else onEnded()
                     } else onEnded()
                 }
             }

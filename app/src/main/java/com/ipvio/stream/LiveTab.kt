@@ -171,7 +171,7 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
     }
     // Quality variants of one channel as a single row (not in favorites, own lists, recordings or while filling a list)
     val bundleOn = General.bundleLive && sel != FAV_CAT && sel != "REC" && curList == null && addTo == null
-    val bundled = remember(rawList, bundleOn) { if (bundleOn) LiveBundleLogic.bundle(rawList) else null }
+    val bundled = remember(rawList, bundleOn, PlaybackPrefs.liveResPref) { if (bundleOn) LiveBundleLogic.bundle(rawList, PlaybackPrefs.liveResPref) else null }
     val list = bundled?.list ?: rawList
     val variantsOf = bundled?.variants.orEmpty()
     // requestFocus() returns false (no exception) when the row is not composed (scrolled away). Check that result,

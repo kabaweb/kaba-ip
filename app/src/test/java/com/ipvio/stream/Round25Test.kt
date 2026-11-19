@@ -44,6 +44,33 @@ class Round25Test {
         assertEquals(listOf("5", "7"), r.variants["5"]!!.map { it.id })
     }
 
+    @Test fun bundlesWithResolutionPreferencesAndNearestFallback() {
+        val channels = listOf(
+            ch("1", "DE: Das Erste SD"), ch("2", "DE: Das Erste 4K"), ch("3", "DE: Das Erste HD"), ch("4", "DE: Das Erste FHD")
+        )
+        // FHD preferred -> selects FHD (id "4")
+        val rFhd = LiveBundleLogic.bundle(channels, PlaybackPrefs.LIVE_RES_FHD)
+        assertEquals("4", rFhd.list.first().id)
+
+        // HD preferred -> selects HD (id "3")
+        val rHd = LiveBundleLogic.bundle(channels, PlaybackPrefs.LIVE_RES_HD)
+        assertEquals("3", rHd.list.first().id)
+
+        // SD preferred -> selects SD (id "1")
+        val rSd = LiveBundleLogic.bundle(channels, PlaybackPrefs.LIVE_RES_SD)
+        assertEquals("1", rSd.list.first().id)
+
+        // 4K requested but only FHD and HD exist -> nearest is FHD
+        val channelsWithout4k = listOf(ch("3", "DE: Das Erste HD"), ch("4", "DE: Das Erste FHD"))
+        val rNearest4k = LiveBundleLogic.bundle(channelsWithout4k, PlaybackPrefs.LIVE_RES_4K)
+        assertEquals("4", rNearest4k.list.first().id)
+
+        // SD requested but only 4K and HD exist -> nearest is HD
+        val channelsWithoutSd = listOf(ch("2", "DE: Das Erste 4K"), ch("3", "DE: Das Erste HD"))
+        val rNearestSd = LiveBundleLogic.bundle(channelsWithoutSd, PlaybackPrefs.LIVE_RES_SD)
+        assertEquals("3", rNearestSd.list.first().id)
+    }
+
     @Test fun differentLanguagesAreNotBundled() {
         val r = LiveBundleLogic.bundle(listOf(ch("1", "Sport1 HD", "de"), ch("2", "Sport1", "tr")))
         assertEquals(2, r.list.size)

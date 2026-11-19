@@ -90,8 +90,14 @@ private fun ipvioGroups(list: List<Item>): Map<String, List<Item>> {
     return sorted.associate { it.key to it.value }
 }
 
-private fun providerGroups(list: List<Item>): Map<String, List<Item>> {
-    return list.groupBy { it.group }
+private fun providerGroups(list: List<Item>, order: Map<String, Int> = emptyMap(), prefix: String = ""): Map<String, List<Item>> {
+    val groups = list.groupBy { it.group }
+    if (order.isEmpty()) return groups
+    val sorted = groups.entries.sortedWith(compareBy(
+        { entry -> order[prefix + entry.key] ?: order[entry.key] ?: Int.MAX_VALUE },
+        { _ -> 0 }
+    ))
+    return sorted.associate { it.key to it.value }
 }
 
 /**
@@ -108,23 +114,24 @@ private class HomeData(
     val rowMovies: List<Item> = movies, val rowSeries: List<Item> = series
 )
 
-private fun buildHome(all: List<Item>, ipvioWanted: Boolean, trend: Set<String>, noAdult: Boolean = false): HomeData {
+private fun buildHome(all: List<Item>, ipvioWanted: Boolean, trend: Set<String>, noAdult: Boolean = false, order: Map<String, Int> = emptyMap()): HomeData {
     val live = ArrayList<Item>(); val movies0 = ArrayList<Item>(); val series = ArrayList<Item>()
     for (i in all) when (i.kind) { Kind.LIVE -> live.add(i); Kind.MOVIE -> movies0.add(i); Kind.SERIES -> series.add(i) }
     // Show the same movie in several versions (HD, 4K, …) only once; the version is chosen on the detail page (source)
     val movies = PlaylistLogic.firstPerKey(movies0) { it.mk + "|" + it.lang }
     val genresOk = MetaRepo.enabled() && Classifier.supported(movies.size + series.size)
     val ipvio = ipvioWanted && genresOk
-    val movieP = providerGroups(movies)
-    val seriesP = providerGroups(series)
+    val movieP = providerGroups(movies, order, "movie:")
+    val seriesP = providerGroups(series, order, "series:")
+    val liveP = providerGroups(live, order, "live:")
     // Home rows never show adult titles if wanted; categories, "All movies" and Live TV keep them (whoever looks finds them there)
     val rm = if (noAdult) movies.filterNot { ParentalLogic.isAdult(it.group, it.title) } else movies
     val rs = if (noAdult) series.filterNot { ParentalLogic.isAdult(it.group, it.title) } else series
     val trendItems = if (trend.isEmpty()) emptyList() else (rm.asSequence() + rs.asSequence()).filter { Trending.norm(it.title) in trend }.toList()
-    val rowMP = if (rm === movies) movieP else providerGroups(rm)
-    val rowSP = if (rs === series) seriesP else providerGroups(rs)
+    val rowMP = if (rm === movies) movieP else providerGroups(rm, order, "movie:")
+    val rowSP = if (rs === series) seriesP else providerGroups(rs, order, "series:")
     return HomeData(
-        live, movies, series, providerGroups(live), movieP, seriesP,
+        live, movies, series, liveP, movieP, seriesP,
         if (ipvio) ipvioGroups(rm) else rowMP, if (ipvio) ipvioGroups(rs) else rowSP,
         topRated(rm), topRated(rs), all.associateBy { it.id }, trendItems, genresOk, rm, rs
     )
@@ -229,7 +236,7 @@ fun HomeScreen(
     // When inputs change, the previous state stays visible until the new result (produceState keeps the value)
     val dataState = produceState(cached, all, order, wantIpvio, ver, trend, noAdult) {
         value = HomeCache.get(all, order, wantIpvio, ver, trend, noAdult)
-            ?: withContext(Dispatchers.Default) { keepLiveLists(buildHome(all, wantIpvio, trend, noAdult), HomeCache.last()) }.also { HomeCache.put(all, order, wantIpvio, ver, trend, noAdult, it) }
+            ?: withContext(Dispatchers.Default) { keepLiveLists(buildHome(all, wantIpvio, trend, noAdult, order), HomeCache.last()) }.also { HomeCache.put(all, order, wantIpvio, ver, trend, noAdult, it) }
     }
     // While recomputing: show the previous state, the loading skeleton only the very first time
     val prev = HomeCache.last()

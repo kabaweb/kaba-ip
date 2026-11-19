@@ -76,6 +76,18 @@ object PlaybackPrefs {
     /** On stutter/error switch automatically to another (smaller) source. */
     var autoFallback by mutableStateOf(true)
         private set
+
+    const val LIVE_RES_AUTO = 0
+    const val LIVE_RES_4K = 1
+    const val LIVE_RES_FHD = 2
+    const val LIVE_RES_HD = 3
+    const val LIVE_RES_SD = 4
+
+    var liveResPref by mutableIntStateOf(LIVE_RES_AUTO)
+        private set
+    var liveAutoFallback by mutableStateOf(true)
+        private set
+
     /** Learned limit: 3 = at most Full HD (4K stuttered here several times), 0 = none. */
     var learnedCap by mutableIntStateOf(0)
         private set
@@ -91,6 +103,8 @@ object PlaybackPrefs {
         val p = prefs(c)
         quality = p.getInt("quality", QualityLogic.AUTO).coerceIn(0, 3)
         autoFallback = p.getBoolean("fallback", true)
+        liveResPref = p.getInt("live_res_pref", LIVE_RES_AUTO).coerceIn(0, 4)
+        liveAutoFallback = p.getBoolean("live_auto_fallback", true)
         learnedCap = p.getInt("learned_cap", 0)
         fails4k = p.getInt("fails_4k", 0)
     }
@@ -104,6 +118,8 @@ object PlaybackPrefs {
 
     fun setQuality(c: Context, v: Int) { quality = v.coerceIn(0, 3); prefs(c).edit().putInt("quality", quality).apply() }
     fun setFallback(c: Context, v: Boolean) { autoFallback = v; prefs(c).edit().putBoolean("fallback", v).apply() }
+    fun setLiveResPref(c: Context, v: Int) { liveResPref = v.coerceIn(0, 4); prefs(c).edit().putInt("live_res_pref", liveResPref).apply() }
+    fun setLiveAutoFallback(c: Context, v: Boolean) { liveAutoFallback = v; prefs(c).edit().putBoolean("live_auto_fallback", v).apply() }
 
     /** 4K had to give way here (stutter/decoder). After two times the automatic mode plays at most Full HD. */
     fun note4kTrouble(c: Context) {

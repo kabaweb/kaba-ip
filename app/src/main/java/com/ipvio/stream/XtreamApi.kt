@@ -184,10 +184,47 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
         return out
     }
 
-    /** Movies as finished lines into [w]; returns their number. */
-    private fun writeMovies(a: XtreamLogic.Acct, w: Writer): Int {
-        var n = 0
+    companion object {
+        private val catCache = java.util.concurrent.ConcurrentHashMap<String, Map<String, Int>>()
+        fun storeOrder(key: String, order: Map<String, Int>) { catCache[key] = order }
+    }
+
+    fun categoryOrder(a: XtreamLogic.Acct): Map<String, Int> {
+        val key = "${a.base}|${a.user}"
+        catCache[key]?.let { return it }
+        val liveCats = categories(a, "get_live_categories")
         val vodCats = categories(a, "get_vod_categories")
+        val serCats = categories(a, "get_series_categories")
+        return buildCatMap(liveCats, vodCats, serCats).also { catCache[key] = it }
+    }
+
+    private fun buildCatMap(live: Map<String, String>, vod: Map<String, String>, ser: Map<String, String>): Map<String, Int> {
+        val out = LinkedHashMap<String, Int>()
+        var idx = 0
+        for (name in live.values) {
+            out["live:$name"] = idx
+            if (!out.containsKey(name)) out[name] = idx
+            idx++
+        }
+        idx = 0
+        for (name in vod.values) {
+            out["movie:$name"] = idx
+            if (!out.containsKey(name)) out[name] = idx
+            idx++
+        }
+        idx = 0
+        for (name in ser.values) {
+            out["series:$name"] = idx
+            if (!out.containsKey(name)) out[name] = idx
+            idx++
+        }
+        return out
+    }
+
+    /** Movies as finished lines into [w]; returns their number. */
+    private fun writeMovies(a: XtreamLogic.Acct, w: Writer, catSink: ((Map<String, String>) -> Unit)? = null): Int {
+        var n = 0
+        val vodCats = categories(a, "get_vod_categories").also { catSink?.invoke(it) }
         stream(XtreamLogic.api(a, "get_vod_streams")) { f ->
             XtreamLogic.movieEntry(a, f, vodCats)?.let { w.write(it); w.write("\n"); n++ }
         }
@@ -196,8 +233,8 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
     }
 
     /** Series (one placeholder per series, the episodes come on opening via LazySeries) into [w]; returns their number. */
-    private fun writeSeries(a: XtreamLogic.Acct, w: Writer): Int {
-        val serCats = categories(a, "get_series_categories")
+    private fun writeSeries(a: XtreamLogic.Acct, w: Writer, catSink: ((Map<String, String>) -> Unit)? = null): Int {
+        val serCats = categories(a, "get_series_categories").also { catSink?.invoke(it) }
         val series = ArrayList<XtreamLogic.Series>()
         stream(XtreamLogic.api(a, "get_series")) { f -> XtreamLogic.seriesOf(f, serCats)?.let { series.add(it) } }
         for (s in series) { w.write(XtreamLogic.lazyEntry(a, s)); w.write("\n") }
@@ -234,8 +271,10 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
             }
             fun job(file: java.io.File, count: java.util.concurrent.atomic.AtomicLong, work: (Writer) -> Int) =
                 pool.submit<Int> { fill(file, count, work) }
-            val vodJob = job(vodFile, vodCount) { writeMovies(a, it) }
-            val serJob = job(serFile, serCount) { writeSeries(a, it) }
+            val vodCatsRef = java.util.concurrent.atomic.AtomicReference<Map<String, String>>()
+            val serCatsRef = java.util.concurrent.atomic.AtomicReference<Map<String, String>>()
+            val vodJob = job(vodFile, vodCount) { writeMovies(a, it) { c -> vodCatsRef.set(c) } }
+            val serJob = job(serFile, serCount) { writeSeries(a, it) { c -> serCatsRef.set(c) } }
 
             onPhase("Sender werden geladen …")
             val liveCats = categories(a, "get_live_categories")
@@ -256,10 +295,12 @@ class XtreamApi(private val client: OkHttpClient, private val ua: String) {
                 return count
             }
             onPhase("Filme werden geladen …")
-            n += take(vodJob, vodFile, vodCount) { writeMovies(a, it) }
+            n += take(vodJob, vodFile, vodCount) { writeMovies(a, it) { c -> vodCatsRef.set(c) } }
             check()
             onPhase("Serien werden geladen …")
-            n += take(serJob, serFile, serCount) { writeSeries(a, it) }
+            n += take(serJob, serFile, serCount) { writeSeries(a, it) { c -> serCatsRef.set(c) } }
+            val key = "${a.base}|${a.user}"
+            storeOrder(key, buildCatMap(liveCats, vodCatsRef.get().orEmpty(), serCatsRef.get().orEmpty()))
             out.flush()
             return n
         } finally {
