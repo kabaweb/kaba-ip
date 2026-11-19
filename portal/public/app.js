@@ -403,8 +403,8 @@ function renderDevices(list) {
               <button onclick="openPlaylistModal('${d.id}')" class="btn btn-sm btn-outline-light px-2.5 py-1 rounded-pill" title="Configurar Playlist">
                 Playlist
               </button>
-              <button onclick="forceDevicePlaylistReload('${d.id}')" class="btn btn-sm btn-outline-info px-2.5 py-1 rounded-pill" title="Forçar Carga de Lista (Atualizar Canais)">
-                🔄 Carga
+              <button onclick="forceDevicePlaylistReload('${d.id}')" class="btn btn-sm btn-outline-info px-2.5 py-1 rounded-pill fw-semibold" title="Forçar Carga de Lista (Atualizar Canais no Aparelho)">
+                🔄 Forçar Carga
               </button>
               <button onclick="openMessageModal('${d.id}')" class="btn btn-sm btn-outline-secondary px-2.5 py-1 rounded-pill" title="Enviar Mensagem">
                 Mensagem
@@ -536,8 +536,8 @@ function renderDevices(list) {
             <button onclick="openPlaylistModal('${d.id}')" class="btn btn-sm btn-outline-light py-1.5 rounded-pill text-truncate">
               Playlist
             </button>
-            <button onclick="forceDevicePlaylistReload('${d.id}')" class="btn btn-sm btn-outline-info py-1.5 rounded-pill text-truncate" title="Forçar Carga de Lista">
-              🔄 Carga
+            <button onclick="forceDevicePlaylistReload('${d.id}')" class="btn btn-sm btn-outline-info py-1.5 rounded-pill text-truncate fw-semibold" title="Forçar Carga de Lista">
+              🔄 Forçar Carga
             </button>
             <button onclick="openMessageModal('${d.id}')" class="btn btn-sm btn-outline-secondary py-1.5 rounded-pill text-truncate">
               Mensagem
@@ -696,6 +696,12 @@ async function forceDevicePlaylistReload(id) {
   } catch (err) {
     alert('Erro: ' + err.message);
   }
+}
+
+// Forçar sincronização de dentro do modal de playlist
+async function forceCurrentDeviceReload() {
+  if (!selectedDeviceId) return;
+  await forceDevicePlaylistReload(selectedDeviceId);
 }
 
 // Renomear Dispositivo (compatibilidade)
