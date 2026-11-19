@@ -1,0 +1,15 @@
+{
+  "id": "com.kabaweb.korptv",
+  "version": "1.0.0",
+  "vendor": "KabaWeb",
+  "type": "web",
+  "main": "web-tv-demo.html",
+  "title": "Korp TV",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "resolution": "1920x1080",
+  "requiredVersion": "3.0.0",
+  "supportTouchMode": false,
+  "disableBackHistoryAPI": true,
+  "handlesRelaunch": true
+}

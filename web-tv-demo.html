@@ -551,14 +551,16 @@
 
       </div>
 
-      <!-- 3. BARRA DE ATALHOS DO CONTROLE REMOTO (LEGENDA DE BOTÕES) -->
       <footer class="remote-hints-bar">
         <div><span class="key-badge">OK</span> Assistir / Abrir</div>
         <div><span class="key-badge">SETAS</span> Navegar D-Pad</div>
         <div><span class="key-badge">VOLTAR</span> Voltar / Sair</div>
         <div><span class="key-badge red">VERMELHO</span> Favoritos</div>
+        <div><span class="key-badge green" style="background:#10b981; color:#fff;">VERDE</span> Qualidade</div>
         <div><span class="key-badge blue">AZUL</span> Guia Completo</div>
-        <div class="ms-auto"><span class="badge bg-dark border border-secondary">Smart TV Ready (Tizen/webOS)</span></div>
+        <div class="ms-auto">
+          <span class="badge bg-dark border border-secondary" id="platformBadge">Detectando TV...</span>
+        </div>
       </footer>
     </main>
 
@@ -654,18 +656,15 @@
     </div>
   </div>
 
-  <!-- Bootstrap 5.3 Bundle JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
   <!-- ==============================================================================
-       SMART TV REMOTE ENGINE (SAMSUNG TIZEN + LG WEBOS + D-PAD NAVEGAÇÃO)
+       SMART TV REMOTE ENGINE & DUAL PLAYER (SAMSUNG TIZEN + LG WEBOS)
        ============================================================================== -->
   <script>
     /**
-     * Motor de Navegação Espacial e Teclas de Smart TV (Tizen / webOS)
+     * Mapeamento de Teclas Compatíveis com Samsung Tizen OS e LG webOS
      */
     const TV_KEYS = {
-      // Teclas Padrão
+      // D-Pad Direcional & Ação
       LEFT: 37,
       UP: 38,
       RIGHT: 39,
@@ -673,62 +672,208 @@
       ENTER: 13,
       RETURN_BACK: 8,       // Backspace em navegadores normais
       ESC: 27,
-      // Tizen (Samsung)
+      // Samsung Tizen
       TIZEN_RETURN: 10009,
       TIZEN_EXIT: 10182,
       // LG webOS
       WEBOS_BACK: 461,
-      // Teclas de Cores
+      // Teclas Coloridas (Tizen & webOS)
       RED: 403,
       GREEN: 404,
       YELLOW: 405,
       BLUE: 406,
-      // Mídia
+      // Teclas Multimídia
       PLAY: 415,
       PAUSE: 19,
       STOP: 413,
       FAST_FWD: 417,
-      REWIND: 412
+      REWIND: 412,
+      // Teclas Numéricas (0-9)
+      NUM_0: 48, NUM_1: 49, NUM_2: 50, NUM_3: 51, NUM_4: 52,
+      NUM_5: 53, NUM_6: 54, NUM_7: 55, NUM_8: 56, NUM_9: 57
     };
 
-    class TVNavigationEngine {
+    /**
+     * Reprodutor de Mídia Dual:
+     * - Samsung Tizen: Hardware decoding via webapis.avplay
+     * - LG webOS / Browser: HTML5 Video Element com aceleração de hardware
+     */
+    class SmartTVPlayer {
       constructor() {
-        this.currentFocused = null;
+        this.isTizen = !!(window.tizen && window.webapis && window.webapis.avplay);
+        this.isWebOS = !!(window.webOS || window.PalmSystem || navigator.userAgent.includes('Web0S') || navigator.userAgent.includes('webOS'));
+        this.videoEl = document.getElementById('fullVideo');
+        this.miniVideoEl = document.getElementById('miniVideo');
+        this.currentUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+        this.isPlaying = false;
         this.init();
       }
 
       init() {
-        // Registra teclas de TV em Tizen / webOS se disponível na plataforma
-        this.registerPlatformKeys();
-
-        // Escuta eventos de teclado globais
-        window.addEventListener('keydown', (e) => this.handleKeyDown(e));
-
-        // Inicializa o primeiro elemento com foco
-        const firstFocus = document.querySelector('.tv-category-panel .tv-focusable') || document.querySelector('.tv-focusable');
-        if (firstFocus) {
-          this.setFocus(firstFocus);
+        // Inicialização de ciclo de vida LG webOS
+        if (this.isWebOS) {
+          document.addEventListener('webOSLaunch', () => console.log('[webOS] App lançado em primeiro plano'));
+          document.addEventListener('webOSRelaunch', () => console.log('[webOS] App reaberto via launcher'));
         }
 
-        // Relógio da TV em tempo real
-        this.startClock();
+        // Suspensão de aplicativo para economizar RAM (Requisito LG & Samsung)
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) {
+            console.log('[Smart TV] App em background: pausando playback para liberar RAM');
+            this.pause();
+          } else {
+            console.log('[Smart TV] App restaurado para primeiro plano');
+            this.resume();
+          }
+        });
+      }
 
-        // Mapeamento de cliques do mouse para sincronizar o foco em testes de desktop
+      play(url, isFullscreen = false) {
+        this.currentUrl = url || this.currentUrl;
+
+        // Samsung Tizen AVPlay (Hardware Player)
+        if (this.isTizen && isFullscreen) {
+          try {
+            webapis.avplay.stop();
+            webapis.avplay.close();
+          } catch (e) {}
+
+          try {
+            webapis.avplay.open(this.currentUrl);
+            webapis.avplay.setDisplayRect(0, 0, 1920, 1080);
+            webapis.avplay.setListener({
+              onbufferingstart: () => console.log('[Tizen AVPlay] Buffering iniciado...'),
+              onbufferingcomplete: () => console.log('[Tizen AVPlay] Buffering concluído.'),
+              onerror: (err) => console.error('[Tizen AVPlay] Erro no stream:', err)
+            });
+            webapis.avplay.prepareAsync(() => {
+              webapis.avplay.play();
+              this.isPlaying = true;
+            });
+            return;
+          } catch (tizenErr) {
+            console.warn('[Tizen AVPlay] Fallback para HTML5 video:', tizenErr);
+          }
+        }
+
+        // LG webOS / Padrão HTML5 Video
+        const targetVideo = isFullscreen ? this.videoEl : this.miniVideoEl;
+        if (targetVideo) {
+          if (targetVideo.src !== this.currentUrl) {
+            targetVideo.src = this.currentUrl;
+          }
+          targetVideo.play().then(() => {
+            this.isPlaying = true;
+          }).catch(err => console.log('Autoplay aguardando interação do usuário:', err));
+        }
+      }
+
+      pause() {
+        if (this.isTizen) {
+          try { webapis.avplay.pause(); } catch (e) {}
+        }
+        if (this.videoEl) this.videoEl.pause();
+        if (this.miniVideoEl) this.miniVideoEl.pause();
+        this.isPlaying = false;
+      }
+
+      resume() {
+        if (this.isTizen) {
+          try { webapis.avplay.play(); } catch (e) {}
+        }
+        if (this.videoEl && document.getElementById('tvPlayerOverlay').style.display === 'block') {
+          this.videoEl.play().catch(() => {});
+        } else if (this.miniVideoEl) {
+          this.miniVideoEl.play().catch(() => {});
+        }
+        this.isPlaying = true;
+      }
+
+      stop() {
+        if (this.isTizen) {
+          try {
+            webapis.avplay.stop();
+            webapis.avplay.close();
+          } catch (e) {}
+        }
+        if (this.videoEl) this.videoEl.pause();
+        this.isPlaying = false;
+      }
+    }
+
+    /**
+     * Motor de Navegação Espacial e Controle Remoto TV
+     */
+    class TVNavigationEngine {
+      constructor() {
+        this.currentFocused = null;
+        this.cursorActive = false;
+        this.numKeyBuffer = '';
+        this.numKeyTimer = null;
+        this.init();
+      }
+
+      init() {
+        this.detectPlatform();
+        this.registerPlatformKeys();
+
+        // Eventos de teclado globais
+        window.addEventListener('keydown', (e) => this.handleKeyDown(e));
+
+        // Suporte ao Magic Remote da LG (Detecção de Ponteiro vs D-Pad)
+        window.addEventListener('mousemove', () => {
+          if (!this.cursorActive) {
+            this.cursorActive = true;
+            document.body.style.cursor = 'default';
+          }
+        });
+
+        // Clique para focar (Magic Remote ou testes em PC)
         document.addEventListener('click', (e) => {
           const el = e.target.closest('.tv-focusable');
           if (el) this.setFocus(el);
         });
+
+        // Foco inicial
+        const firstFocus = document.querySelector('.tv-category-panel .tv-focusable') || document.querySelector('.tv-focusable');
+        if (firstFocus) this.setFocus(firstFocus);
+
+        // Relógio
+        this.startClock();
+      }
+
+      detectPlatform() {
+        const badge = document.getElementById('platformBadge');
+        if (!badge) return;
+
+        if (window.tizen) {
+          badge.className = 'badge bg-primary border border-primary-subtle';
+          badge.textContent = 'Samsung Tizen OS';
+        } else if (window.webOS || window.PalmSystem || navigator.userAgent.includes('Web0S') || navigator.userAgent.includes('webOS')) {
+          badge.className = 'badge bg-danger border border-danger-subtle';
+          badge.textContent = 'LG webOS TV';
+        } else {
+          badge.className = 'badge bg-dark border border-secondary';
+          badge.textContent = 'Navegador Web (TV Emulação)';
+        }
       }
 
       registerPlatformKeys() {
-        // Samsung Tizen API: registra teclas especiais do controle para não serem interceptadas pelo sistema
+        // Registro de teclas no Samsung Tizen OS
         if (window.tizen && window.tizen.tvinputdevice) {
-          try {
-            const keys = ['MediaPlay', 'MediaPause', 'MediaStop', 'MediaFastForward', 'MediaRewind', 'ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue'];
-            keys.forEach(k => tizen.tvinputdevice.registerKey(k));
-          } catch (err) {
-            console.warn('Tizen TV keys registration:', err);
-          }
+          const tizenKeys = [
+            'Return', 'Exit',
+            'MediaPlay', 'MediaPause', 'MediaStop', 'MediaFastForward', 'MediaRewind',
+            'ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+          ];
+          tizenKeys.forEach(keyName => {
+            try {
+              tizen.tvinputdevice.registerKey(keyName);
+            } catch (err) {
+              console.warn('[Tizen] Erro ao registrar tecla:', keyName, err);
+            }
+          });
         }
       }
 
@@ -741,7 +886,10 @@
         this.currentFocused.classList.add('tv-focused');
         this.currentFocused.focus();
 
-        // Rolagem suave para manter sempre dentro da área segura da TV
+        // Magic Remote D-Pad reativado: esconde ponteiro quando D-Pad navega
+        this.cursorActive = false;
+        document.body.style.cursor = 'none';
+
         this.currentFocused.scrollIntoView({
           behavior: 'smooth',
           block: 'nearest',
@@ -759,7 +907,7 @@
           return;
         }
 
-        // 2. Tecla Enter / OK no controle
+        // 2. Tecla Enter / OK
         if (key === TV_KEYS.ENTER) {
           e.preventDefault();
           if (this.currentFocused) {
@@ -769,33 +917,111 @@
         }
 
         // 3. Teclas de Cores do Controle Remoto
-        if (key === TV_KEYS.BLUE) { // Tecla Azul = Alterna / Abre Guia
+        if (key === TV_KEYS.RED) { // Vermelho: Favoritar
           e.preventDefault();
-          alert('Atalho [AZUL]: Alternando modo Guia TV EPG');
+          this.showTvToast('Favoritos: Canal adicionado com sucesso!');
           return;
         }
 
-        if (key === TV_KEYS.RED) { // Tecla Vermelha = Favoritar
+        if (key === TV_KEYS.GREEN) { // Verde: Alternar Qualidade
           e.preventDefault();
-          alert('Atalho [VERMELHO]: Canal adicionado aos Favoritos!');
+          cycleResolutionOption();
           return;
         }
 
-        // 4. Navegação Espacial D-Pad (Up, Down, Left, Right)
+        if (key === TV_KEYS.YELLOW) { // Amarelo: Áudio & Legendas
+          e.preventDefault();
+          this.showTvToast('Áudio: Português (Original 5.1)');
+          return;
+        }
+
+        if (key === TV_KEYS.BLUE) { // Azul: Guia EPG
+          e.preventDefault();
+          const firstGuide = document.querySelector('.epg-show-box');
+          if (firstGuide) this.setFocus(firstGuide);
+          this.showTvToast('Modo Guia EPG Ativado');
+          return;
+        }
+
+        // 4. Teclas de Mídia
+        if (key === TV_KEYS.PLAY) {
+          e.preventDefault();
+          smartPlayer.resume();
+          return;
+        }
+        if (key === TV_KEYS.PAUSE || key === TV_KEYS.STOP) {
+          e.preventDefault();
+          smartPlayer.pause();
+          return;
+        }
+
+        // 5. Teclas Numéricas (Digitação direta do canal)
+        if (key >= TV_KEYS.NUM_0 && key <= TV_KEYS.NUM_9) {
+          e.preventDefault();
+          const num = (key - TV_KEYS.NUM_0).toString();
+          this.handleNumberKey(num);
+          return;
+        }
+
+        // 6. Navegação D-Pad (Up, Down, Left, Right)
         if ([TV_KEYS.UP, TV_KEYS.DOWN, TV_KEYS.LEFT, TV_KEYS.RIGHT].includes(key)) {
           e.preventDefault();
           this.navigateDirection(key);
         }
       }
 
+      handleNumberKey(num) {
+        this.numKeyBuffer += num;
+        this.showTvToast(`Canal: ${this.numKeyBuffer}`);
+        clearTimeout(this.numKeyTimer);
+        this.numKeyTimer = setTimeout(() => {
+          const target = document.querySelector(`.channel-row[data-ch="${this.numKeyBuffer}"]`);
+          if (target) {
+            this.setFocus(target);
+            target.click();
+          } else {
+            this.showTvToast(`Canal ${this.numKeyBuffer} não encontrado`);
+          }
+          this.numKeyBuffer = '';
+        }, 1200);
+      }
+
+      showTvToast(msg) {
+        let toastEl = document.getElementById('tvToast');
+        if (!toastEl) {
+          toastEl = document.createElement('div');
+          toastEl.id = 'tvToast';
+          toastEl.style.position = 'fixed';
+          toastEl.style.top = '40px';
+          toastEl.style.right = '40px';
+          toastEl.style.background = 'rgba(15, 23, 42, 0.95)';
+          toastEl.style.color = '#fff';
+          toastEl.style.border = '1px solid #06b6d4';
+          toastEl.style.padding = '12px 24px';
+          toastEl.style.borderRadius = '10px';
+          toastEl.style.fontWeight = 'bold';
+          toastEl.style.fontSize = '1.1rem';
+          toastEl.style.zIndex = '9999';
+          toastEl.style.boxShadow = '0 8px 30px rgba(0,0,0,0.8)';
+          document.body.appendChild(toastEl);
+        }
+        toastEl.textContent = msg;
+        toastEl.style.display = 'block';
+        clearTimeout(this.toastTimeout);
+        this.toastTimeout = setTimeout(() => {
+          toastEl.style.display = 'none';
+        }, 2200);
+      }
+
       handleBackAction() {
+        // Se overlay de vídeo em tela cheia estiver ativo, fecha e volta para o canal
         const overlay = document.getElementById('tvPlayerOverlay');
         if (overlay && overlay.style.display === 'block') {
           closeFullscreenPlayer();
           return;
         }
 
-        // Se modal aberto, fecha o modal
+        // Se modal Bootstrap aberto, fecha
         const modalEl = document.querySelector('.modal.show');
         if (modalEl) {
           const modalInstance = bootstrap.Modal.getInstance(modalEl);
@@ -803,7 +1029,14 @@
           return;
         }
 
-        // Se estiver nos canais, volta o foco para as categorias
+        // Se estiver no EPG ou Preview, volta para lista de canais
+        if (this.currentFocused && (this.currentFocused.closest('.tv-preview-panel') || this.currentFocused.closest('.epg-timeline-card'))) {
+          const ch = document.querySelector('.tv-channel-panel .channel-row.tv-focused') || document.querySelector('.tv-channel-panel .channel-row');
+          this.setFocus(ch);
+          return;
+        }
+
+        // Se estiver nos canais, volta para as categorias
         if (this.currentFocused && this.currentFocused.closest('.tv-channel-panel')) {
           const cat = document.querySelector('.tv-category-panel .category-row.active') || document.querySelector('.tv-category-panel .tv-focusable');
           this.setFocus(cat);
@@ -814,7 +1047,29 @@
         if (this.currentFocused && this.currentFocused.closest('.tv-category-panel')) {
           const side = document.querySelector('.tv-sidebar .nav-item-btn.active') || document.querySelector('.tv-sidebar .tv-focusable');
           this.setFocus(side);
+          return;
         }
+
+        // Se já estiver no menu lateral, solicita saída limpa do app na TV
+        this.exitApp();
+      }
+
+      exitApp() {
+        // Samsung Tizen exit
+        if (window.tizen && window.tizen.application) {
+          try {
+            window.tizen.application.getCurrentApplication().exit();
+            return;
+          } catch (e) {}
+        }
+        // LG webOS exit
+        if (window.webOS || window.PalmSystem) {
+          try {
+            window.close();
+            return;
+          } catch (e) {}
+        }
+        this.showTvToast('Pressione Voltar novamente no PC para sair');
       }
 
       navigateDirection(key) {
@@ -839,7 +1094,6 @@
           let isMatch = false;
           let dist = 0;
 
-          // Cálculo euclidiano ponderado na direção da tecla
           switch (key) {
             case TV_KEYS.UP:
               if (rect.bottom <= currentRect.top + 5) {
@@ -891,7 +1145,8 @@
       }
     }
 
-    // Instancia o motor do controle
+    // Instancia reprodutor de TV e motor de navegação
+    const smartPlayer = new SmartTVPlayer();
     const tvEngine = new TVNavigationEngine();
 
     // ==============================================================================
@@ -904,7 +1159,6 @@
         document.querySelectorAll('.category-row').forEach(r => r.classList.remove('active'));
         catRow.classList.add('active');
 
-        // Foca automaticamente no primeiro canal da lista carregada
         const firstChannel = document.querySelector('.tv-channel-panel .channel-row');
         if (firstChannel) tvEngine.setFocus(firstChannel);
       });
@@ -920,7 +1174,6 @@
         document.getElementById('previewTitle').textContent = title;
         document.getElementById('epgCurrentTitle').textContent = prog;
 
-        // Opcional: abre player em tela cheia diretamente no clique duplo ou seleção
         openFullscreenPlayer(title, prog, q);
       });
     });
@@ -933,6 +1186,8 @@
       document.getElementById('fullPlayerQ').textContent = q || 'SD';
 
       overlay.style.display = 'block';
+      smartPlayer.play(null, true);
+
       const backBtn = document.getElementById('btnPlayerBack');
       tvEngine.setFocus(backBtn);
     }
@@ -940,6 +1195,8 @@
     function closeFullscreenPlayer() {
       const overlay = document.getElementById('tvPlayerOverlay');
       overlay.style.display = 'none';
+      smartPlayer.stop();
+
       const chActive = document.querySelector('.channel-row.tv-focused') || document.querySelector('.channel-row');
       tvEngine.setFocus(chActive);
     }
@@ -952,7 +1209,21 @@
 
     document.getElementById('btnPlayerBack').addEventListener('click', closeFullscreenPlayer);
 
-    // 4. Seleção de Resolução Padrão (Modal de Ajustes)
+    // 4. Alternância rápida de resolução (Tecla Verde ou Botão OSD)
+    const RES_LIST = ['SD', 'HD', 'FHD', '4K'];
+    let currentResIdx = 0;
+
+    function cycleResolutionOption() {
+      currentResIdx = (currentResIdx + 1) % RES_LIST.length;
+      const nextRes = RES_LIST[currentResIdx];
+      const badgeQ = document.getElementById('fullPlayerQ');
+      if (badgeQ) badgeQ.textContent = nextRes;
+      tvEngine.showTvToast(`Qualidade de Vídeo: ${nextRes}`);
+    }
+
+    document.getElementById('btnPlayerToggleRes').addEventListener('click', cycleResolutionOption);
+
+    // 5. Seleção de Resolução Padrão (Modal de Ajustes)
     document.querySelectorAll('#resOptionsGroup button').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('#resOptionsGroup button').forEach(b => {

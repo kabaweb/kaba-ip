@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" 
+        xmlns:tizen="http://tizen.org/ns/widgets" 
+        id="http://kabaweb.com/korptv" 
+        version="1.0.0" 
+        viewmodes="maximized">
+    <tizen:application id="Xv7n8R2e1P.KorpTV" exec="web-tv-demo.html" screen-orientation="landscape" />
+    <tizen:profile name="tv-samsung" />
+    <name>Korp TV Web</name>
+    <description>Korp TV Web Player para Smart TV Samsung Tizen</description>
+    <author href="https://kabaweb.com">KabaWeb</author>
+    <content src="web-tv-demo.html" />
+    <feature name="http://tizen.org/feature/screen.size.all" />
+    
+    <!-- Privilégios Tizen essenciais para Smart TV e IPTV -->
+    <tizen:privilege name="http://tizen.org/privilege/internet" />
+    <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice" />
+    <tizen:privilege name="http://tizen.org/privilege/application.launch" />
+    <tizen:privilege name="http://developer.samsung.com/privilege/avplay" />
+    <tizen:privilege name="http://developer.samsung.com/privilege/network.information" />
+    
+    <tizen:setting screen-orientation="landscape" context-menu="enable" background-support="disable" encryption="disable" install-location="auto" />
+</widget>
