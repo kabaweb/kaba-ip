@@ -262,11 +262,12 @@ object PlaylistStore {
         cleanupStale(c)
         val p = prefs(c)
         val lastCode = p.getInt("cache_clean_ver", 0)
-        if (lastCode < 26) {
-            p.edit().putInt("cache_clean_ver", 26).apply()
+        if (lastCode < 27) {
+            p.edit().putInt("cache_clean_ver", 27).apply()
             runCatching {
-                c.filesDir.listFiles { _, name -> name.startsWith("pl_") && name.endsWith(".bin") }?.forEach { it.delete() }
+                c.filesDir.listFiles { _, name -> name.startsWith("pl_") }?.forEach { it.delete() }
             }
+            CatOrder.reset(c)
         }
         // Prefers the encrypted version; fallback to plain-text version if keystore fails on cold boot.
         val enc = p.getString("lists_enc", null)
@@ -489,25 +490,7 @@ object PlaylistStore {
         if (lists.isEmpty()) setItems(emptyList())
     }
 
-    private fun fetchOrder(url: String): Map<String, Int> {
-        val m = XTREAM.find(url) ?: return emptyMap()
-        val base = "${m.groupValues[1]}/player_api.php?username=${m.groupValues[2]}&password=${m.groupValues[3]}&action="
-        val out = LinkedHashMap<String, Int>()
-        for (act in listOf("get_vod_categories", "get_series_categories", "get_live_categories")) {
-            try {
-                val body = client.newCall(Request.Builder().url(base + act).build()).execute().use { r ->
-                    if (r.isSuccessful) r.body?.string() else null
-                } ?: continue
-                val a = JSONArray(body)
-                for (i in 0 until a.length()) {
-                    val n = a.getJSONObject(i).optString("category_name")
-                    if (n.isNotBlank() && !out.containsKey(n)) out[n] = i
-                }
-            } catch (e: Exception) {
-            }
-        }
-        return out
-    }
+    private fun fetchOrder(url: String): Map<String, Int> = emptyMap()
 
     // ------------------------------------------------------------------ files per playlist
 

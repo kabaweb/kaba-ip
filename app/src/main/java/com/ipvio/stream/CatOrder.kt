@@ -35,8 +35,22 @@ object CatOrder {
 
     fun mode(area: String): Int = modes[area] ?: CatOrderLogic.PROVIDER
 
+    fun reset(c: Context) {
+        inited = true
+        prefs(c).edit().clear().apply()
+        for (a in listOf(LIVE, MOVIE, SERIES)) {
+            modes[a] = CatOrderLogic.PROVIDER
+            own[a] = emptyList()
+        }
+        version++
+    }
+
     /** [names] in provider order → order to show. */
-    fun sorted(area: String, names: List<String>): List<String> = CatOrderLogic.apply(names, mode(area), own[area].orEmpty())
+    fun sorted(area: String, names: List<String>): List<String> {
+        val m = mode(area)
+        if (m == CatOrderLogic.PROVIDER) return names
+        return CatOrderLogic.apply(names, m, own[area].orEmpty())
+    }
 
     fun setMode(c: Context, area: String, m: Int) {
         init(c)
