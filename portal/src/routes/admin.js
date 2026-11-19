@@ -9,6 +9,7 @@ const AppInfoParser = require('app-info-parser');
 const db = require('../db');
 const config = require('../config');
 const { checkPlaylistValidity } = require('../services/playlistChecker');
+const { checkBasePlaylist } = require('../services/basePlaylistChecker');
 const { getSettings, saveSettings, migrateAllClientsUrl, calculateDaysRemaining, runExpiryAutomations } = require('../services/automationService');
 const { sendWhatsAppMessage } = require('../services/whatsappService');
 const metadataService = require('../services/metadataService');
@@ -452,6 +453,16 @@ router.post('/settings', requireAdmin, async (req, res) => {
   try {
     const updated = await saveSettings(req.body);
     res.json({ success: true, settings: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4.1.1 Checagem manual da Lista Base
+router.post('/base-playlist/check', requireAdmin, async (req, res) => {
+  try {
+    const result = await checkBasePlaylist(true); // forçado manualmente pelo admin
+    res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

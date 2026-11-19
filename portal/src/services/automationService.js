@@ -25,7 +25,14 @@ async function getSettings() {
     downloader_code: map.downloader_code || '',
     test_app_url: map.test_app_url || '',
     test_auto_whatsapp: map.test_auto_whatsapp !== '0',
-    test_whatsapp_message: map.test_whatsapp_message || 'Olá {{nome}}! Seu teste do Korp TV foi liberado com sucesso 🎉\n\n📲 *Baixar Aplicativo:* {{app_url}}\n🔢 *Código no Downloader:* {{codigo_downloader}}\n\n👤 *Usuário:* {{usuario}}\n🔑 *Senha:* {{senha}}\n📅 *Vencimento:* {{vencimento}}\n\nAbra o aplicativo e assista no seu celular, TV Box ou Smart TV!'
+    test_whatsapp_message: map.test_whatsapp_message || 'Olá {{nome}}! Seu teste do Korp TV foi liberado com sucesso 🎉\n\n📲 *Baixar Aplicativo:* {{app_url}}\n🔢 *Código no Downloader:* {{codigo_downloader}}\n\n👤 *Usuário:* {{usuario}}\n🔑 *Senha:* {{senha}}\n📅 *Vencimento:* {{vencimento}}\n\nAbra o aplicativo e assista no seu celular, TV Box ou Smart TV!',
+    base_playlist_url: map.base_playlist_url || '',
+    base_playlist_check_hour: parseInt(map.base_playlist_check_hour || '1', 10),
+    base_playlist_auto_sync: map.base_playlist_auto_sync !== '0',
+    base_playlist_last_check: map.base_playlist_last_check || '',
+    base_playlist_last_status: map.base_playlist_last_status || '',
+    base_playlist_last_msg: map.base_playlist_last_msg || '',
+    base_playlist_etag: map.base_playlist_etag || ''
   };
 }
 

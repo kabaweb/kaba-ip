@@ -11,6 +11,7 @@ const adminRoutes = require('./routes/admin');
 const publicRoutes = require('./routes/public');
 
 const { runExpiryAutomations } = require('./services/automationService');
+const { checkBasePlaylist, isScheduledHour } = require('./services/basePlaylistChecker');
 
 const app = express();
 
@@ -112,6 +113,22 @@ async function start() {
       setInterval(() => {
         runExpiryAutomations().catch(err => console.error('[Automação Vencimento]', err.message));
       }, 60 * 60 * 1000);
+
+      // Verificação diária da lista base (às 01:00 no fuso de Brasília UTC-3)
+      let lastCheckDay = '';
+      setInterval(async () => {
+        try {
+          const nowBr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()); // YYYY-MM-DD
+          if (isScheduledHour(1) && lastCheckDay !== nowBr) {
+            lastCheckDay = nowBr;
+            console.log(`[Lista Base] Iniciando checagem diária agendada das 01:00 (UTC-3)...`);
+            const res = await checkBasePlaylist();
+            console.log(`[Lista Base] Resultado:`, res.message || res.error || 'Concluído');
+          }
+        } catch (err) {
+          console.error('[Lista Base] Erro no agendador:', err.message);
+        }
+      }, 45 * 1000); // Checa a cada 45 segundos se bateu o horário agendado
     });
   } catch (err) {
     console.error('Falha ao iniciar o portal:', err);

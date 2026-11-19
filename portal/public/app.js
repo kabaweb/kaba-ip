@@ -1152,6 +1152,16 @@ async function loadSettings() {
     if (document.getElementById('omdb-api-key')) {
       document.getElementById('omdb-api-key').value = s.omdb_api_key || '';
     }
+
+    // Lista Base Global
+    if (document.getElementById('base-playlist-url')) {
+      document.getElementById('base-playlist-url').value = s.base_playlist_url || '';
+    }
+    if (document.getElementById('base-playlist-auto-sync')) {
+      document.getElementById('base-playlist-auto-sync').checked = s.base_playlist_auto_sync !== false && s.base_playlist_auto_sync !== '0';
+    }
+    renderBasePlaylistStatus(s);
+
     loadMetadataStats();
     const publicLink = document.getElementById('link-public-teste');
     if (publicLink) {
@@ -1160,6 +1170,106 @@ async function loadSettings() {
     }
   } catch (err) {
     console.error('Erro ao carregar configurações:', err);
+  }
+}
+
+function renderBasePlaylistStatus(s) {
+  const badge = document.getElementById('base-playlist-badge');
+  const msgBox = document.getElementById('base-playlist-last-msg-box');
+  const msgText = document.getElementById('base-playlist-last-msg-text');
+  if (!badge) return;
+
+  const status = s.base_playlist_last_status || '';
+  const lastCheck = s.base_playlist_last_check || '';
+  const msg = s.base_playlist_last_msg || '';
+
+  if (status === 'updated') {
+    badge.className = 'badge bg-success-subtle text-success border border-success-subtle py-1.5 px-3';
+    badge.innerHTML = `<i class="bi bi-check-circle me-1"></i>Atualizada (${lastCheck})`;
+  } else if (status === 'unchanged') {
+    badge.className = 'badge bg-info-subtle text-info border border-info-subtle py-1.5 px-3';
+    badge.innerHTML = `<i class="bi bi-shield-check me-1"></i>Sincronizada (${lastCheck})`;
+  } else if (status === 'error') {
+    badge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle py-1.5 px-3';
+    badge.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i>Falha na checagem (${lastCheck})`;
+  } else {
+    badge.className = 'badge bg-secondary-subtle text-secondary border border-secondary-subtle py-1.5 px-3';
+    badge.innerHTML = `<i class="bi bi-clock me-1"></i>Não verificada`;
+  }
+
+  if (msg && msgBox && msgText) {
+    msgText.innerText = msg;
+    msgBox.classList.remove('d-none');
+  }
+}
+
+async function saveBasePlaylistSettings() {
+  const url = (document.getElementById('base-playlist-url')?.value || '').trim();
+  const autoSync = document.getElementById('base-playlist-auto-sync')?.checked ?? true;
+
+  try {
+    const res = await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        base_playlist_url: url,
+        base_playlist_auto_sync: autoSync ? '1' : '0'
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      alert('Configurações da Lista Base salvas com sucesso! A checagem automática ocorrerá diariamente às 01:00 (Brasília).');
+      loadSettings();
+    } else {
+      alert('Erro ao salvar: ' + (data.error || `HTTP ${res.status}`));
+    }
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+async function checkBasePlaylistNow() {
+  const btn = document.getElementById('btn-check-base-playlist');
+  const originalText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span>Verificando no provedor...`;
+  }
+
+  try {
+    // 1. Garante que salvou a URL antes de checar
+    const url = (document.getElementById('base-playlist-url')?.value || '').trim();
+    if (!url) {
+      alert('Por favor, informe a URL da Lista Base antes de verificar.');
+      if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
+      return;
+    }
+    await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ base_playlist_url: url })
+    });
+
+    // 2. Dispara a verificação
+    const res = await fetch('/api/admin/base-playlist/check', {
+      method: 'POST',
+      headers: authHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok && data.success) {
+      alert(data.message || 'Verificação concluída com sucesso!');
+      loadSettings();
+    } else {
+      alert('Erro na verificação: ' + (data.error || `HTTP ${res.status}`));
+    }
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
   }
 }
 

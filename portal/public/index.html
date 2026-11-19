@@ -664,6 +664,61 @@
         <section id="section-automations" class="hidden d-flex flex-column gap-4">
           <div class="row g-4">
 
+            <!-- CARD: LISTA BASE GLOBAL & CHECAGEM AUTOMÁTICA (01:00 UTC-3) -->
+            <div class="col-12">
+              <div class="glass-card p-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="icon-box bg-info-subtle text-info border border-info-subtle" style="width: 44px; height: 44px; font-size: 1.25rem;">
+                      <i class="bi bi-collection-play"></i>
+                    </div>
+                    <div>
+                      <h2 class="h5 fw-bold text-white mb-0">Lista Base Global & Atualização Automática</h2>
+                      <small class="text-secondary">Checagem diária agendada para às <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">01:00 (Brasília / UTC-3)</span> ou sob demanda</small>
+                    </div>
+                  </div>
+                  <div id="base-playlist-status-container" class="d-flex align-items-center gap-2">
+                    <span id="base-playlist-badge" class="badge bg-secondary-subtle text-secondary border border-secondary-subtle py-1.5 px-3">
+                      <i class="bi bi-clock me-1"></i>Não verificada
+                    </span>
+                  </div>
+                </div>
+
+                <p class="text-secondary small leading-relaxed mb-3">
+                  Insira a URL principal da sua lista M3U ou Xtream. O portal realiza a checagem no provedor todos os dias às 01:00 (horário de Brasília). Caso haja alteração no provedor, o portal notifica os aplicativos conectados para recarregarem a lista em segundo plano, sem travar nem interromper quem estiver assistindo.
+                </p>
+
+                <div class="row g-3 mb-3">
+                  <div class="col-12 col-md-8">
+                    <label for="base-playlist-url" class="form-label small fw-semibold text-light mb-1">URL da Lista Base (M3U / Xtream)</label>
+                    <input type="url" id="base-playlist-url" placeholder="http://servidor.com:8080/get.php?username=...&password=...&type=m3u_plus" class="form-control form-control-sm font-monospace">
+                  </div>
+                  <div class="col-12 col-md-4 d-flex align-items-end">
+                    <div class="form-check form-switch p-2 bg-body-tertiary rounded-3 border border-secondary-subtle w-100 d-flex justify-content-between align-items-center">
+                      <label class="form-check-label fw-bold text-white small" for="base-playlist-auto-sync" style="font-size: 0.78rem;">
+                        Sincronizar Apps Automaticamente
+                      </label>
+                      <input class="form-check-input ms-0" type="checkbox" role="switch" id="base-playlist-auto-sync" checked style="cursor: pointer;">
+                    </div>
+                  </div>
+                </div>
+
+                <div id="base-playlist-last-msg-box" class="p-2.5 rounded-3 border border-secondary-subtle bg-body-tertiary mb-3 d-none" style="font-size: 0.78rem;">
+                  <strong class="text-info d-block mb-1"><i class="bi bi-info-circle me-1"></i>Último Registro de Checagem:</strong>
+                  <span id="base-playlist-last-msg-text" class="text-secondary"></span>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 justify-content-end">
+                  <button onclick="saveBasePlaylistSettings()" class="btn btn-sm btn-primary fw-semibold px-3 shadow-sm">
+                    <i class="bi bi-save me-1"></i>Salvar Lista Base
+                  </button>
+                  <button onclick="checkBasePlaylistNow()" id="btn-check-base-playlist" class="btn btn-sm btn-outline-info fw-bold px-3">
+                    <i class="bi bi-arrow-repeat me-1"></i>Verificar Lista Agora
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <!-- CARD 1: SERVIDOR IPTV & MIGRAÇÃO EM MASSA -->
             <div class="col-12 col-lg-4">
               <div class="glass-card p-4 h-100 d-flex flex-column justify-content-between">
