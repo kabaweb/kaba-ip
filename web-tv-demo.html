@@ -11,16 +11,17 @@
 
   <style>
     /* ==============================================================================
-       10-Foot UI & Smart TV Optimizations (Samsung Tizen / LG webOS)
+       10-FOOT UI & DESIGN SYSTEM RESPONSIVO PARA SMART TV (SAMSUNG & LG)
        ============================================================================== */
     :root {
-      --tv-safe-gap: 28px;
+      --tv-safe-gap: clamp(20px, 2.5vw, 36px);
       --tv-accent: #06b6d4;
       --tv-accent-glow: rgba(6, 182, 212, 0.45);
-      --tv-card-bg: #161b26;
-      --tv-sidebar-width: 90px;
-      --tv-sidebar-expanded: 240px;
       --tv-focus-border: #38bdf8;
+      --tv-card-bg: rgba(22, 27, 38, 0.85);
+      --tv-sidebar-width: clamp(74px, 6vw, 92px);
+      --tv-sidebar-expanded: clamp(220px, 18vw, 280px);
+      --tv-card-radius: 12px;
     }
 
     * {
@@ -33,7 +34,7 @@
     body {
       margin: 0;
       padding: 0;
-      background: radial-gradient(circle at 15% 15%, #131722 0%, #090b10 100%);
+      background-color: #090b10;
       color: #f1f5f9;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       overflow: hidden;
@@ -41,36 +42,38 @@
       height: 100vh;
     }
 
-    /* Overscan Safe Container para Smart TVs */
+    /* Overscan Safe Container (16:9 Adaptável de 32" a 75" 4K) */
     .tv-screen-container {
       width: 100vw;
       height: 100vh;
       display: flex;
       padding: var(--tv-safe-gap);
-      gap: 20px;
+      gap: clamp(14px, 1.5vw, 24px);
       position: relative;
+      background: radial-gradient(circle at 10% 10%, #151926 0%, #080a0f 100%);
     }
 
     /* ==============================================================================
-       SISTEMA DE FOCO VISUAL PARA CONTROLE REMOTO (D-PAD)
+       SISTEMA DE FOCO VISUAL PARA CONTROLE REMOTO (D-PAD & MAGIC REMOTE)
        ============================================================================== */
     .tv-focusable {
-      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+      transition: transform 0.18s cubic-bezier(0.2, 0, 0.2, 1), 
+                  box-shadow 0.18s cubic-bezier(0.2, 0, 0.2, 1), 
+                  border-color 0.18s ease, 
+                  background-color 0.18s ease;
       cursor: pointer;
-      border: 2px solid transparent;
+      border: 2.5px solid transparent;
     }
 
     /* Efeito de Foco de Alta Visibilidade (visível a 3 metros de distância) */
     .tv-focusable:focus,
     .tv-focusable.tv-focused {
       border-color: var(--tv-focus-border) !important;
-      box-shadow: 0 0 0 3px var(--tv-accent-glow), 0 8px 24px rgba(0, 0, 0, 0.7) !important;
-      transform: scale(1.035);
-      background-color: rgba(56, 189, 248, 0.14) !important;
-      z-index: 10;
+      box-shadow: 0 0 0 3px var(--tv-accent-glow), 0 12px 28px rgba(0, 0, 0, 0.85) !important;
+      transform: scale(1.05);
+      z-index: 15;
     }
 
-    /* Botões focados com preenchimento forte */
     .btn.tv-focusable:focus,
     .btn.tv-focusable.tv-focused {
       background-color: var(--tv-accent) !important;
@@ -79,43 +82,45 @@
     }
 
     /* ==============================================================================
-       SIDEBAR DE NAVEGAÇÃO RÁPIDA
+       SIDEBAR DE NAVEGAÇÃO RÁPIDA (RETRÁTIL / EXPANSÍVEL)
        ============================================================================== */
     .tv-sidebar {
       width: var(--tv-sidebar-width);
-      background: rgba(18, 22, 34, 0.85);
-      backdrop-filter: blur(16px);
-      border-radius: 16px;
+      background: rgba(18, 22, 34, 0.88);
+      backdrop-filter: blur(20px);
+      border-radius: 18px;
       border: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px 8px;
-      transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 20;
+      padding: clamp(14px, 1.8vh, 24px) 10px;
+      transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 30;
+      flex-shrink: 0;
     }
 
     .tv-sidebar:focus-within,
     .tv-sidebar.expanded {
       width: var(--tv-sidebar-expanded);
       align-items: stretch;
-      box-shadow: 10px 0 30px rgba(0, 0, 0, 0.6);
+      box-shadow: 15px 0 40px rgba(0, 0, 0, 0.7);
     }
 
     .sidebar-brand {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 6px 12px;
-      margin-bottom: 24px;
+      padding: 6px 10px;
+      margin-bottom: clamp(14px, 2vh, 26px);
       color: var(--tv-accent);
       font-weight: 800;
-      font-size: 1.25rem;
+      font-size: clamp(1.1rem, 1.4vw, 1.35rem);
     }
 
     .sidebar-brand span {
       display: none;
       white-space: nowrap;
+      letter-spacing: 0.5px;
     }
 
     .tv-sidebar:focus-within .sidebar-brand span,
@@ -128,23 +133,24 @@
       align-items: center;
       gap: 14px;
       width: 100%;
-      padding: 12px 14px;
+      padding: clamp(10px, 1.4vh, 14px) 12px;
       border-radius: 12px;
       color: #94a3b8;
       text-decoration: none;
-      font-size: 1.05rem;
-      margin-bottom: 8px;
+      font-size: clamp(0.95rem, 1.1vw, 1.1rem);
+      margin-bottom: 6px;
     }
 
     .nav-item-btn i {
-      font-size: 1.4rem;
-      min-width: 28px;
+      font-size: clamp(1.3rem, 1.5vw, 1.55rem);
+      min-width: 30px;
       text-align: center;
     }
 
     .nav-item-btn span {
       display: none;
       white-space: nowrap;
+      font-weight: 500;
     }
 
     .tv-sidebar:focus-within .nav-item-btn span,
@@ -154,11 +160,13 @@
 
     .nav-item-btn.active {
       color: #fff;
-      background: rgba(255, 255, 255, 0.08);
+      background: rgba(6, 182, 212, 0.18);
+      border-left: 3px solid var(--tv-accent);
+      font-weight: 700;
     }
 
     /* ==============================================================================
-       CONTEÚDO PRINCIPAL (LAYOUT 3 COLUNAS / GRIDS)
+       ÁREA PRINCIPAL DE CONTEÚDO (VISTAS DINÂMICAS: INÍCIO, AO VIVO, FILMES, SÉRIES)
        ============================================================================== */
     .tv-main-content {
       flex: 1;
@@ -169,15 +177,226 @@
       position: relative;
     }
 
-    .tv-header {
+    .tv-view {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .tv-view.active {
+      display: flex;
+    }
+
+    /* Header Superior com Horário e Status */
+    .tv-top-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: clamp(10px, 1.5vh, 18px);
+      flex-shrink: 0;
+    }
+
+    /* ==============================================================================
+       VISTA 1: HOME CINEMÁTICA (BILLBOARD + CARROSSÉIS DE FILMES E SÉRIES)
+       ============================================================================== */
+    .home-scroll-container {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: none;
+      padding-right: 6px;
+    }
+    .home-scroll-container::-webkit-scrollbar { display: none; }
+
+    /* Billboard / Hero Banner em Destaque */
+    .tv-billboard {
+      position: relative;
+      height: clamp(220px, 34vh, 340px);
+      border-radius: 18px;
+      overflow: hidden;
+      margin-bottom: clamp(16px, 2.2vh, 26px);
+      display: flex;
+      align-items: flex-end;
+      padding: clamp(18px, 2.6vw, 36px);
+      background-size: cover;
+      background-position: center 25%;
+      transition: background-image 0.4s ease-in-out;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+    }
+
+    .tv-billboard::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(9, 11, 16, 0.95) 0%, rgba(9, 11, 16, 0.7) 45%, rgba(9, 11, 16, 0.1) 100%),
+                  linear-gradient(0deg, rgba(9, 11, 16, 0.95) 0%, transparent 60%);
+      z-index: 1;
+    }
+
+    .billboard-content {
+      position: relative;
+      z-index: 2;
+      max-width: clamp(380px, 50vw, 680px);
+    }
+
+    .billboard-badge {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .billboard-title {
+      font-size: clamp(1.4rem, 2.5vw, 2.4rem);
+      font-weight: 900;
+      line-height: 1.15;
+      margin-bottom: 8px;
+      color: #fff;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+    }
+
+    .billboard-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: clamp(0.85rem, 1vw, 0.95rem);
+      margin-bottom: 10px;
+      color: #cbd5e1;
+    }
+
+    .billboard-synopsis {
+      font-size: clamp(0.85rem, 0.95vw, 0.95rem);
+      color: #94a3b8;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
       margin-bottom: 16px;
     }
 
+    /* Fileiras / Carrosséis Horizontais de Conteúdo */
+    .tv-shelf {
+      margin-bottom: clamp(16px, 2.4vh, 26px);
+    }
+
+    .shelf-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 0 4px;
+    }
+
+    .shelf-title {
+      font-size: clamp(1.05rem, 1.25vw, 1.3rem);
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+    }
+
+    .shelf-carousel {
+      display: flex;
+      gap: clamp(12px, 1.2vw, 18px);
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 8px 4px 16px 4px;
+      scrollbar-width: none;
+      scroll-behavior: smooth;
+    }
+    .shelf-carousel::-webkit-scrollbar { display: none; }
+
+    /* Cards de Poster (Filmes & Séries - Proporção 2:3) */
+    .tv-poster-card {
+      flex: 0 0 clamp(130px, 11vw, 175px);
+      aspect-ratio: 2 / 3;
+      border-radius: var(--tv-card-radius);
+      position: relative;
+      overflow: hidden;
+      background: #181d29;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    }
+
+    .tv-poster-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .poster-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 40%, rgba(9, 11, 16, 0.92) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 10px;
+    }
+
+    .poster-title {
+      font-size: clamp(0.8rem, 0.9vw, 0.95rem);
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .poster-tags {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    /* Cards Horizontais para Canais Ao Vivo */
+    .tv-live-card {
+      flex: 0 0 clamp(200px, 16vw, 260px);
+      height: clamp(100px, 12vh, 120px);
+      border-radius: var(--tv-card-radius);
+      position: relative;
+      overflow: hidden;
+      background: #161b26;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      padding: 14px;
+      gap: 14px;
+    }
+
+    .live-badge-pulse {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.2); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* ==============================================================================
+       VISTA 2: TV AO VIVO (3 COLUNAS XTREAM: GRUPOS, CANAIS, MINI PLAYER / EPG)
+       ============================================================================== */
     .tv-category-panel {
-      width: 260px;
+      width: clamp(210px, 18vw, 270px);
       height: 100%;
       background: rgba(22, 27, 38, 0.7);
       border-radius: 14px;
@@ -185,11 +404,12 @@
       padding: 12px;
       overflow-y: auto;
       scrollbar-width: none;
+      flex-shrink: 0;
     }
     .tv-category-panel::-webkit-scrollbar { display: none; }
 
     .tv-channel-panel {
-      width: 380px;
+      width: clamp(280px, 24vw, 390px);
       height: 100%;
       background: rgba(18, 22, 31, 0.9);
       border-radius: 14px;
@@ -197,6 +417,7 @@
       padding: 12px;
       overflow-y: auto;
       scrollbar-width: none;
+      flex-shrink: 0;
     }
     .tv-channel-panel::-webkit-scrollbar { display: none; }
 
@@ -206,20 +427,21 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
+      overflow: hidden;
     }
 
     .category-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 14px;
+      padding: 10px 14px;
       border-radius: 10px;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
       color: #cbd5e1;
-      font-size: 0.98rem;
+      font-size: clamp(0.85rem, 0.95vw, 0.98rem);
     }
     .category-row.active {
-      background: rgba(6, 182, 212, 0.15);
+      background: rgba(6, 182, 212, 0.16);
       color: #fff;
       font-weight: 600;
       border-left: 4px solid var(--tv-accent);
@@ -236,32 +458,20 @@
     }
 
     .channel-logo {
-      width: 44px;
-      height: 44px;
+      width: clamp(38px, 3vw, 44px);
+      height: clamp(38px, 3vw, 44px);
       border-radius: 8px;
       background: #1e2536;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: bold;
-      font-size: 1.1rem;
       color: var(--tv-accent);
+      flex-shrink: 0;
     }
 
-    .badge-quality {
-      font-size: 0.72rem;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: rgba(255, 255, 255, 0.12);
-      color: #38bdf8;
-      font-weight: 700;
-    }
-
-    /* ==============================================================================
-       MINI PLAYER & GUIA TV EPG
-       ============================================================================== */
     .mini-player-card {
-      height: 260px;
+      height: clamp(180px, 28vh, 260px);
       border-radius: 14px;
       position: relative;
       background: #000;
@@ -270,6 +480,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
     }
 
     .epg-timeline-card {
@@ -279,6 +490,7 @@
       border: 1px solid rgba(255, 255, 255, 0.06);
       padding: 16px;
       overflow-y: auto;
+      scrollbar-width: none;
     }
 
     .epg-show-box {
@@ -290,7 +502,41 @@
     }
 
     /* ==============================================================================
-       FULLSCREEN PLAYER OVERLAY (MODO TV PLAYBACK)
+       BARRA DE ATALHOS DO CONTROLE REMOTO (LEGENDA VISUAL FIXA)
+       ============================================================================== */
+    .remote-hints-bar {
+      display: flex;
+      align-items: center;
+      gap: clamp(10px, 1.5vw, 22px);
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border-radius: 12px;
+      padding: 8px clamp(12px, 1.4vw, 20px);
+      margin-top: 10px;
+      font-size: clamp(0.78rem, 0.85vw, 0.9rem);
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .key-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: #334155;
+      color: #fff;
+      font-weight: bold;
+      font-size: 0.72rem;
+      margin-right: 5px;
+    }
+    .key-badge.red { background: #ef4444; }
+    .key-badge.green { background: #10b981; }
+    .key-badge.yellow { background: #f59e0b; color: #000; }
+    .key-badge.blue { background: #3b82f6; }
+
+    /* ==============================================================================
+       PLAYER EM TELA CHEIA (OVERLAY FULLSCREEN COM HARDWARE/HTML5 DUAL)
        ============================================================================== */
     #tvPlayerOverlay {
       position: fixed;
@@ -299,7 +545,7 @@
       width: 100vw;
       height: 100vh;
       background: #000;
-      z-index: 100;
+      z-index: 1000;
       display: none;
     }
 
@@ -308,75 +554,48 @@
       bottom: 0;
       left: 0;
       right: 0;
-      background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 75%, transparent 100%);
+      background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 75%, transparent 100%);
       padding: var(--tv-safe-gap);
-      padding-top: 60px;
+      padding-top: 80px;
       display: flex;
       flex-direction: column;
       gap: 12px;
       transition: opacity 0.3s ease;
     }
 
-    /* ==============================================================================
-       BARRA DE ATALHOS DO CONTROLE REMOTO (LEGENDA VISUAL)
-       ============================================================================== */
-    .remote-hints-bar {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      background: rgba(15, 23, 42, 0.8);
-      border-radius: 10px;
-      padding: 8px 16px;
-      margin-top: 10px;
-      font-size: 0.85rem;
-      color: #94a3b8;
+    /* Modal de Detalhes Cinemático */
+    .modal-backdrop.show {
+      opacity: 0.82;
+      backdrop-filter: blur(12px);
     }
-
-    .key-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2px 8px;
-      border-radius: 4px;
-      background: #334155;
-      color: #fff;
-      font-weight: bold;
-      font-size: 0.75rem;
-      margin-right: 6px;
-    }
-
-    .key-badge.red { background: #ef4444; }
-    .key-badge.green { background: #10b981; }
-    .key-badge.yellow { background: #f59e0b; color: #000; }
-    .key-badge.blue { background: #3b82f6; }
   </style>
 </head>
 <body>
 
-  <!-- Container Seguro para TVs 16:9 -->
+  <!-- Container Seguro para TVs (16:9 Adaptável a 720p, 1080p, 4K) -->
   <div class="tv-screen-container">
 
-    <!-- 1. SIDEBAR TV (Navegação D-PAD Esquerda/Direita) -->
+    <!-- 1. SIDEBAR TV (Navegação D-PAD com Foco Retrátil) -->
     <nav class="tv-sidebar" id="tvSidebar">
       <div class="sidebar-brand">
-        <i class="bi bi-play-circle-fill fs-3"></i>
+        <i class="bi bi-play-circle-fill fs-3 text-info"></i>
         <span>KORP TV</span>
       </div>
 
       <div class="w-100 d-flex flex-column gap-1">
-        <a href="#live" class="nav-item-btn tv-focusable active" data-nav="live" tabindex="0">
+        <a href="#home" class="nav-item-btn tv-focusable active" data-view="home" tabindex="0">
+          <i class="bi bi-house-door-fill"></i>
+          <span>Início</span>
+        </a>
+        <a href="#live" class="nav-item-btn tv-focusable" data-view="live" tabindex="0">
           <i class="bi bi-tv"></i>
-          <span>Ao Vivo</span>
+          <span>TV Ao Vivo</span>
         </a>
-        <a href="#guide" class="nav-item-btn tv-focusable" data-nav="guide" tabindex="0">
-          <i class="bi bi-grid-3x3-gap"></i>
-          <span>Guia TV</span>
-        </a>
-        <a href="#movies" class="nav-item-btn tv-focusable" data-nav="movies" tabindex="0">
+        <a href="#movies" class="nav-item-btn tv-focusable" data-view="movies" tabindex="0">
           <i class="bi bi-film"></i>
           <span>Filmes</span>
         </a>
-        <a href="#series" class="nav-item-btn tv-focusable" data-nav="series" tabindex="0">
+        <a href="#series" class="nav-item-btn tv-focusable" data-view="series" tabindex="0">
           <i class="bi bi-collection-play"></i>
           <span>Séries</span>
         </a>
@@ -386,21 +605,22 @@
         </a>
       </div>
 
-      <div class="mt-auto text-center text-muted small py-2 d-none d-lg-block">
-        <span class="badge bg-secondary-subtle text-secondary">v1.6.4 Web</span>
+      <div class="mt-auto text-center py-2 d-none d-lg-block">
+        <span class="badge bg-secondary-subtle text-secondary small">v1.6.4 Smart</span>
       </div>
     </nav>
 
-    <!-- 2. ÁREA PRINCIPAL -->
+    <!-- 2. ÁREA DE CONTEÚDO PRINCIPAL (TELAS DINÂMICAS) -->
     <main class="tv-main-content">
-      <!-- Topo: Título da Seção e Status -->
-      <header class="tv-header">
+      
+      <!-- Topo: Título da Seção Atual, Conexão e Relógio em Tempo Real -->
+      <header class="tv-top-bar">
         <div>
           <h2 class="fw-bold mb-0 text-white d-flex align-items-center gap-2">
-            <span class="text-info" id="viewTitle">TV Ao Vivo</span>
+            <span class="text-info" id="viewHeaderTitle">Início</span>
             <span class="badge bg-success-subtle text-success fs-6 border border-success-subtle">Online</span>
           </h2>
-          <small class="text-secondary" id="viewSubtitle">Ordem oficial Xtream · Qualidade padrão selecionada</small>
+          <small class="text-secondary" id="viewHeaderSubtitle">Destaques recomendados · Filmes, Séries e TV Ao Vivo</small>
         </div>
         <div class="d-flex align-items-center gap-3">
           <div class="text-end">
@@ -410,171 +630,609 @@
         </div>
       </header>
 
-      <!-- Painel de TV Ao Vivo (3 Colunas: Grupos, Canais, Prévia/EPG) -->
-      <div class="d-flex gap-3 flex-grow-1 overflow-hidden">
-        
-        <!-- Coluna 1: Categorias (Ordem Oficial Xtream: Jogos primeiro, Adultos por último) -->
-        <section class="tv-category-panel" id="categoryPanel">
-          <div class="text-uppercase small text-secondary fw-bold px-2 mb-2">Categorias</div>
-          <div class="category-row tv-focusable active" tabindex="0" data-cat="jogos">
-            <span>⚽ JOGOS DO DIA</span>
-            <span class="badge bg-info-subtle text-info">14</span>
-          </div>
-          <div class="category-row tv-focusable" tabindex="0" data-cat="abertos">
-            <span>📺 CANAIS ABERTOS</span>
-            <span class="badge bg-secondary-subtle text-secondary">28</span>
-          </div>
-          <div class="category-row tv-focusable" tabindex="0" data-cat="esportes">
-            <span>🏆 ESPORTES</span>
-            <span class="badge bg-secondary-subtle text-secondary">42</span>
-          </div>
-          <div class="category-row tv-focusable" tabindex="0" data-cat="filmes">
-            <span>🎬 FILMES E SÉRIES</span>
-            <span class="badge bg-secondary-subtle text-secondary">36</span>
-          </div>
-          <div class="category-row tv-focusable" tabindex="0" data-cat="noticias">
-            <span>📰 NOTÍCIAS</span>
-            <span class="badge bg-secondary-subtle text-secondary">18</span>
-          </div>
-          <div class="category-row tv-focusable" tabindex="0" data-cat="infantil">
-            <span>🎨 INFANTIL</span>
-            <span class="badge bg-secondary-subtle text-secondary">15</span>
-          </div>
-          <div class="category-row tv-focusable" tabindex="0" data-cat="documentarios">
-            <span>🌍 DOCUMENTÁRIOS</span>
-            <span class="badge bg-secondary-subtle text-secondary">12</span>
-          </div>
-          <div class="category-row tv-focusable" tabindex="0" data-cat="adultos">
-            <span>🔒 [XXX] ADULTOS</span>
-            <span class="badge bg-danger-subtle text-danger">8</span>
-          </div>
-        </section>
-
-        <!-- Coluna 2: Lista de Canais do Grupo Selecionado -->
-        <section class="tv-channel-panel" id="channelPanel">
-          <div class="text-uppercase small text-secondary fw-bold px-2 mb-2 d-flex justify-content-between">
-            <span>Canais (JOGOS DO DIA)</span>
-            <span class="text-info">Resolução: SD</span>
-          </div>
-
-          <div class="channel-row tv-focusable" tabindex="0" data-ch="1" data-title="Premiere Clubes SD" data-q="SD" data-prog="Brasileirão: Flamengo x Palmeiras (Ao Vivo)">
-            <div class="channel-logo">P1</div>
-            <div class="flex-grow-1 overflow-hidden">
-              <div class="text-truncate fw-semibold">Premiere Clubes</div>
-              <small class="text-secondary text-truncate d-block">Ao vivo: Flamengo x Palmeiras</small>
-            </div>
-            <span class="badge-quality">SD</span>
-          </div>
-
-          <div class="channel-row tv-focusable" tabindex="0" data-ch="2" data-title="SporTV SD" data-q="SD" data-prog="Tá na Área - Pré Jogo">
-            <div class="channel-logo">STV</div>
-            <div class="flex-grow-1 overflow-hidden">
-              <div class="text-truncate fw-semibold">SporTV</div>
-              <small class="text-secondary text-truncate d-block">Tá na Área - Pré Jogo</small>
-            </div>
-            <span class="badge-quality">SD</span>
-          </div>
-
-          <div class="channel-row tv-focusable" tabindex="0" data-ch="3" data-title="ESPN Brasil SD" data-q="SD" data-prog="Futebol Europeu: Premier League">
-            <div class="channel-logo">ESPN</div>
-            <div class="flex-grow-1 overflow-hidden">
-              <div class="text-truncate fw-semibold">ESPN Brasil</div>
-              <small class="text-secondary text-truncate d-block">Futebol Europeu: Premier League</small>
-            </div>
-            <span class="badge-quality">SD</span>
-          </div>
-
-          <div class="channel-row tv-focusable" tabindex="0" data-ch="4" data-title="CazéTV HD" data-q="HD" data-prog="Transmissão Especial">
-            <div class="channel-logo">CZ</div>
-            <div class="flex-grow-1 overflow-hidden">
-              <div class="text-truncate fw-semibold">CazéTV</div>
-              <small class="text-secondary text-truncate d-block">Transmissão Especial</small>
-            </div>
-            <span class="badge-quality">HD</span>
-          </div>
-
-          <div class="channel-row tv-focusable" tabindex="0" data-ch="5" data-title="TNT Sports SD" data-q="SD" data-prog="Champions League Highlights">
-            <div class="channel-logo">TNT</div>
-            <div class="flex-grow-1 overflow-hidden">
-              <div class="text-truncate fw-semibold">TNT Sports</div>
-              <small class="text-secondary text-truncate d-block">Champions League Highlights</small>
-            </div>
-            <span class="badge-quality">SD</span>
-          </div>
-        </section>
-
-        <!-- Coluna 3: Pré-Visualização / Player Ativo + EPG Completo -->
-        <section class="tv-preview-panel">
-          <!-- Mini Player / Janela PiP -->
-          <div class="mini-player-card">
-            <!-- Simulação de Vídeo com Canvas/HTML5 Video -->
-            <video id="miniVideo" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;">
-              <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
-            </video>
-            <div class="position-absolute bottom-0 start-0 end-0 p-3 bg-dark bg-opacity-75 d-flex justify-content-between align-items-center">
-              <div>
-                <span class="badge bg-danger me-2">AO VIVO</span>
-                <span class="fw-bold" id="previewTitle">Premiere Clubes SD</span>
+      <!-- ==============================================================================
+           VISTA 1: INÍCIO (BILLBOARD HERO + CARROSSÉIS DE FILMES E SÉRIES)
+           ============================================================================== -->
+      <section class="tv-view active" id="viewHome">
+        <div class="home-scroll-container">
+          
+          <!-- Billboard Cinemático Dinâmico -->
+          <div class="tv-billboard" id="homeBillboard" style="background-image: url('https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1600&auto=format&fit=crop');">
+            <div class="billboard-content">
+              <div class="billboard-badge bg-danger text-white">
+                <i class="bi bi-fire"></i> DESTAQUE DA SEMANA
               </div>
-              <button class="btn btn-sm btn-info tv-focusable" id="btnFullscreen" tabindex="0">
-                <i class="bi bi-arrows-fullscreen me-1"></i> Tela Cheia
-              </button>
+              <h1 class="billboard-title" id="bbTitle">Duna: Parte 2</h1>
+              <div class="billboard-meta">
+                <span class="text-warning fw-bold"><i class="bi bi-star-fill me-1"></i>8.6</span>
+                <span>2024</span>
+                <span class="badge bg-secondary">14+</span>
+                <span>2h 46m</span>
+                <span class="badge bg-info-subtle text-info">4K UHD</span>
+                <span class="badge bg-dark border border-secondary">Dolby Atmos</span>
+              </div>
+              <p class="billboard-synopsis" id="bbSynopsis">
+                Paul Atreides se une a Chani e aos Fremen enquanto busca vingança contra os conspiradores que destruíram sua família. Uma jornada épica pelo deserto de Arrakis.
+              </p>
+              <div class="d-flex gap-3">
+                <button class="btn btn-info tv-focusable px-4 py-2" id="btnBbWatch" tabindex="0">
+                  <i class="bi bi-play-fill me-1 fs-5"></i> Assistir Agora
+                </button>
+                <button class="btn btn-outline-light tv-focusable px-3 py-2" id="btnBbDetails" tabindex="0">
+                  <i class="bi bi-info-circle me-1"></i> Detalhes
+                </button>
+                <button class="btn btn-outline-secondary tv-focusable px-3 py-2" id="btnBbList" tabindex="0">
+                  <i class="bi bi-plus-lg me-1"></i> Minha Lista
+                </button>
+              </div>
             </div>
           </div>
 
-          <!-- Guia de Programação (EPG) -->
-          <div class="epg-timeline-card">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h5 class="fw-bold mb-0 text-white"><i class="bi bi-clock-history me-2 text-info"></i>Programação do Canal</h5>
-              <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Fuso Oficial: Brasil/SP</span>
+          <!-- Prateleira 1: Em Alta & Tendências (Filmes e Séries Misturados) -->
+          <div class="tv-shelf">
+            <div class="shelf-header">
+              <h3 class="shelf-title"><i class="bi bi-lightning-charge-fill text-warning"></i> Em Alta no Korp TV</h3>
+              <small class="text-secondary">Os mais assistidos nas últimas 24h</small>
             </div>
-
-            <div class="epg-show-box tv-focusable" tabindex="0">
-              <div class="d-flex justify-content-between text-info small fw-bold">
-                <span>AGORA (19:30 - 21:45)</span>
-                <span>AO VIVO</span>
+            <div class="shelf-carousel" id="shelfTrending">
+              
+              <div class="tv-poster-card tv-focusable" tabindex="0" 
+                   data-type="movie" data-title="Oppenheimer" data-year="2023" data-rating="8.9" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=1400"
+                   data-syn="A história do físico J. Robert Oppenheimer e o desenvolvimento do Projeto Manhattan durante a Segunda Guerra Mundial.">
+                <img src="https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=600" alt="Oppenheimer">
+                <div class="poster-overlay">
+                  <div class="poster-title">Oppenheimer</div>
+                  <div class="poster-tags">
+                    <span class="text-warning"><i class="bi bi-star-fill"></i> 8.9</span>
+                    <span class="badge bg-info-subtle text-info">4K</span>
+                  </div>
+                </div>
               </div>
-              <h6 class="fw-bold my-1 text-white" id="epgCurrentTitle">Brasileirão Série A: Flamengo vs Palmeiras</h6>
-              <p class="text-secondary small mb-0">Transmissão completa em tempo real direto do Maracanã com som surround e análise tática.</p>
-            </div>
 
-            <div class="epg-show-box tv-focusable" tabindex="0">
-              <div class="d-flex justify-content-between text-muted small fw-bold">
-                <span>A SEGUIR (21:45 - 22:30)</span>
-                <span>PÓS-JOGO</span>
+              <div class="tv-poster-card tv-focusable" tabindex="0" 
+                   data-type="series" data-title="The Last of Us" data-year="2023" data-rating="8.8" data-q="FHD"
+                   data-bg="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1400"
+                   data-syn="Vinte anos após uma pandemia devastadora, Joel é contratado para contrabandear Ellie para fora de uma zona militar de quarentena.">
+                <img src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600" alt="The Last of Us">
+                <div class="poster-overlay">
+                  <div class="poster-title">The Last of Us</div>
+                  <div class="poster-tags">
+                    <span class="text-warning"><i class="bi bi-star-fill"></i> 8.8</span>
+                    <span class="badge bg-primary-subtle text-primary">T1</span>
+                  </div>
+                </div>
               </div>
-              <h6 class="fw-bold my-1 text-light">Linha de Passe: Melhores Momentos & Coletiva</h6>
-              <p class="text-secondary small mb-0">Debate completo dos lances, entrevistas exclusivas com os técnicos e classificação atualizada.</p>
+
+              <div class="tv-poster-card tv-focusable" tabindex="0" 
+                   data-type="movie" data-title="Interestelar" data-year="2014" data-rating="8.7" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1400"
+                   data-syn="Um grupo de exploradores viaja através de um buraco de minhoca no espaço na tentativa de garantir a sobrevivência da humanidade.">
+                <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=600" alt="Interestelar">
+                <div class="poster-overlay">
+                  <div class="poster-title">Interestelar</div>
+                  <div class="poster-tags">
+                    <span class="text-warning"><i class="bi bi-star-fill"></i> 8.7</span>
+                    <span class="badge bg-info-subtle text-info">4K</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tv-poster-card tv-focusable" tabindex="0" 
+                   data-type="series" data-title="Stranger Things" data-year="2022" data-rating="8.7" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1400"
+                   data-syn="Quando um garoto desaparece, sua mãe, o chefe de polícia e seus amigos precisam enfrentar forças aterrorizantes para tê-lo de volta.">
+                <img src="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=600" alt="Stranger Things">
+                <div class="poster-overlay">
+                  <div class="poster-title">Stranger Things</div>
+                  <div class="poster-tags">
+                    <span class="text-warning"><i class="bi bi-star-fill"></i> 8.7</span>
+                    <span class="badge bg-primary-subtle text-primary">T4</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tv-poster-card tv-focusable" tabindex="0" 
+                   data-type="movie" data-title="Blade Runner 2049" data-year="2017" data-rating="8.0" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=1400"
+                   data-syn="O policial K desenterra um segredo há muito enterrado que tem o potencial de mergulhar o que resta da sociedade no caos total.">
+                <img src="https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=600" alt="Blade Runner 2049">
+                <div class="poster-overlay">
+                  <div class="poster-title">Blade Runner 2049</div>
+                  <div class="poster-tags">
+                    <span class="text-warning"><i class="bi bi-star-fill"></i> 8.0</span>
+                    <span class="badge bg-info-subtle text-info">4K</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tv-poster-card tv-focusable" tabindex="0" 
+                   data-type="series" data-title="Succession" data-year="2023" data-rating="8.9" data-q="FHD"
+                   data-bg="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1400"
+                   data-syn="A família Roy é conhecida por controlar o maior conglomerado de mídia do mundo. Quando o patriarca decide se afastar, a briga sucessória começa.">
+                <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=600" alt="Succession">
+                <div class="poster-overlay">
+                  <div class="poster-title">Succession</div>
+                  <div class="poster-tags">
+                    <span class="text-warning"><i class="bi bi-star-fill"></i> 8.9</span>
+                    <span class="badge bg-primary-subtle text-primary">T4</span>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
-        </section>
 
-      </div>
+          <!-- Prateleira 2: Filmes Recomendados (Catálogo VOD) -->
+          <div class="tv-shelf">
+            <div class="shelf-header">
+              <h3 class="shelf-title"><i class="bi bi-film text-info"></i> Filmes Recomendados</h3>
+              <small class="text-secondary">Adicionados recentemente</small>
+            </div>
+            <div class="shelf-carousel" id="shelfMovies">
+              
+              <div class="tv-poster-card tv-focusable" tabindex="0" 
+                   data-type="movie" data-title="Top Gun: Maverick" data-year="2022" data-rating="8.3" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1508614589041-895b88991e3e?q=80&w=1400"
+                   data-syn="Após trinta anos de serviço como um dos melhores aviadores da Marinha, Pete Mitchell treina uma unidade de graduados de elite para uma missão inédita.">
+                <img src="https://images.unsplash.com/photo-1508614589041-895b88991e3e?q=80&w=600" alt="Top Gun Maverick">
+                <div class="poster-overlay">
+                  <div class="poster-title">Top Gun: Maverick</div>
+                  <div class="poster-tags">
+                    <span class="text-warning"><i class="bi bi-star-fill"></i> 8.3</span>
+                    <span class="badge bg-info-subtle text-info">4K</span>
+                  </div>
+                </div>
+              </div>
 
+              <div class="tv-poster-card tv-focusable" tabindex="0" 
+                   data-type="movie" data-title="Batman" data-year="2022" data-rating="7.8" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1509281373149-e957c6296406?q=80&w=1400"
+                   data-syn="Nos seus primeiros anos investigando o submundo do crime em Gotham City, Batman descobre uma rede de corrupção que conecta sua própria família ao Charada.">
+                <img src="https://images.unsplash.com/photo-1509281373149-e957c6296406?q=80&w=600" alt="The Batman">
+                <div class="poster-overlay">
+                  <div class="poster-title">The Batman</div>
+                  <div class="poster-tags">
+                    <span class="text-warning"><i class="bi bi-star-fill"></i> 7.8</span>
+                    <span class="badge bg-info-subtle text-info">4K</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tv-poster-card tv-focusable" tabindex="0" 
+                   data-type="movie" data-title="Avatar: O Caminho da Água" data-year="2022" data-rating="7.6" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1400"
+                   data-syn="Jake Sully vive com sua nova família no planeta Pandora. Quando uma ameaça familiar retorna para terminar o que começou, ele deve agir.">
+                <img src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600" alt="Avatar">
+                <div class="poster-overlay">
+                  <div class="poster-title">Avatar: Caminho da Água</div>
+                  <div class="poster-tags">
+                    <span class="text-warning"><i class="bi bi-star-fill"></i> 7.6</span>
+                    <span class="badge bg-info-subtle text-info">4K</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tv-poster-card tv-focusable" tabindex="0" 
+                   data-type="movie" data-title="Gladiador II" data-year="2024" data-rating="7.7" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1461360370896-922624d12aa1?q=80&w=1400"
+                   data-syn="Anos após presenciar a morte do herói Máximus, Lucius deve entrar no Coliseu depois que sua casa é conquistada por imperadores tiranos.">
+                <img src="https://images.unsplash.com/photo-1461360370896-922624d12aa1?q=80&w=600" alt="Gladiador 2">
+                <div class="poster-overlay">
+                  <div class="poster-title">Gladiador II</div>
+                  <div class="poster-tags">
+                    <span class="text-warning"><i class="bi bi-star-fill"></i> 7.7</span>
+                    <span class="badge bg-info-subtle text-info">4K</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tv-poster-card tv-focusable" tabindex="0" 
+                   data-type="movie" data-title="Coringa: Delírio a Dois" data-year="2024" data-rating="7.0" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=1400"
+                   data-syn="Arthur Fleck é institucionalizado no Asilo Arkham aguardando julgamento por seus crimes como Coringa.">
+                <img src="https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=600" alt="Joker 2">
+                <div class="poster-overlay">
+                  <div class="poster-title">Coringa 2</div>
+                  <div class="poster-tags">
+                    <span class="text-warning"><i class="bi bi-star-fill"></i> 7.0</span>
+                    <span class="badge bg-info-subtle text-info">4K</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Prateleira 3: Canais em Destaque Ao Vivo -->
+          <div class="tv-shelf mb-4">
+            <div class="shelf-header">
+              <h3 class="shelf-title"><i class="bi bi-broadcast text-danger"></i> Jogos e Canais Ao Vivo Agora</h3>
+              <small class="text-secondary">Sintonizar diretamente</small>
+            </div>
+            <div class="shelf-carousel" id="shelfLive">
+              
+              <div class="tv-live-card tv-focusable" tabindex="0" data-view-jump="live" data-ch="1" data-title="Premiere Clubes SD" data-prog="Flamengo x Palmeiras (Ao Vivo)">
+                <div class="channel-logo">P1</div>
+                <div class="flex-grow-1 overflow-hidden">
+                  <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="live-badge-pulse"></span>
+                    <span class="badge bg-danger p-1 small" style="font-size: 0.65rem;">AO VIVO</span>
+                    <span class="badge bg-secondary p-1 small" style="font-size: 0.65rem;">SD</span>
+                  </div>
+                  <div class="fw-bold text-white text-truncate">Premiere Clubes</div>
+                  <small class="text-secondary text-truncate d-block">Flamengo x Palmeiras</small>
+                </div>
+              </div>
+
+              <div class="tv-live-card tv-focusable" tabindex="0" data-view-jump="live" data-ch="2" data-title="SporTV SD" data-prog="Tá na Área - Pré Jogo">
+                <div class="channel-logo">STV</div>
+                <div class="flex-grow-1 overflow-hidden">
+                  <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="live-badge-pulse"></span>
+                    <span class="badge bg-danger p-1 small" style="font-size: 0.65rem;">AO VIVO</span>
+                    <span class="badge bg-secondary p-1 small" style="font-size: 0.65rem;">SD</span>
+                  </div>
+                  <div class="fw-bold text-white text-truncate">SporTV</div>
+                  <small class="text-secondary text-truncate d-block">Tá na Área</small>
+                </div>
+              </div>
+
+              <div class="tv-live-card tv-focusable" tabindex="0" data-view-jump="live" data-ch="3" data-title="ESPN Brasil SD" data-prog="Premier League: Arsenal x Chelsea">
+                <div class="channel-logo">ESPN</div>
+                <div class="flex-grow-1 overflow-hidden">
+                  <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="live-badge-pulse"></span>
+                    <span class="badge bg-danger p-1 small" style="font-size: 0.65rem;">AO VIVO</span>
+                    <span class="badge bg-secondary p-1 small" style="font-size: 0.65rem;">SD</span>
+                  </div>
+                  <div class="fw-bold text-white text-truncate">ESPN Brasil</div>
+                  <small class="text-secondary text-truncate d-block">Arsenal x Chelsea</small>
+                </div>
+              </div>
+
+              <div class="tv-live-card tv-focusable" tabindex="0" data-view-jump="live" data-ch="4" data-title="CazéTV HD" data-prog="Futebol Europeu em Tempo Real">
+                <div class="channel-logo">CZ</div>
+                <div class="flex-grow-1 overflow-hidden">
+                  <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="live-badge-pulse"></span>
+                    <span class="badge bg-danger p-1 small" style="font-size: 0.65rem;">AO VIVO</span>
+                    <span class="badge bg-info p-1 small text-dark fw-bold" style="font-size: 0.65rem;">HD</span>
+                  </div>
+                  <div class="fw-bold text-white text-truncate">CazéTV</div>
+                  <small class="text-secondary text-truncate d-block">Transmissão Especial</small>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==============================================================================
+           VISTA 2: TV AO VIVO (3 COLUNAS XTREAM: GRUPOS, CANAIS, MINI PLAYER & EPG)
+           ============================================================================== -->
+      <section class="tv-view" id="viewLive">
+        <div class="d-flex gap-3 flex-grow-1 overflow-hidden">
+          
+          <!-- Coluna 1: Categorias Xtream -->
+          <section class="tv-category-panel" id="categoryPanel">
+            <div class="text-uppercase small text-secondary fw-bold px-2 mb-2">Categorias Xtream</div>
+            <div class="category-row tv-focusable active" tabindex="0" data-cat="jogos">
+              <span>⚽ JOGOS DO DIA</span>
+              <span class="badge bg-info-subtle text-info">14</span>
+            </div>
+            <div class="category-row tv-focusable" tabindex="0" data-cat="abertos">
+              <span>📺 CANAIS ABERTOS</span>
+              <span class="badge bg-secondary-subtle text-secondary">28</span>
+            </div>
+            <div class="category-row tv-focusable" tabindex="0" data-cat="esportes">
+              <span>🏆 ESPORTES</span>
+              <span class="badge bg-secondary-subtle text-secondary">42</span>
+            </div>
+            <div class="category-row tv-focusable" tabindex="0" data-cat="filmes">
+              <span>🎬 FILMES E SÉRIES</span>
+              <span class="badge bg-secondary-subtle text-secondary">36</span>
+            </div>
+            <div class="category-row tv-focusable" tabindex="0" data-cat="noticias">
+              <span>📰 NOTÍCIAS</span>
+              <span class="badge bg-secondary-subtle text-secondary">18</span>
+            </div>
+            <div class="category-row tv-focusable" tabindex="0" data-cat="infantil">
+              <span>🎨 INFANTIL</span>
+              <span class="badge bg-secondary-subtle text-secondary">15</span>
+            </div>
+            <div class="category-row tv-focusable" tabindex="0" data-cat="documentarios">
+              <span>🌍 DOCUMENTÁRIOS</span>
+              <span class="badge bg-secondary-subtle text-secondary">12</span>
+            </div>
+            <div class="category-row tv-focusable" tabindex="0" data-cat="adultos">
+              <span>🔒 [XXX] ADULTOS</span>
+              <span class="badge bg-danger-subtle text-danger">8</span>
+            </div>
+          </section>
+
+          <!-- Coluna 2: Lista de Canais -->
+          <section class="tv-channel-panel" id="channelPanel">
+            <div class="text-uppercase small text-secondary fw-bold px-2 mb-2 d-flex justify-content-between">
+              <span id="currentCatTitle">Canais (JOGOS DO DIA)</span>
+              <span class="text-info">Padrão: SD</span>
+            </div>
+
+            <div class="channel-row tv-focusable active" tabindex="0" data-ch="1" data-title="Premiere Clubes SD" data-q="SD" data-prog="Brasileirão: Flamengo x Palmeiras (Ao Vivo)">
+              <div class="channel-logo">P1</div>
+              <div class="flex-grow-1 overflow-hidden">
+                <div class="text-truncate fw-semibold">Premiere Clubes</div>
+                <small class="text-secondary text-truncate d-block">Ao vivo: Flamengo x Palmeiras</small>
+              </div>
+              <span class="badge bg-secondary">SD</span>
+            </div>
+
+            <div class="channel-row tv-focusable" tabindex="0" data-ch="2" data-title="SporTV SD" data-q="SD" data-prog="Tá na Área - Pré Jogo">
+              <div class="channel-logo">STV</div>
+              <div class="flex-grow-1 overflow-hidden">
+                <div class="text-truncate fw-semibold">SporTV</div>
+                <small class="text-secondary text-truncate d-block">Tá na Área - Pré Jogo</small>
+              </div>
+              <span class="badge bg-secondary">SD</span>
+            </div>
+
+            <div class="channel-row tv-focusable" tabindex="0" data-ch="3" data-title="ESPN Brasil SD" data-q="SD" data-prog="Futebol Europeu: Premier League">
+              <div class="channel-logo">ESPN</div>
+              <div class="flex-grow-1 overflow-hidden">
+                <div class="text-truncate fw-semibold">ESPN Brasil</div>
+                <small class="text-secondary text-truncate d-block">Futebol Europeu: Premier League</small>
+              </div>
+              <span class="badge bg-secondary">SD</span>
+            </div>
+
+            <div class="channel-row tv-focusable" tabindex="0" data-ch="4" data-title="CazéTV HD" data-q="HD" data-prog="Transmissão Especial">
+              <div class="channel-logo">CZ</div>
+              <div class="flex-grow-1 overflow-hidden">
+                <div class="text-truncate fw-semibold">CazéTV</div>
+                <small class="text-secondary text-truncate d-block">Transmissão Especial</small>
+              </div>
+              <span class="badge bg-info text-dark fw-bold">HD</span>
+            </div>
+
+            <div class="channel-row tv-focusable" tabindex="0" data-ch="5" data-title="TNT Sports SD" data-q="SD" data-prog="Champions League Highlights">
+              <div class="channel-logo">TNT</div>
+              <div class="flex-grow-1 overflow-hidden">
+                <div class="text-truncate fw-semibold">TNT Sports</div>
+                <small class="text-secondary text-truncate d-block">Champions League Highlights</small>
+              </div>
+              <span class="badge bg-secondary">SD</span>
+            </div>
+          </section>
+
+          <!-- Coluna 3: Pré-Visualização / Mini Player + EPG -->
+          <section class="tv-preview-panel">
+            <div class="mini-player-card">
+              <video id="miniVideo" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;">
+                <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+              </video>
+              <div class="position-absolute bottom-0 start-0 end-0 p-3 bg-dark bg-opacity-75 d-flex justify-content-between align-items-center">
+                <div>
+                  <span class="badge bg-danger me-2">AO VIVO</span>
+                  <span class="fw-bold" id="previewTitle">Premiere Clubes SD</span>
+                </div>
+                <button class="btn btn-sm btn-info tv-focusable" id="btnFullscreen" tabindex="0">
+                  <i class="bi bi-arrows-fullscreen me-1"></i> Tela Cheia
+                </button>
+              </div>
+            </div>
+
+            <div class="epg-timeline-card">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 text-white"><i class="bi bi-clock-history me-2 text-info"></i>Programação do Canal</h5>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Fuso: Horário de Brasília</span>
+              </div>
+
+              <div class="epg-show-box tv-focusable" tabindex="0">
+                <div class="d-flex justify-content-between text-info small fw-bold">
+                  <span>AGORA (19:30 - 21:45)</span>
+                  <span>AO VIVO</span>
+                </div>
+                <h6 class="fw-bold my-1 text-white" id="epgCurrentTitle">Brasileirão Série A: Flamengo vs Palmeiras</h6>
+                <p class="text-secondary small mb-0">Transmissão completa em tempo real com som surround e análise tática.</p>
+              </div>
+
+              <div class="epg-show-box tv-focusable" tabindex="0">
+                <div class="d-flex justify-content-between text-muted small fw-bold">
+                  <span>A SEGUIR (21:45 - 22:30)</span>
+                  <span>PÓS-JOGO</span>
+                </div>
+                <h6 class="fw-bold my-1 text-light">Linha de Passe: Melhores Momentos & Coletiva</h6>
+                <p class="text-secondary small mb-0">Debate completo dos lances, entrevistas exclusivas com os técnicos e classificação atualizada.</p>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </section>
+
+      <!-- ==============================================================================
+           VISTA 3: FILMES (CATÁLOGO VOD FILTRÁVEL)
+           ============================================================================== -->
+      <section class="tv-view" id="viewMovies">
+        <div class="home-scroll-container">
+          <div class="d-flex gap-2 mb-3 overflow-auto pb-1" style="scrollbar-width: none;">
+            <button class="btn btn-info tv-focusable rounded-pill px-3 active" tabindex="0">Todos</button>
+            <button class="btn btn-outline-secondary tv-focusable rounded-pill px-3" tabindex="0">Ação</button>
+            <button class="btn btn-outline-secondary tv-focusable rounded-pill px-3" tabindex="0">Ficção Científica</button>
+            <button class="btn btn-outline-secondary tv-focusable rounded-pill px-3" tabindex="0">Comédia</button>
+            <button class="btn btn-outline-secondary tv-focusable rounded-pill px-3" tabindex="0">Suspense</button>
+            <button class="btn btn-outline-secondary tv-focusable rounded-pill px-3" tabindex="0">Terror</button>
+            <button class="btn btn-outline-secondary tv-focusable rounded-pill px-3" tabindex="0">Animação</button>
+          </div>
+
+          <div class="tv-shelf">
+            <h4 class="shelf-title mb-3"><i class="bi bi-stars text-warning"></i> Lançamentos 2024 / 2025</h4>
+            <div class="d-flex flex-wrap gap-3">
+              <!-- Grid responsivo de Filmes -->
+              <div class="tv-poster-card tv-focusable" style="flex: 0 0 clamp(140px, 12vw, 180px);" tabindex="0"
+                   data-type="movie" data-title="Duna: Parte 2" data-year="2024" data-rating="8.6" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1400"
+                   data-syn="Paul Atreides busca vingança contra os conspiradores que destruíram sua família.">
+                <img src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=600" alt="Duna 2">
+                <div class="poster-overlay">
+                  <div class="poster-title">Duna: Parte 2</div>
+                  <div class="poster-tags"><span>2024</span><span class="badge bg-info-subtle text-info">4K</span></div>
+                </div>
+              </div>
+
+              <div class="tv-poster-card tv-focusable" style="flex: 0 0 clamp(140px, 12vw, 180px);" tabindex="0"
+                   data-type="movie" data-title="Oppenheimer" data-year="2023" data-rating="8.9" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=1400"
+                   data-syn="A criação da bomba atômica liderada por J. Robert Oppenheimer.">
+                <img src="https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=600" alt="Oppenheimer">
+                <div class="poster-overlay">
+                  <div class="poster-title">Oppenheimer</div>
+                  <div class="poster-tags"><span>2023</span><span class="badge bg-info-subtle text-info">4K</span></div>
+                </div>
+              </div>
+
+              <div class="tv-poster-card tv-focusable" style="flex: 0 0 clamp(140px, 12vw, 180px);" tabindex="0"
+                   data-type="movie" data-title="Gladiador II" data-year="2024" data-rating="7.7" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1461360370896-922624d12aa1?q=80&w=1400"
+                   data-syn="Lucius entra no Coliseu para restaurar a honra de Roma.">
+                <img src="https://images.unsplash.com/photo-1461360370896-922624d12aa1?q=80&w=600" alt="Gladiador 2">
+                <div class="poster-overlay">
+                  <div class="poster-title">Gladiador II</div>
+                  <div class="poster-tags"><span>2024</span><span class="badge bg-info-subtle text-info">4K</span></div>
+                </div>
+              </div>
+
+              <div class="tv-poster-card tv-focusable" style="flex: 0 0 clamp(140px, 12vw, 180px);" tabindex="0"
+                   data-type="movie" data-title="Interestelar" data-year="2014" data-rating="8.7" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1400"
+                   data-syn="Uma missão interestelar em busca de um novo lar para a humanidade.">
+                <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=600" alt="Interestelar">
+                <div class="poster-overlay">
+                  <div class="poster-title">Interestelar</div>
+                  <div class="poster-tags"><span>2014</span><span class="badge bg-info-subtle text-info">4K</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==============================================================================
+           VISTA 4: SÉRIES (EPISÓDIOS E TEMPORADAS)
+           ============================================================================== -->
+      <section class="tv-view" id="viewSeries">
+        <div class="home-scroll-container">
+          <div class="tv-shelf">
+            <h4 class="shelf-title mb-3"><i class="bi bi-collection-play text-info"></i> Séries Populares & Novas Temporadas</h4>
+            <div class="d-flex flex-wrap gap-3">
+              <div class="tv-poster-card tv-focusable" style="flex: 0 0 clamp(140px, 12vw, 180px);" tabindex="0"
+                   data-type="series" data-title="The Last of Us" data-year="2023" data-rating="8.8" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1400"
+                   data-syn="Joel e Ellie atravessam um Estados Unidos pós-apocalíptico infectado por fungos.">
+                <img src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600" alt="The Last of Us">
+                <div class="poster-overlay">
+                  <div class="poster-title">The Last of Us</div>
+                  <div class="poster-tags"><span>1ª Temporada</span><span class="badge bg-primary">9 Eps</span></div>
+                </div>
+              </div>
+
+              <div class="tv-poster-card tv-focusable" style="flex: 0 0 clamp(140px, 12vw, 180px);" tabindex="0"
+                   data-type="series" data-title="Stranger Things" data-year="2022" data-rating="8.7" data-q="4K"
+                   data-bg="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1400"
+                   data-syn="Mistérios sobrenaturais e conspirações governamentais na cidade de Hawkins.">
+                <img src="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=600" alt="Stranger Things">
+                <div class="poster-overlay">
+                  <div class="poster-title">Stranger Things</div>
+                  <div class="poster-tags"><span>4ª Temporada</span><span class="badge bg-primary">34 Eps</span></div>
+                </div>
+              </div>
+
+              <div class="tv-poster-card tv-focusable" style="flex: 0 0 clamp(140px, 12vw, 180px);" tabindex="0"
+                   data-type="series" data-title="Succession" data-year="2023" data-rating="8.9" data-q="FHD"
+                   data-bg="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1400"
+                   data-syn="A batalha impiedosa pelo império de mídia da família Roy.">
+                <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=600" alt="Succession">
+                <div class="poster-overlay">
+                  <div class="poster-title">Succession</div>
+                  <div class="poster-tags"><span>4ª Temporada</span><span class="badge bg-primary">39 Eps</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. BARRA DE ATALHOS DO CONTROLE REMOTO (LEGENDA FIXA) -->
       <footer class="remote-hints-bar">
         <div><span class="key-badge">OK</span> Assistir / Abrir</div>
         <div><span class="key-badge">SETAS</span> Navegar D-Pad</div>
         <div><span class="key-badge">VOLTAR</span> Voltar / Sair</div>
         <div><span class="key-badge red">VERMELHO</span> Favoritos</div>
-        <div><span class="key-badge green" style="background:#10b981; color:#fff;">VERDE</span> Qualidade</div>
-        <div><span class="key-badge blue">AZUL</span> Guia Completo</div>
+        <div><span class="key-badge green">VERDE</span> Qualidade</div>
+        <div><span class="key-badge yellow">AMARELO</span> Áudio</div>
+        <div><span class="key-badge blue">AZUL</span> Guia TV</div>
         <div class="ms-auto">
           <span class="badge bg-dark border border-secondary" id="platformBadge">Detectando TV...</span>
         </div>
       </footer>
+
     </main>
 
   </div>
 
   <!-- ==============================================================================
-       MODAL DE CONFIGURAÇÕES DE RESOLUÇÃO (BOOSTRAP 5.3 + CONTROLE REMOTO)
+       MODAL DE DETALHES DE FILME / SÉRIE (CINEMATIC POPUP)
+       ============================================================================== -->
+  <div class="modal fade" id="movieDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content bg-dark border-secondary overflow-hidden" style="border-radius: 18px;">
+        <div class="position-relative" style="height: 220px; background-size: cover; background-position: center;" id="modalHeroBg">
+          <div style="position: absolute; inset: 0; background: linear-gradient(0deg, #161b26 0%, transparent 100%);"></div>
+          <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4 pt-2">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h3 class="fw-bold text-white mb-0" id="modalTitle">Título do Filme</h3>
+            <span class="badge bg-info-subtle text-info fs-6" id="modalQuality">4K UHD</span>
+          </div>
+          <div class="d-flex gap-3 text-secondary small mb-3">
+            <span class="text-warning fw-bold"><i class="bi bi-star-fill me-1"></i><span id="modalRating">8.5</span></span>
+            <span id="modalYear">2024</span>
+            <span class="badge bg-secondary">Livre</span>
+            <span>Áudio: Dublado / Legendado</span>
+          </div>
+          <p class="text-light" id="modalSynopsis" style="line-height: 1.6;">
+            Sinopse detalhada do filme ou da série selecionada.
+          </p>
+        </div>
+        <div class="modal-footer border-secondary d-flex justify-content-between">
+          <button type="button" class="btn btn-secondary tv-focusable" data-bs-dismiss="modal" tabindex="0">
+            <i class="bi bi-arrow-left me-1"></i> Voltar
+          </button>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-info tv-focusable" id="btnModalAddFav" tabindex="0">
+              <i class="bi bi-heart me-1"></i> Favoritar
+            </button>
+            <button type="button" class="btn btn-info tv-focusable px-4" id="btnModalPlay" tabindex="0">
+              <i class="bi bi-play-fill me-1 fs-5"></i> Iniciar Reprodução
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================================================
+       MODAL DE CONFIGURAÇÕES DE RESOLUÇÃO (AJUSTES)
        ============================================================================== -->
   <div class="modal fade" id="tvSettingsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content bg-dark border-secondary">
+      <div class="modal-content bg-dark border-secondary" style="border-radius: 16px;">
         <div class="modal-header border-secondary">
           <h5 class="modal-title text-white"><i class="bi bi-sliders me-2 text-info"></i>Configurações de Reprodução</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <div class="mb-4">
@@ -596,15 +1254,12 @@
                 <i class="bi bi-circle me-2"></i> 4K / UHD
               </button>
             </div>
-            <small class="text-secondary d-block mt-2">
-              Ao selecionar SD, todos os canais de TV ao vivo iniciarão automaticamente na variante SD.
-            </small>
           </div>
 
           <div class="form-check form-switch mb-3">
             <input class="form-check-input tv-focusable" type="checkbox" id="autoFallbackSwitch" checked tabindex="0">
             <label class="form-check-label text-light" for="autoFallbackSwitch">
-              Fallback automático de qualidade se o stream cair
+              Fallback automático de qualidade em caso de instabilidade
             </label>
           </div>
         </div>
@@ -617,7 +1272,7 @@
   </div>
 
   <!-- ==============================================================================
-       OVERLAY DO PLAYER EM TELA CHEIA (CONTROLE TOTAL VIA D-PAD)
+       OVERLAY DO PLAYER EM TELA CHEIA (CONTROLE TOTAL VIA D-PAD E HARDWARE AVPLAY)
        ============================================================================== -->
   <div id="tvPlayerOverlay">
     <video id="fullVideo" style="width: 100%; height: 100%; object-fit: contain;">
@@ -656,47 +1311,26 @@
     </div>
   </div>
 
+  <!-- Bootstrap 5.3 Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
   <!-- ==============================================================================
-       SMART TV REMOTE ENGINE & DUAL PLAYER (SAMSUNG TIZEN + LG WEBOS)
+       SMART TV REMOTE ENGINE & MULTI-VIEW CONTROLLER (SAMSUNG & LG COMPLIANT)
        ============================================================================== -->
   <script>
-    /**
-     * Mapeamento de Teclas Compatíveis com Samsung Tizen OS e LG webOS
-     */
     const TV_KEYS = {
-      // D-Pad Direcional & Ação
-      LEFT: 37,
-      UP: 38,
-      RIGHT: 39,
-      DOWN: 40,
-      ENTER: 13,
-      RETURN_BACK: 8,       // Backspace em navegadores normais
-      ESC: 27,
-      // Samsung Tizen
-      TIZEN_RETURN: 10009,
-      TIZEN_EXIT: 10182,
-      // LG webOS
+      LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40,
+      ENTER: 13, RETURN_BACK: 8, ESC: 27,
+      TIZEN_RETURN: 10009, TIZEN_EXIT: 10182,
       WEBOS_BACK: 461,
-      // Teclas Coloridas (Tizen & webOS)
-      RED: 403,
-      GREEN: 404,
-      YELLOW: 405,
-      BLUE: 406,
-      // Teclas Multimídia
-      PLAY: 415,
-      PAUSE: 19,
-      STOP: 413,
-      FAST_FWD: 417,
-      REWIND: 412,
-      // Teclas Numéricas (0-9)
+      RED: 403, GREEN: 404, YELLOW: 405, BLUE: 406,
+      PLAY: 415, PAUSE: 19, STOP: 413, FAST_FWD: 417, REWIND: 412,
       NUM_0: 48, NUM_1: 49, NUM_2: 50, NUM_3: 51, NUM_4: 52,
       NUM_5: 53, NUM_6: 54, NUM_7: 55, NUM_8: 56, NUM_9: 57
     };
 
     /**
-     * Reprodutor de Mídia Dual:
-     * - Samsung Tizen: Hardware decoding via webapis.avplay
-     * - LG webOS / Browser: HTML5 Video Element com aceleração de hardware
+     * Reprodutor Dual: Samsung Tizen AVPlay (Hardware) + LG webOS / Browser HTML5 Video
      */
     class SmartTVPlayer {
       constructor() {
@@ -710,19 +1344,16 @@
       }
 
       init() {
-        // Inicialização de ciclo de vida LG webOS
         if (this.isWebOS) {
           document.addEventListener('webOSLaunch', () => console.log('[webOS] App lançado em primeiro plano'));
           document.addEventListener('webOSRelaunch', () => console.log('[webOS] App reaberto via launcher'));
         }
 
-        // Suspensão de aplicativo para economizar RAM (Requisito LG & Samsung)
         document.addEventListener('visibilitychange', () => {
           if (document.hidden) {
-            console.log('[Smart TV] App em background: pausando playback para liberar RAM');
+            console.log('[Smart TV] App em background: liberando buffer');
             this.pause();
           } else {
-            console.log('[Smart TV] App restaurado para primeiro plano');
             this.resume();
           }
         });
@@ -731,56 +1362,38 @@
       play(url, isFullscreen = false) {
         this.currentUrl = url || this.currentUrl;
 
-        // Samsung Tizen AVPlay (Hardware Player)
         if (this.isTizen && isFullscreen) {
           try {
             webapis.avplay.stop();
             webapis.avplay.close();
-          } catch (e) {}
-
-          try {
             webapis.avplay.open(this.currentUrl);
             webapis.avplay.setDisplayRect(0, 0, 1920, 1080);
-            webapis.avplay.setListener({
-              onbufferingstart: () => console.log('[Tizen AVPlay] Buffering iniciado...'),
-              onbufferingcomplete: () => console.log('[Tizen AVPlay] Buffering concluído.'),
-              onerror: (err) => console.error('[Tizen AVPlay] Erro no stream:', err)
-            });
             webapis.avplay.prepareAsync(() => {
               webapis.avplay.play();
               this.isPlaying = true;
             });
             return;
           } catch (tizenErr) {
-            console.warn('[Tizen AVPlay] Fallback para HTML5 video:', tizenErr);
+            console.warn('[Tizen AVPlay] Fallback HTML5:', tizenErr);
           }
         }
 
-        // LG webOS / Padrão HTML5 Video
-        const targetVideo = isFullscreen ? this.videoEl : this.miniVideoEl;
-        if (targetVideo) {
-          if (targetVideo.src !== this.currentUrl) {
-            targetVideo.src = this.currentUrl;
-          }
-          targetVideo.play().then(() => {
-            this.isPlaying = true;
-          }).catch(err => console.log('Autoplay aguardando interação do usuário:', err));
+        const target = isFullscreen ? this.videoEl : this.miniVideoEl;
+        if (target) {
+          if (target.src !== this.currentUrl) target.src = this.currentUrl;
+          target.play().then(() => { this.isPlaying = true; }).catch(() => {});
         }
       }
 
       pause() {
-        if (this.isTizen) {
-          try { webapis.avplay.pause(); } catch (e) {}
-        }
+        if (this.isTizen) { try { webapis.avplay.pause(); } catch (e) {} }
         if (this.videoEl) this.videoEl.pause();
         if (this.miniVideoEl) this.miniVideoEl.pause();
         this.isPlaying = false;
       }
 
       resume() {
-        if (this.isTizen) {
-          try { webapis.avplay.play(); } catch (e) {}
-        }
+        if (this.isTizen) { try { webapis.avplay.play(); } catch (e) {} }
         if (this.videoEl && document.getElementById('tvPlayerOverlay').style.display === 'block') {
           this.videoEl.play().catch(() => {});
         } else if (this.miniVideoEl) {
@@ -790,19 +1403,14 @@
       }
 
       stop() {
-        if (this.isTizen) {
-          try {
-            webapis.avplay.stop();
-            webapis.avplay.close();
-          } catch (e) {}
-        }
+        if (this.isTizen) { try { webapis.avplay.stop(); webapis.avplay.close(); } catch (e) {} }
         if (this.videoEl) this.videoEl.pause();
         this.isPlaying = false;
       }
     }
 
     /**
-     * Motor de Navegação Espacial e Controle Remoto TV
+     * Motor de Navegação Espacial e Controle Remoto
      */
     class TVNavigationEngine {
       constructor() {
@@ -817,10 +1425,9 @@
         this.detectPlatform();
         this.registerPlatformKeys();
 
-        // Eventos de teclado globais
         window.addEventListener('keydown', (e) => this.handleKeyDown(e));
 
-        // Suporte ao Magic Remote da LG (Detecção de Ponteiro vs D-Pad)
+        // Magic Remote da LG (Pointer vs D-Pad)
         window.addEventListener('mousemove', () => {
           if (!this.cursorActive) {
             this.cursorActive = true;
@@ -828,17 +1435,14 @@
           }
         });
 
-        // Clique para focar (Magic Remote ou testes em PC)
         document.addEventListener('click', (e) => {
           const el = e.target.closest('.tv-focusable');
           if (el) this.setFocus(el);
         });
 
-        // Foco inicial
-        const firstFocus = document.querySelector('.tv-category-panel .tv-focusable') || document.querySelector('.tv-focusable');
-        if (firstFocus) this.setFocus(firstFocus);
+        const first = document.querySelector('#viewHome .tv-focusable') || document.querySelector('.tv-focusable');
+        if (first) this.setFocus(first);
 
-        // Relógio
         this.startClock();
       }
 
@@ -854,25 +1458,17 @@
           badge.textContent = 'LG webOS TV';
         } else {
           badge.className = 'badge bg-dark border border-secondary';
-          badge.textContent = 'Navegador Web (TV Emulação)';
+          badge.textContent = 'Navegador Web (TV 16:9)';
         }
       }
 
       registerPlatformKeys() {
-        // Registro de teclas no Samsung Tizen OS
         if (window.tizen && window.tizen.tvinputdevice) {
-          const tizenKeys = [
-            'Return', 'Exit',
-            'MediaPlay', 'MediaPause', 'MediaStop', 'MediaFastForward', 'MediaRewind',
-            'ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue',
-            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
-          ];
-          tizenKeys.forEach(keyName => {
-            try {
-              tizen.tvinputdevice.registerKey(keyName);
-            } catch (err) {
-              console.warn('[Tizen] Erro ao registrar tecla:', keyName, err);
-            }
+          const keys = ['Return', 'Exit', 'MediaPlay', 'MediaPause', 'MediaStop', 'MediaFastForward', 'MediaRewind',
+                        'ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue',
+                        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+          keys.forEach(k => {
+            try { tizen.tvinputdevice.registerKey(k); } catch (e) {}
           });
         }
       }
@@ -886,7 +1482,6 @@
         this.currentFocused.classList.add('tv-focused');
         this.currentFocused.focus();
 
-        // Magic Remote D-Pad reativado: esconde ponteiro quando D-Pad navega
         this.cursorActive = false;
         document.body.style.cursor = 'none';
 
@@ -895,19 +1490,38 @@
           block: 'nearest',
           inline: 'nearest'
         });
+
+        // Atualização Dinâmica do Billboard ao focar em cards de Filmes ou Séries
+        if (this.currentFocused.classList.contains('tv-poster-card')) {
+          this.syncBillboard(this.currentFocused);
+        }
+      }
+
+      syncBillboard(card) {
+        const title = card.getAttribute('data-title');
+        const syn = card.getAttribute('data-syn');
+        const bg = card.getAttribute('data-bg');
+        const rating = card.getAttribute('data-rating') || '8.5';
+        const year = card.getAttribute('data-year') || '2024';
+
+        if (title && document.getElementById('bbTitle')) document.getElementById('bbTitle').textContent = title;
+        if (syn && document.getElementById('bbSynopsis')) document.getElementById('bbSynopsis').textContent = syn;
+        if (bg && document.getElementById('homeBillboard')) {
+          document.getElementById('homeBillboard').style.backgroundImage = `url('${bg}')`;
+        }
       }
 
       handleKeyDown(e) {
         const key = e.keyCode;
 
-        // 1. Trata Botão Voltar (Tizen 10009, webOS 461, Esc 27, Backspace 8)
+        // 1. Tecla Voltar
         if (key === TV_KEYS.RETURN_BACK || key === TV_KEYS.TIZEN_RETURN || key === TV_KEYS.WEBOS_BACK || key === TV_KEYS.ESC) {
           e.preventDefault();
           this.handleBackAction();
           return;
         }
 
-        // 2. Tecla Enter / OK
+        // 2. OK / Enter
         if (key === TV_KEYS.ENTER) {
           e.preventDefault();
           if (this.currentFocused) {
@@ -916,46 +1530,34 @@
           return;
         }
 
-        // 3. Teclas de Cores do Controle Remoto
-        if (key === TV_KEYS.RED) { // Vermelho: Favoritar
+        // 3. Teclas de Cores
+        if (key === TV_KEYS.RED) {
           e.preventDefault();
-          this.showTvToast('Favoritos: Canal adicionado com sucesso!');
+          this.showTvToast('Favoritos: Item salvo na sua lista!');
           return;
         }
-
-        if (key === TV_KEYS.GREEN) { // Verde: Alternar Qualidade
+        if (key === TV_KEYS.GREEN) {
           e.preventDefault();
           cycleResolutionOption();
           return;
         }
-
-        if (key === TV_KEYS.YELLOW) { // Amarelo: Áudio & Legendas
+        if (key === TV_KEYS.YELLOW) {
           e.preventDefault();
-          this.showTvToast('Áudio: Português (Original 5.1)');
+          this.showTvToast('Áudio: Português (Dolby 5.1)');
+          return;
+        }
+        if (key === TV_KEYS.BLUE) {
+          e.preventDefault();
+          switchView('live');
+          this.showTvToast('Modo TV Ao Vivo ativado');
           return;
         }
 
-        if (key === TV_KEYS.BLUE) { // Azul: Guia EPG
-          e.preventDefault();
-          const firstGuide = document.querySelector('.epg-show-box');
-          if (firstGuide) this.setFocus(firstGuide);
-          this.showTvToast('Modo Guia EPG Ativado');
-          return;
-        }
+        // 4. Mídia
+        if (key === TV_KEYS.PLAY) { e.preventDefault(); smartPlayer.resume(); return; }
+        if (key === TV_KEYS.PAUSE || key === TV_KEYS.STOP) { e.preventDefault(); smartPlayer.pause(); return; }
 
-        // 4. Teclas de Mídia
-        if (key === TV_KEYS.PLAY) {
-          e.preventDefault();
-          smartPlayer.resume();
-          return;
-        }
-        if (key === TV_KEYS.PAUSE || key === TV_KEYS.STOP) {
-          e.preventDefault();
-          smartPlayer.pause();
-          return;
-        }
-
-        // 5. Teclas Numéricas (Digitação direta do canal)
+        // 5. Números do controle remoto
         if (key >= TV_KEYS.NUM_0 && key <= TV_KEYS.NUM_9) {
           e.preventDefault();
           const num = (key - TV_KEYS.NUM_0).toString();
@@ -963,7 +1565,7 @@
           return;
         }
 
-        // 6. Navegação D-Pad (Up, Down, Left, Right)
+        // 6. Setas D-Pad
         if ([TV_KEYS.UP, TV_KEYS.DOWN, TV_KEYS.LEFT, TV_KEYS.RIGHT].includes(key)) {
           e.preventDefault();
           this.navigateDirection(key);
@@ -975,6 +1577,7 @@
         this.showTvToast(`Canal: ${this.numKeyBuffer}`);
         clearTimeout(this.numKeyTimer);
         this.numKeyTimer = setTimeout(() => {
+          switchView('live');
           const target = document.querySelector(`.channel-row[data-ch="${this.numKeyBuffer}"]`);
           if (target) {
             this.setFocus(target);
@@ -992,15 +1595,15 @@
           toastEl = document.createElement('div');
           toastEl.id = 'tvToast';
           toastEl.style.position = 'fixed';
-          toastEl.style.top = '40px';
-          toastEl.style.right = '40px';
+          toastEl.style.top = '36px';
+          toastEl.style.right = '36px';
           toastEl.style.background = 'rgba(15, 23, 42, 0.95)';
           toastEl.style.color = '#fff';
           toastEl.style.border = '1px solid #06b6d4';
-          toastEl.style.padding = '12px 24px';
+          toastEl.style.padding = '12px 22px';
           toastEl.style.borderRadius = '10px';
           toastEl.style.fontWeight = 'bold';
-          toastEl.style.fontSize = '1.1rem';
+          toastEl.style.fontSize = '1.05rem';
           toastEl.style.zIndex = '9999';
           toastEl.style.boxShadow = '0 8px 30px rgba(0,0,0,0.8)';
           document.body.appendChild(toastEl);
@@ -1008,20 +1611,16 @@
         toastEl.textContent = msg;
         toastEl.style.display = 'block';
         clearTimeout(this.toastTimeout);
-        this.toastTimeout = setTimeout(() => {
-          toastEl.style.display = 'none';
-        }, 2200);
+        this.toastTimeout = setTimeout(() => { toastEl.style.display = 'none'; }, 2200);
       }
 
       handleBackAction() {
-        // Se overlay de vídeo em tela cheia estiver ativo, fecha e volta para o canal
         const overlay = document.getElementById('tvPlayerOverlay');
         if (overlay && overlay.style.display === 'block') {
           closeFullscreenPlayer();
           return;
         }
 
-        // Se modal Bootstrap aberto, fecha
         const modalEl = document.querySelector('.modal.show');
         if (modalEl) {
           const modalInstance = bootstrap.Modal.getInstance(modalEl);
@@ -1029,45 +1628,36 @@
           return;
         }
 
-        // Se estiver no EPG ou Preview, volta para lista de canais
+        // Se estiver em sub-painéis da TV Ao Vivo
         if (this.currentFocused && (this.currentFocused.closest('.tv-preview-panel') || this.currentFocused.closest('.epg-timeline-card'))) {
           const ch = document.querySelector('.tv-channel-panel .channel-row.tv-focused') || document.querySelector('.tv-channel-panel .channel-row');
           this.setFocus(ch);
           return;
         }
 
-        // Se estiver nos canais, volta para as categorias
         if (this.currentFocused && this.currentFocused.closest('.tv-channel-panel')) {
           const cat = document.querySelector('.tv-category-panel .category-row.active') || document.querySelector('.tv-category-panel .tv-focusable');
           this.setFocus(cat);
           return;
         }
 
-        // Se estiver nas categorias, volta para o menu lateral
-        if (this.currentFocused && this.currentFocused.closest('.tv-category-panel')) {
-          const side = document.querySelector('.tv-sidebar .nav-item-btn.active') || document.querySelector('.tv-sidebar .tv-focusable');
-          this.setFocus(side);
+        // Se estiver na tela Home ou outra vista, foca no menu lateral
+        if (this.currentFocused && !this.currentFocused.closest('.tv-sidebar')) {
+          const activeNav = document.querySelector('.tv-sidebar .nav-item-btn.active') || document.querySelector('.tv-sidebar .tv-focusable');
+          this.setFocus(activeNav);
           return;
         }
 
-        // Se já estiver no menu lateral, solicita saída limpa do app na TV
+        // Se já está no menu lateral, sai do app
         this.exitApp();
       }
 
       exitApp() {
-        // Samsung Tizen exit
         if (window.tizen && window.tizen.application) {
-          try {
-            window.tizen.application.getCurrentApplication().exit();
-            return;
-          } catch (e) {}
+          try { window.tizen.application.getCurrentApplication().exit(); return; } catch (e) {}
         }
-        // LG webOS exit
         if (window.webOS || window.PalmSystem) {
-          try {
-            window.close();
-            return;
-          } catch (e) {}
+          try { window.close(); return; } catch (e) {}
         }
         this.showTvToast('Pressione Voltar novamente no PC para sair');
       }
@@ -1077,6 +1667,26 @@
           const first = document.querySelector('.tv-focusable');
           if (first) this.setFocus(first);
           return;
+        }
+
+        // Se estiver em um carrossel horizontal, tenta rolar o carrossel nas setas esquerda/direita
+        const carousel = this.currentFocused.closest('.shelf-carousel');
+        if (carousel && (key === TV_KEYS.LEFT || key === TV_KEYS.RIGHT)) {
+          const cards = Array.from(carousel.querySelectorAll('.tv-focusable'));
+          const idx = cards.indexOf(this.currentFocused);
+          if (key === TV_KEYS.RIGHT && idx < cards.length - 1) {
+            this.setFocus(cards[idx + 1]);
+            return;
+          }
+          if (key === TV_KEYS.LEFT && idx > 0) {
+            this.setFocus(cards[idx - 1]);
+            return;
+          }
+          if (key === TV_KEYS.LEFT && idx === 0) {
+            // Volta para a sidebar
+            const activeNav = document.querySelector('.tv-sidebar .nav-item-btn.active');
+            if (activeNav) { this.setFocus(activeNav); return; }
+          }
         }
 
         const focusables = Array.from(document.querySelectorAll('.tv-focusable:not([disabled])')).filter(el => {
@@ -1090,31 +1700,30 @@
         focusables.forEach(candidate => {
           if (candidate === this.currentFocused) return;
           const rect = candidate.getBoundingClientRect();
-
           let isMatch = false;
           let dist = 0;
 
           switch (key) {
             case TV_KEYS.UP:
-              if (rect.bottom <= currentRect.top + 5) {
+              if (rect.bottom <= currentRect.top + 10) {
                 isMatch = true;
                 dist = (currentRect.top - rect.bottom) * 1.5 + Math.abs(rect.left - currentRect.left);
               }
               break;
             case TV_KEYS.DOWN:
-              if (rect.top >= currentRect.bottom - 5) {
+              if (rect.top >= currentRect.bottom - 10) {
                 isMatch = true;
                 dist = (rect.top - currentRect.bottom) * 1.5 + Math.abs(rect.left - currentRect.left);
               }
               break;
             case TV_KEYS.LEFT:
-              if (rect.right <= currentRect.left + 5) {
+              if (rect.right <= currentRect.left + 10) {
                 isMatch = true;
                 dist = (currentRect.left - rect.right) * 1.5 + Math.abs(rect.top - currentRect.top);
               }
               break;
             case TV_KEYS.RIGHT:
-              if (rect.left >= currentRect.right - 5) {
+              if (rect.left >= currentRect.right - 10) {
                 isMatch = true;
                 dist = (rect.left - currentRect.right) * 1.5 + Math.abs(rect.top - currentRect.top);
               }
@@ -1127,9 +1736,7 @@
           }
         });
 
-        if (bestCandidate) {
-          this.setFocus(bestCandidate);
-        }
+        if (bestCandidate) this.setFocus(bestCandidate);
       }
 
       startClock() {
@@ -1145,26 +1752,142 @@
       }
     }
 
-    // Instancia reprodutor de TV e motor de navegação
+    // Instancia reprodutor e navegação
     const smartPlayer = new SmartTVPlayer();
     const tvEngine = new TVNavigationEngine();
 
     // ==============================================================================
+    // CONTROLE DE NAVEGAÇÃO ENTRE VISTAS (INÍCIO, AO VIVO, FILMES, SÉRIES)
+    // ==============================================================================
+    function switchView(viewName) {
+      document.querySelectorAll('.tv-view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-item-btn').forEach(b => b.classList.remove('active'));
+
+      const targetView = document.getElementById('view' + viewName.charAt(0).toUpperCase() + viewName.slice(1));
+      const targetNav = document.querySelector(`.nav-item-btn[data-view="${viewName}"]`);
+
+      if (targetView) targetView.classList.add('active');
+      if (targetNav) targetNav.classList.add('active');
+
+      const titleEl = document.getElementById('viewHeaderTitle');
+      const subEl = document.getElementById('viewHeaderSubtitle');
+
+      switch (viewName) {
+        case 'home':
+          if (titleEl) titleEl.textContent = 'Início';
+          if (subEl) subEl.textContent = 'Destaques recomendados · Filmes, Séries e TV Ao Vivo';
+          break;
+        case 'live':
+          if (titleEl) titleEl.textContent = 'TV Ao Vivo';
+          if (subEl) subEl.textContent = 'Ordem oficial Xtream · Qualidade padrão selecionada';
+          break;
+        case 'movies':
+          if (titleEl) titleEl.textContent = 'Filmes';
+          if (subEl) subEl.textContent = 'Catálogo de Filmes VOD sob demanda';
+          break;
+        case 'series':
+          if (titleEl) titleEl.textContent = 'Séries';
+          if (subEl) subEl.textContent = 'Séries completas organizadas por temporadas';
+          break;
+      }
+
+      // Foca no primeiro elemento interativo da vista ativa
+      setTimeout(() => {
+        const firstFocus = targetView.querySelector('.tv-focusable');
+        if (firstFocus) tvEngine.setFocus(firstFocus);
+      }, 80);
+    }
+
+    document.querySelectorAll('.nav-item-btn[data-view]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const v = btn.getAttribute('data-view');
+        switchView(v);
+      });
+    });
+
+    // Pulo rápido para canais ao vivo a partir dos cards da Home
+    document.querySelectorAll('[data-view-jump="live"]').forEach(card => {
+      card.addEventListener('click', () => {
+        const title = card.getAttribute('data-title');
+        const prog = card.getAttribute('data-prog');
+        switchView('live');
+        openFullscreenPlayer(title, prog, 'SD');
+      });
+    });
+
+    // ==============================================================================
+    // MODAL DE DETALHES DE FILMES E SÉRIES
+    // ==============================================================================
+    const movieDetailModalEl = document.getElementById('movieDetailModal');
+    let movieDetailModal = null;
+    if (movieDetailModalEl) {
+      movieDetailModal = new bootstrap.Modal(movieDetailModalEl);
+    }
+
+    document.querySelectorAll('.tv-poster-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const title = card.getAttribute('data-title');
+        const syn = card.getAttribute('data-syn');
+        const bg = card.getAttribute('data-bg');
+        const rating = card.getAttribute('data-rating') || '8.5';
+        const year = card.getAttribute('data-year') || '2024';
+        const q = card.getAttribute('data-q') || '4K';
+
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('modalSynopsis').textContent = syn;
+        document.getElementById('modalRating').textContent = rating;
+        document.getElementById('modalYear').textContent = year;
+        document.getElementById('modalQuality').textContent = q;
+        document.getElementById('modalHeroBg').style.backgroundImage = `url('${bg}')`;
+
+        movieDetailModal.show();
+        setTimeout(() => {
+          const playBtn = document.getElementById('btnModalPlay');
+          if (playBtn) tvEngine.setFocus(playBtn);
+        }, 300);
+      });
+    });
+
+    document.getElementById('btnModalPlay').addEventListener('click', () => {
+      const title = document.getElementById('modalTitle').textContent;
+      const syn = document.getElementById('modalSynopsis').textContent;
+      const q = document.getElementById('modalQuality').textContent;
+      movieDetailModal.hide();
+      openFullscreenPlayer(title, syn, q);
+    });
+
+    document.getElementById('btnBbWatch').addEventListener('click', () => {
+      const title = document.getElementById('bbTitle').textContent;
+      const syn = document.getElementById('bbSynopsis').textContent;
+      openFullscreenPlayer(title, syn, '4K');
+    });
+
+    document.getElementById('btnBbDetails').addEventListener('click', () => {
+      const title = document.getElementById('bbTitle').textContent;
+      const syn = document.getElementById('bbSynopsis').textContent;
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalSynopsis').textContent = syn;
+      movieDetailModal.show();
+    });
+
+    // ==============================================================================
     // AÇÕES DE INTERFACE (CANAIS, CATEGORIAS, PLAYER TELA CHEIA)
     // ==============================================================================
-
-    // 1. Troca de Categoria
     document.querySelectorAll('.category-row').forEach(catRow => {
       catRow.addEventListener('click', () => {
         document.querySelectorAll('.category-row').forEach(r => r.classList.remove('active'));
         catRow.classList.add('active');
+
+        const catName = catRow.querySelector('span').textContent;
+        const catTitleEl = document.getElementById('currentCatTitle');
+        if (catTitleEl) catTitleEl.textContent = `Canais (${catName})`;
 
         const firstChannel = document.querySelector('.tv-channel-panel .channel-row');
         if (firstChannel) tvEngine.setFocus(firstChannel);
       });
     });
 
-    // 2. Clique em Canal (Atualiza Mini Player e Inicia)
     document.querySelectorAll('.channel-row').forEach(chRow => {
       chRow.addEventListener('click', () => {
         const title = chRow.getAttribute('data-title');
@@ -1178,7 +1901,6 @@
       });
     });
 
-    // 3. Player em Tela Cheia
     function openFullscreenPlayer(title, prog, q) {
       const overlay = document.getElementById('tvPlayerOverlay');
       document.getElementById('fullPlayerTitle').textContent = title;
@@ -1197,8 +1919,9 @@
       overlay.style.display = 'none';
       smartPlayer.stop();
 
-      const chActive = document.querySelector('.channel-row.tv-focused') || document.querySelector('.channel-row');
-      tvEngine.setFocus(chActive);
+      const activeView = document.querySelector('.tv-view.active');
+      const focusTarget = activeView.querySelector('.tv-focused') || activeView.querySelector('.tv-focusable');
+      if (focusTarget) tvEngine.setFocus(focusTarget);
     }
 
     document.getElementById('btnFullscreen').addEventListener('click', () => {
@@ -1209,7 +1932,6 @@
 
     document.getElementById('btnPlayerBack').addEventListener('click', closeFullscreenPlayer);
 
-    // 4. Alternância rápida de resolução (Tecla Verde ou Botão OSD)
     const RES_LIST = ['SD', 'HD', 'FHD', '4K'];
     let currentResIdx = 0;
 
@@ -1223,7 +1945,6 @@
 
     document.getElementById('btnPlayerToggleRes').addEventListener('click', cycleResolutionOption);
 
-    // 5. Seleção de Resolução Padrão (Modal de Ajustes)
     document.querySelectorAll('#resOptionsGroup button').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('#resOptionsGroup button').forEach(b => {
