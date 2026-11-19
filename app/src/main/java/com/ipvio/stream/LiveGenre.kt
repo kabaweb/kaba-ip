@@ -42,10 +42,25 @@ object LiveGenre {
     private val last = ArrayList<Pair<List<Item>, LinkedHashMap<String, List<Item>>>>()
 
     private fun compute(live: List<Item>): LinkedHashMap<String, List<Item>> {
+        val lists = Array(ALL.size) { ArrayList<Item>() }
+        for (item in live) {
+            val isSport = SportLogic.isSportChannel(item)
+            if (isSport) {
+                lists[0].add(item)
+                continue
+            }
+            val g = item.group
+            val t = item.title
+            for (idx in 1 until ALL.size) {
+                val re = ALL[idx].re
+                if (re != null && (re.containsMatchIn(g) || re.containsMatchIn(t))) {
+                    lists[idx].add(item)
+                }
+            }
+        }
         val out = LinkedHashMap<String, List<Item>>()
-        for (g in ALL) {
-            val l = live.filter { matches(g, it) }
-            if (l.isNotEmpty()) out[g.key] = l
+        for (i in ALL.indices) {
+            if (lists[i].isNotEmpty()) out[ALL[i].key] = lists[i]
         }
         return out
     }

@@ -466,6 +466,8 @@ Suche nach einem Titel: hier erscheinen Beschreibung, Bewertung und Format des m
 SportsHub¦Sports Hub
 Sports Hub öffnen¦Abrir Sports Hub
 Sender-Qualitäten bündeln¦Agrupar qualidades do mesmo canal
+Automatische Genre-Kategorien¦Categorias automáticas de gêneros
+Erstellt Kategorien wie Sport, Kinder, Filme und Dokus automatisch. Deaktivieren lädt Live-TV schneller und zeigt direkt die Originalgruppen des Anbieters.¦Cria categorias como Esportes, Infantil, Filmes e Documentários. Desativar acelera muito o carregamento da TV Ao Vivo e mostra direto os grupos originais da sua lista.
 Derselbe Sender in 8K, 4K, FHD, HD und SD erscheint als eine Zeile. OK startet die beste Qualität, die anderen wählst du im Menü des Senders (OK gedrückt halten).¦Canais idênticos em 4K, FHD, HD e SD viram uma única linha. OK abre na melhor qualidade; segure OK para escolher outra resolução.
 Qualität¦Qualidade
 Sprache¦Idioma

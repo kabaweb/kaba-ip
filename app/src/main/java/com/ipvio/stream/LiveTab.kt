@@ -109,8 +109,10 @@ fun LiveTab(liveAll: List<Item>, groupsAll: Map<String, List<Item>>, favsAll: Li
             for ((g, l) in groupsAll) { val f = l.filter { it.src == srcK }; if (f.isNotEmpty()) m[g] = f }
         }
     }
-    // Genres (sports, movies, documentary, kids, news, music) – detected by category and channel name
-    val genres = remember(live) { LiveGenre.split(live) }
+    // Genres (sports, movies, documentary, kids, news, music) – optional, disabled by default for maximum speed
+    val genres = remember(live, General.showLiveGenres) {
+        if (General.showLiveGenres) LiveGenre.split(live) else LinkedHashMap()
+    }
     val favs = remember(favsAll, srcK) { if (srcK < 0) favsAll else favsAll.filter { it.src == srcK } }
     CatFavs.init(ctx)
     ChannelLists.init(ctx)

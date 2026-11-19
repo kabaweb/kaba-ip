@@ -28,6 +28,8 @@ object General {
     var vodCats by mutableStateOf(false)
     /** Live TV: show the quality variants of one channel (8K/4K/FHD/HD/SD) as a single row. */
     var bundleLive by mutableStateOf(true)
+    /** Live TV: show automatic genre categories (Sports, Kids, Movies, etc.). Default false for maximum speed and showing original provider groups directly. */
+    var showLiveGenres by mutableStateOf(false)
     /** Live TV channel row size: 0 = small, 1 = normal (default), 2 = large. */
     var channelRowSize by mutableIntStateOf(1)
     /** Playlist refresh: 0 = at every start, 1 = every X hours, 2 = daily, 3 = weekly, 4 = by hand only */
@@ -126,6 +128,7 @@ object General {
         confirmExit = p.getBoolean("confirm_exit", true)
         vodCats = p.getBoolean("vod_cats", false)
         bundleLive = p.getBoolean("bundle_live", true)
+        showLiveGenres = p.getBoolean("show_live_genres", false)
         channelRowSize = p.getInt("channel_row_size", 1).coerceIn(0, 2)
         // Default to "at every start" (0): loads cache instantly on start and checks for updates/renewals in background.
         if (!p.getBoolean("refresh_start_auto_v1", false)) {
@@ -168,6 +171,7 @@ object General {
     fun setResumeLive(c: Context, v: Boolean) { resumeLive = v; prefs(c).edit().putBoolean("resume_live", v).apply() }
     fun setResumeVod(c: Context, v: Boolean) { resumeVod = v; prefs(c).edit().putBoolean("resume_vod", v).apply() }
     fun setBundleLive(c: Context, v: Boolean) { bundleLive = v; prefs(c).edit().putBoolean("bundle_live", v).apply() }
+    fun setShowLiveGenres(c: Context, v: Boolean) { showLiveGenres = v; prefs(c).edit().putBoolean("show_live_genres", v).apply() }
     fun setChannelRowSize(c: Context, v: Int) { channelRowSize = v.coerceIn(0, 2); prefs(c).edit().putInt("channel_row_size", channelRowSize).apply() }
     fun setVodCats(c: Context, v: Boolean) { vodCats = v; prefs(c).edit().putBoolean("vod_cats", v).apply() }
     fun setConfirmExit(c: Context, v: Boolean) { confirmExit = v; prefs(c).edit().putBoolean("confirm_exit", v).apply() }

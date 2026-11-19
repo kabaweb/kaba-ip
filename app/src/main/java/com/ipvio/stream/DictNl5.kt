@@ -467,6 +467,8 @@ Suche nach einem Titel: hier erscheinen Beschreibung, Bewertung und Format des m
 SportsHub¦Sports Hub
 Sports Hub öffnen¦Sports Hub openen
 Sender-Qualitäten bündeln¦Zenderkwaliteiten bundelen
+Automatische Genre-Kategorien¦Automatische genre-categorieën
+Erstellt Kategorien wie Sport, Kinder, Filme und Dokus automatisch. Deaktivieren lädt Live-TV schneller und zeigt direkt die Originalgruppen des Anbieters.¦Maakt automatisch categorieën zoals Sport, Kinderen, Films en Documentaires. Uitschakelen laadt Live TV sneller en toont direct de originele groepen.
 Derselbe Sender in 8K, 4K, FHD, HD und SD erscheint als eine Zeile. OK startet die beste Qualität, die anderen wählst du im Menü des Senders (OK gedrückt halten).¦Dezelfde zender in 8K, 4K, FHD, HD en SD verschijnt als één rij. OK start de beste kwaliteit; kies de andere in het zendermenu (houd OK ingedrukt).
 Qualität¦Kwaliteit
 Sprache¦Taal
